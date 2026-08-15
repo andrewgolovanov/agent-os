@@ -28,8 +28,11 @@
   the packaged runtime, and made home migration rewrite monitor-owned registry,
   Task Board, runtime, dashboard, and runbook paths to the new owners without
   changing unrelated monitor entries.
-- Prepared the compatible `v0.2.1` plugin and application release with the
-  updated checkout-independent runtime and installation references.
+- Published the compatible `v0.2.1` plugin and application release from
+  `d7607144fcf21fa4781ee9beabff9f3c0c9786d3` in successful workflow run
+  `31913614945`. The public zip, checksum, appcast, Apple Silicon/macOS
+  metadata, strict bundle signature, exact embedded runtime, Sparkle Ed25519
+  signature, and a fresh anonymous-clone validation passed independent checks.
 
 ## 2026-08-15
 
