@@ -28,7 +28,7 @@ downloadable macOS app supports Apple Silicon (`arm64`) on macOS 14 or newer;
 an Intel or universal binary is not included yet.
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.2.0
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.2.1
 codex plugin add agent-os@agent-os
 ```
 
@@ -46,6 +46,9 @@ Onboard this repository into Agent OS safely.
 
 The plugin previews the registry and wrapper changes before applying them. It
 does not move, copy, rename, commit, or otherwise modify the project repository.
+If the user later moves a registered repository, ask Agent OS to relink that
+project. The plugin verifies repository identity and previews only the private
+path metadata that will change.
 See the complete [installation guide](docs/installation.md), including the
 macOS Gatekeeper flow and development-source setup.
 
@@ -56,7 +59,7 @@ The checkout contains reusable product source:
 ```text
 agent-os/
 ├── apps/agent-os/              optional native macOS app
-├── bin/agent-os                setup, doctor, update, validate, publication audit
+├── bin/agent-os                setup, migrate, doctor, update, validate, publication audit
 ├── config/examples/            sanitized configuration templates
 ├── docs/                       architecture and runbooks
 ├── lib/ and tools/             deterministic control plane
@@ -92,6 +95,11 @@ Plugin updates come from versioned marketplace snapshots. The native app uses
 signed Sparkle release archives. A development checkout keeps the older
 preview-first Git update path and is never overwritten when the packaged
 runtime bootstraps.
+
+An older development installation that used one directory for both source and
+private state can be separated without losing its registry or Task Board. Use
+the preview-first `agent-os migrate-home` command from the development checkout;
+the old home remains untouched until the migrated copy has been verified.
 
 ## Optional macOS app
 
@@ -141,6 +149,11 @@ cd agent-os
 
 An explicitly selected valid development checkout takes precedence over the
 packaged runtime and is preserved by app/plugin bootstrap.
+
+To deliberately return that private home to an installed packaged runtime,
+preview and then apply `agent-os bootstrap --replace-source` from the chosen
+runtime. This explicit flag prevents an automatic app or plugin launch from
+silently replacing a development checkout.
 
 Documentation is part of a complete change. Update the nearest `AGENTS.md` when
 agent workflows, commands, paths, validation, or ownership rules change; update

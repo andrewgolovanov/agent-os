@@ -84,6 +84,54 @@ class ProjectRegistryTest < Minitest::Test
     assert_includes error.message, "already belongs to another repository"
   end
 
+  def test_relink_is_preview_first_and_updates_only_registered_paths
+    registry = AgentOS::ProjectRegistry.new(source: @source, home: @home)
+    registry.onboard(repository: @repository, display_name: "Sample Project", apply: true)
+    previous_path = File.realpath(@repository)
+    before_head = git_output("-C", @repository, "rev-parse", "HEAD")
+    moved_repository = File.join(@temporary, "moved-project")
+    FileUtils.mv(@repository, moved_repository)
+
+    preview = registry.relink(repository: moved_repository, key: "sample-project")
+
+    assert_equal "replace", preview.fetch(:action)
+    assert_equal false, preview.fetch(:applied)
+    assert_equal previous_path, preview.fetch(:previous_path)
+    assert_equal File.realpath(moved_repository), preview.dig(:repository, :path)
+    projects = YAML.safe_load(File.read(File.join(@home, "config", "projects.yaml")), aliases: false)
+    assert_equal previous_path, projects.dig("projects", "sample-project", "repositories", 0, "path")
+
+    applied = registry.relink(repository: moved_repository, key: "sample-project", apply: true)
+
+    assert_equal "relinked", applied.fetch(:action)
+    assert_equal true, applied.fetch(:applied)
+    projects = YAML.safe_load(File.read(File.join(@home, "config", "projects.yaml")), aliases: false)
+    assert_equal File.realpath(moved_repository), projects.dig("projects", "sample-project", "repositories", 0, "path")
+    wrapper = File.join(@home, "projects", "sample-project")
+    refute_includes File.read(File.join(wrapper, "project.yaml")), previous_path
+    assert_includes File.read(File.join(wrapper, "project.yaml")), File.realpath(moved_repository)
+    assert_equal before_head, git_output("-C", moved_repository, "rev-parse", "HEAD")
+    assert_equal "", git_output("-C", moved_repository, "status", "--porcelain")
+  end
+
+  def test_relink_refuses_a_repository_with_a_different_origin
+    registry = AgentOS::ProjectRegistry.new(source: @source, home: @home)
+    registry.onboard(repository: @repository, key: "sample-project", apply: true)
+    another = File.join(@temporary, "different-project")
+    git("init", "-b", "main", another)
+    git("-C", another, "config", "user.name", "Agent OS Test")
+    git("-C", another, "config", "user.email", "agent-os@example.invalid")
+    File.write(File.join(another, "README.md"), "# Different\n")
+    git("-C", another, "add", "README.md")
+    git("-C", another, "commit", "-m", "Initial commit")
+    git("-C", another, "remote", "add", "origin", "https://example.invalid/different-project.git")
+
+    error = assert_raises(ArgumentError) do
+      registry.relink(repository: another, key: "sample-project", apply: true)
+    end
+    assert_includes error.message, "remote does not match"
+  end
+
   private
 
   def git(*arguments)

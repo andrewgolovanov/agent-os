@@ -57,9 +57,17 @@ bootstrap.
   state, and preserve a valid selected development source.
 - MCP project onboarding previews and registers any existing Git repository by
   absolute path without moving or modifying it.
+- MCP and CLI relinking verify repository identity and update only private
+  registry/wrapper paths after the user has physically moved a repository.
 - `bin/agent-os init` previews exact targets and preserves every existing file.
 - `activate` records the selected home in the standard user config directory so
   app/plugin processes do not need a hard-coded path or shell environment.
+- `migrate-home` stages and validates a copy of legacy private state before
+  atomically selecting a separate home; repositories remain in place and the
+  previous home is preserved for rollback.
+- `bootstrap --replace-source` provides a separate preview-first escape hatch
+  from an explicitly selected development checkout to a chosen packaged
+  runtime; automatic bootstrap continues to preserve development selection.
 - `doctor` is read-only; `validate` checks source structure, the selected home,
   Ruby tests, MCP source/home isolation, the plugin package, and Context Loop.
 - Sanitized config templates create an empty registry and no enabled monitors.

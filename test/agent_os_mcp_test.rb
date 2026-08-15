@@ -5,6 +5,7 @@ require "json"
 require "minitest/autorun"
 require "open3"
 require "tmpdir"
+require "yaml"
 
 class AgentOSMCPTest < Minitest::Test
   def setup
@@ -30,8 +31,9 @@ class AgentOSMCPTest < Minitest::Test
       assert_equal "agent-os", initialize_result.dig("result", "serverInfo", "name")
 
       tool_list = request(stdin, stdout, 2, "tools/list")
-      assert_equal 5, tool_list.dig("result", "tools").length
+      assert_equal 6, tool_list.dig("result", "tools").length
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_onboard_project" }
+      assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_relink_project" }
 
       tasks = request(
         stdin,
@@ -55,6 +57,7 @@ class AgentOSMCPTest < Minitest::Test
     File.write(File.join(repository, "README.md"), "# MCP project\n")
     git(repository, "add", "README.md")
     git(repository, "commit", "-m", "Initial commit")
+    git(repository, "remote", "add", "origin", "https://example.invalid/mcp-project.git")
 
     with_server("AGENT_OS_SOURCE_ROOT" => @source, "AGENT_OS_HOME" => @home) do |stdin, stdout, stderr, wait_thread|
       preview = request(
@@ -76,6 +79,34 @@ class AgentOSMCPTest < Minitest::Test
       )
       assert_equal "created", applied.dig("result", "structuredContent", "action")
       assert File.file?(File.join(@home, "projects", "mcp-project", "project.yaml"))
+
+      moved_repository = File.join(@temporary, "mcp-project-moved")
+      FileUtils.mv(repository, moved_repository)
+      relink_preview = request(
+        stdin,
+        stdout,
+        3,
+        "tools/call",
+        {
+          "name" => "agent_os_relink_project",
+          "arguments" => { "key" => "mcp-project", "repositoryPath" => moved_repository }
+        }
+      )
+      assert_equal "replace", relink_preview.dig("result", "structuredContent", "action")
+
+      relink_applied = request(
+        stdin,
+        stdout,
+        4,
+        "tools/call",
+        {
+          "name" => "agent_os_relink_project",
+          "arguments" => { "key" => "mcp-project", "repositoryPath" => moved_repository, "apply" => true }
+        }
+      )
+      assert_equal "relinked", relink_applied.dig("result", "structuredContent", "action")
+      registry = YAML.safe_load(File.read(File.join(@home, "config", "projects.yaml")), aliases: false)
+      assert_equal File.realpath(moved_repository), registry.dig("projects", "mcp-project", "repositories", 0, "path")
 
       stdin.close
       assert wait_thread.value.success?, stderr.read

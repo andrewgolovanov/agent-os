@@ -11,7 +11,7 @@ Human entry point      README.md or installed app/plugin
 Agent routing          packaged skills + registered project AGENTS.md
 Structured facts       AGENT_OS_HOME/config/projects.yaml
 Durable documentation docs/
-Project context        AGENT_OS_HOME/projects/<key>/
+Project context        registered project root (wrapper or direct repository)
 Reusable workflows     installed plugin skills or .agents/skills/<skill>/
 Deterministic helpers  selected packaged/development runtime
 Durable task state     AGENT_OS_HOME/work/items/<task-id>/
@@ -47,12 +47,16 @@ Optional operator UI   installed Agent OS.app
 
 ## Project layouts
 
-`AGENT_OS_HOME/projects/<key>/` имеет один из двух layout, явно записанный в registry.
+Каждый зарегистрированный project root имеет один из двух layout, явно
+записанный в registry. Wrapper по умолчанию живёт в
+`AGENT_OS_HOME/projects/<key>/`; direct repository остаётся в своём Git root.
 
 Project onboarding принимает существующий абсолютный Git root из любой папки.
 Agent OS хранит routing path и при необходимости создаёт приватный wrapper, но
 не перемещает и не копирует repository. Каталог `projects/` — приватное место
 для Agent OS wrappers, а не обязательный родительский каталог исходного кода.
+Если пользователь позже сам переносит repository, relink проверяет его Git root
+и origin identity, затем меняет только private registry и wrapper metadata.
 
 ### Wrapper
 
@@ -70,12 +74,20 @@ Private `config/projects.yaml` остаётся глобальным источ�
 
 ### Direct repository
 
-`layout: direct-repository` используется, когда один существующий Git-репозиторий уже находится прямо в `projects/<key>/`. Его repository root обязан совпадать с зарегистрированным project root.
+`layout: direct-repository` используется, когда один существующий
+Git-репозиторий одновременно является зарегистрированным project root. Его
+repository root обязан совпадать с полем `wrapper`, но сам абсолютный каталог
+может находиться где угодно на компьютере. Новое onboarding создаёт direct
+layout только если выбранный Git root уже совпадает с ожидаемым private project
+root; identity-checked relink сохраняет direct layout после отдельного
+пользовательского переноса repository в другую папку.
 
 - Agent OS хранит structured metadata только в private `config/projects.yaml`.
 - Существующие repository `AGENTS.md` и `README.md` остаются владельцами project-local правил и документации. Если repository `AGENTS.md` отсутствует, direct project наследует корневой Agent OS `AGENTS.md`; onboarding не создаёт служебный файл внутри продукта.
 - Agent OS не добавляет `project.yaml` или другие служебные файлы внутрь репозитория.
-- Точный каталог исключается из Git index Agent OS, чтобы не создать случайный gitlink и не смешать истории.
+- Если direct repository находится под development checkout Agent OS, его
+  точный каталог исключается из Git index Agent OS, чтобы не создать случайный
+  gitlink и не смешать истории. Внешнему Git root это исключение не требуется.
 
 Direct layout подходит для одного репозитория. Если проекту понадобится несколько репозиториев или отдельный личный operational context, его следует отдельно мигрировать в wrapper layout.
 

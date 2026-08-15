@@ -14,7 +14,7 @@ module AgentOS
 
     def home_root
       @home_root ||= resolve_root(
-        ENV["AGENT_OS_HOME"] || ENV["WORKSPACE_ROOT"],
+        ENV["AGENT_OS_HOME"] || ENV["WORKSPACE_ROOT"] || active_home_root,
         source_root,
         "AGENT_OS_HOME"
       )
@@ -35,6 +35,23 @@ module AgentOS
     def reset!
       @source_root = nil
       @home_root = nil
+    end
+
+    def active_home_root
+      pointer = ENV["AGENT_OS_HOME_POINTER"].to_s.strip
+      if pointer.empty?
+        user_home = ENV["HOME"].to_s.strip
+        user_home = Dir.home if user_home.empty?
+        pointer = File.join(user_home, ".config", "agent-os", "home")
+      end
+      return nil unless File.file?(pointer)
+
+      value = File.read(pointer).strip
+      return nil unless value.start_with?(File::SEPARATOR) && value != File::SEPARATOR
+
+      value
+    rescue SystemCallError
+      nil
     end
 
     def resolve_root(configured, fallback, label)

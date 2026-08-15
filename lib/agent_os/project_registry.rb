@@ -86,6 +86,45 @@ module AgentOS
       )
     end
 
+    def relink(repository:, key:, repository_id: nil, apply: false)
+      repository = verified_repository(repository)
+      key = normalized_key(key)
+      registry = load_registry
+      project = registry.fetch("projects").fetch(key) do
+        raise ArgumentError, "project key #{key.inspect} is not registered"
+      end
+      raise ArgumentError, "project entry must be a mapping" unless project.is_a?(Hash)
+
+      registered = Array(project["repositories"])
+      entry = if repository_id.to_s.empty?
+                raise ArgumentError, "repository id is required for a multi-repository project" unless registered.length == 1
+                registered.first
+              else
+                registered.find { |item| item.is_a?(Hash) && item["id"] == repository_id }
+              end
+      raise ArgumentError, "registered repository was not found" unless entry.is_a?(Hash)
+
+      previous_path = File.expand_path(entry.fetch("path"))
+      return relink_result(key, project, entry, repository, previous_path, apply: false, action: "preserve", files: []) if same_path?(previous_path, repository.fetch(:path))
+
+      other = project_for_repository(registry, repository.fetch(:path))
+      if other && other.fetch(:key) != key
+        raise ArgumentError, "repository is already registered as #{other.fetch(:key)}"
+      end
+      verify_repository_identity!(entry, previous_path, repository)
+      files = [@registry_path]
+      files.concat(wrapper_metadata_files(project, previous_path)) if project["layout"] == "wrapper"
+
+      unless apply
+        return relink_result(key, project, entry, repository, previous_path, apply: false, action: "replace", files: files)
+      end
+
+      relink_registry!(key, entry.fetch("id"), previous_path, repository)
+      updated = load_registry.fetch("projects").fetch(key)
+      updated_entry = updated.fetch("repositories").find { |item| item.fetch("id") == entry.fetch("id") }
+      relink_result(key, updated, updated_entry, repository, previous_path, apply: true, action: "relinked", files: files)
+    end
+
     private
 
     def verified_repository(path)
@@ -149,7 +188,7 @@ module AgentOS
     end
 
     def project_entry(key:, display_name:, layout:, wrapper:, repository:)
-      {
+      entry = {
         "display_name" => display_name,
         "status" => "active",
         "layout" => layout,
@@ -164,6 +203,98 @@ module AgentOS
             "primary_branch" => repository.fetch(:primary_branch)
           }
         ]
+      }
+      remote = repository[:remote]
+      entry.fetch("repositories").first["remotes"] = { "origin" => remote } if remote
+      entry
+    end
+
+    def verify_repository_identity!(entry, previous_path, repository)
+      remotes = entry["remotes"].is_a?(Hash) ? entry["remotes"].values : []
+      if remotes.empty? && File.directory?(previous_path)
+        previous_remote = git_optional(previous_path, "remote", "get-url", "origin")
+        remotes << previous_remote unless previous_remote.to_s.empty?
+      end
+      expected = remotes.map { |remote| normalized_remote(remote) }.compact
+      actual = normalized_remote(repository[:remote])
+      if expected.empty?
+        raise ArgumentError, "cannot verify repository identity because the registered entry has no remote"
+      end
+      return if actual && expected.include?(actual)
+
+      raise ArgumentError, "repository remote does not match the registered project"
+    end
+
+    def normalized_remote(value)
+      remote = value.to_s.strip
+      return nil if remote.empty?
+      remote = remote.sub(/\Agit@github\.com:/, "https://github.com/")
+      remote = remote.sub(/\Assh:\/\/git@github\.com\//, "https://github.com/")
+      remote = remote.delete_suffix(".git").delete_suffix("/")
+      remote.downcase
+    end
+
+    def relink_registry!(key, repository_id, previous_path, repository)
+      lock_path = File.join(@home, ".runtime", "projects.lock")
+      FileUtils.mkdir_p(File.dirname(lock_path))
+      File.open(lock_path, File::RDWR | File::CREAT, 0o600) do |lock|
+        lock.flock(File::LOCK_EX)
+        registry = load_registry
+        project = registry.fetch("projects").fetch(key)
+        entry = project.fetch("repositories").find { |item| item.fetch("id") == repository_id }
+        raise ArgumentError, "registered repository changed during relink" unless same_path?(entry.fetch("path"), previous_path)
+
+        if project["layout"] == "wrapper"
+          update_wrapper_metadata!(project, repository_id, previous_path, repository.fetch(:path))
+        elsif same_path?(project.fetch("wrapper"), previous_path)
+          project["wrapper"] = repository.fetch(:path)
+        end
+        entry["path"] = repository.fetch(:path)
+        entry["remotes"] ||= { "origin" => repository.fetch(:remote) } if repository[:remote]
+        atomic_write(@registry_path, YAML.dump(registry), mode: 0o600)
+      end
+    end
+
+    def wrapper_metadata_files(project, previous_path)
+      wrapper = File.expand_path(project.fetch("wrapper"))
+      return [] unless wrapper.start_with?("#{@home}/") && File.directory?(wrapper)
+
+      Dir.glob(File.join(wrapper, "**", "*"), File::FNM_DOTMATCH).select do |path|
+        File.file?(path) && !File.symlink?(path) && File.read(path).include?(previous_path)
+      end
+    end
+
+    def update_wrapper_metadata!(project, repository_id, previous_path, repository_path)
+      wrapper_metadata_files(project, previous_path).each do |path|
+        if File.basename(path) == "project.yaml"
+          payload = YAML.safe_load(File.read(path), permitted_classes: [], permitted_symbols: [], aliases: false)
+          item = payload.fetch("repositories").find { |candidate| candidate.fetch("id") == repository_id }
+          raise ArgumentError, "wrapper repository metadata is missing #{repository_id}" unless item
+          item["path"] = repository_path
+          atomic_write(path, YAML.dump(payload), mode: 0o600)
+        else
+          atomic_write(path, File.read(path).gsub(previous_path, repository_path), mode: File.stat(path).mode & 0o777)
+        end
+      end
+    rescue Psych::SyntaxError, KeyError => error
+      raise ArgumentError, "invalid wrapper metadata: #{error.message}"
+    end
+
+    def relink_result(key, project, entry, repository, previous_path, apply:, action:, files:)
+      {
+        schema_version: 1,
+        action: action,
+        applied: apply && action == "relinked",
+        project: {
+          key: key,
+          display_name: project.fetch("display_name"),
+          layout: project.fetch("layout", "wrapper"),
+          wrapper: project.fetch("wrapper")
+        },
+        repository: repository.merge(id: entry.fetch("id")),
+        previous_path: previous_path,
+        files: files,
+        reason: action == "preserve" ? "repository path is already current" : "registry metadata only; repository files and Git state are unchanged"
       }
     end
 

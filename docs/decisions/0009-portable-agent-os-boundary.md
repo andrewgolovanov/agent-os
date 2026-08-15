@@ -33,6 +33,9 @@ duplicate plugin sources.
 - Agent OS remains useful without the native app or provider integrations.
 - Initialization and activation must be preview-first and preserve existing
   state.
+- Separating a legacy source-plus-home installation must copy only private
+  state and wrapper metadata, validate before activation, leave project
+  repositories in place, and preserve the previous home for rollback.
 - Plugin and app code may read source and home independently but may not escape
   either configured root.
 - The source repository cannot be treated as a backup for personal tasks or

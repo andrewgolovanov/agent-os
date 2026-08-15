@@ -20,11 +20,11 @@ Add the public Git marketplace at the release tag you want to install, then add
 the Agent OS plugin from that marketplace:
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.2.0
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.2.1
 codex plugin add agent-os@agent-os
 ```
 
-For a later release, replace `v0.2.0` with the latest published `vN.N.N` tag
+For a later release, replace `v0.2.1` with the latest published `vN.N.N` tag
 shown on the [Agent OS Releases page](https://github.com/andrewgolovanov/agent-os/releases).
 Codex downloads and manages the plugin snapshot; the user does not clone or
 maintain the Agent OS repository.
@@ -53,6 +53,10 @@ codex plugin remove context-loop@agent-os
 This removes the redundant installed plugin snapshot; it does not delete any
 project `.context-loop/` state.
 
+The installed Agent OS plugin also carries the deterministic Slack monitor
+runbook and its optional-integration guide. No documentation checkout is
+required for that workflow.
+
 ## 2. Onboard a project from any folder
 
 Open an existing Git repository from any location on the computer and ask:
@@ -67,6 +71,21 @@ before applying them. It never moves, clones, renames, commits, pushes, or
 writes files inside the project repository. Once registered, Agent OS and Codex
 can open that project through its absolute path; no common `projects/` parent
 folder is required.
+
+### Move an already registered project
+
+Agent OS does not move repositories. Move a project only when you deliberately
+want to reorganize the computer, then open the repository from its new location
+and ask:
+
+```text
+Relink this registered Agent OS project to its current folder safely.
+```
+
+The plugin checks the new Git root and origin against the registered identity,
+previews the private registry and wrapper metadata changes, and updates only
+those paths after approval. Git history, remotes, branches, and project files
+remain untouched.
 
 ## 3. Install the macOS app
 
@@ -112,6 +131,25 @@ archive whose source or checksum you cannot verify. See
   the preview-first tagged Git update flow. Packaged bootstrap never resets or
   overwrites it.
 
+When development is finished, use the CLI from the packaged runtime that should
+become authoritative. The first command is preview-only:
+
+```bash
+/absolute/path/to/packaged/runtime/bin/agent-os bootstrap \
+  --source /absolute/path/to/packaged/runtime \
+  --home "$HOME/.agent-os" \
+  --replace-source
+
+/absolute/path/to/packaged/runtime/bin/agent-os bootstrap \
+  --source /absolute/path/to/packaged/runtime \
+  --home "$HOME/.agent-os" \
+  --replace-source \
+  --apply
+```
+
+`--replace-source` is deliberately explicit. Normal app/plugin bootstrap keeps
+a valid development checkout selected and cannot perform this transition.
+
 ## Development source checkout
 
 Only contributors and advanced local development need the full repository:
@@ -136,6 +174,34 @@ AGENT_OS_HOME="$HOME/.agent-os" \
 The bundle is created at `apps/agent-os/dist/Agent OS.app` and includes the
 synchronized minimal runtime from `plugins/agent-os/runtime`.
 
+### Migrate an older one-directory development installation
+
+If a development checkout is also the currently active private home, first
+select the packaged runtime that should serve the migrated installation. Then
+preview every copied and replaced path:
+
+```bash
+./bin/agent-os migrate-home \
+  --from /absolute/path/to/legacy-agent-os \
+  --home "$HOME/.agent-os" \
+  --source /absolute/path/to/installed-or-packaged/runtime
+```
+
+The migration copies `config/`, `work/`, `.runtime/`, and registered wrapper
+metadata. It never copies, moves, renames, or rewrites project repositories.
+It rejects symbolic links in copied private state, refuses an existing target,
+validates the staged registry and Task Board JSON, and switches the active-home
+pointer only after the staged home is complete. Apply the reviewed plan with
+the same arguments plus `--apply`.
+
+The previous home remains in place for rollback. To select it again, preview
+and then apply an explicit replacement:
+
+```bash
+./bin/agent-os activate --home /absolute/path/to/legacy-agent-os --replace
+./bin/agent-os activate --home /absolute/path/to/legacy-agent-os --replace --apply
+```
+
 To create the distributable zip and checksum:
 
 ```bash
@@ -146,17 +212,17 @@ The script bundles Sparkle, ad-hoc signs the complete app and its updater
 helpers, signs the update archive with the Agent OS Ed25519 key, and verifies
 the archive signature before returning. It creates:
 
-- `dist/release/AgentOS-0.2.0-macOS.zip`;
-- `dist/release/AgentOS-0.2.0-macOS.zip.sha256`;
+- `dist/release/AgentOS-0.2.1-macOS.zip`;
+- `dist/release/AgentOS-0.2.1-macOS.zip.sha256`;
 - `dist/release/appcast.xml`.
 
 This is not a Developer ID signature and the app is not notarized. Only install
 an archive downloaded from the expected Agent OS GitHub release and compare its
 checksum before opening it. The current public package and checksum are attached
-to [Agent OS v0.2.0](https://github.com/andrewgolovanov/agent-os/releases/tag/v0.2.0):
+to [Agent OS v0.2.1](https://github.com/andrewgolovanov/agent-os/releases/tag/v0.2.1):
 
 ```bash
-shasum -a 256 -c AgentOS-0.2.0-macOS.zip.sha256
+shasum -a 256 -c AgentOS-0.2.1-macOS.zip.sha256
 ```
 
 ### App updates

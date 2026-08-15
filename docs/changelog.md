@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-08-16
+
+- Added preview-first migration from a legacy source-plus-home installation to
+  a separate private `~/.agent-os`: config, Task Board, runtime evidence, and
+  wrapper metadata are staged and validated without copying project
+  repositories; the previous home remains intact for rollback.
+- Added an explicit `activate --replace` gate so an existing valid active-home
+  pointer can be changed only after a visible preview and deliberate apply.
+- Added `bootstrap --replace-source` as the explicit preview-first transition
+  from a selected development checkout to a chosen packaged runtime while
+  preserving the existing automatic-bootstrap safety boundary.
+- Added identity-checked MCP/CLI project relinking after a user moves a
+  registered repository; only private registry and wrapper metadata change.
+- Migrated the verified development installation to a separate private home,
+  kept source repositories in independent user-selected folders, and removed
+  the old assumption that project code belongs under the Agent OS checkout.
+- Made optional integration diagnostics recognize Task Bridge hooks beside a
+  packaged plugin runtime as well as inside a development checkout.
+- Clarified that a direct project is defined by project-root and Git-root
+  identity rather than by living under the Agent OS checkout; verified relinked
+  direct projects remain supported in ordinary user-selected folders.
+- Made every direct Ruby tool, including the full validator and Task Board CLI,
+  resolve the selected active private home when no explicit home environment is
+  provided; the source checkout remains only the legacy fallback.
+- Bundled the canonical Slack monitor runbook and optional-integration guide in
+  the packaged runtime, and made home migration rewrite monitor-owned registry,
+  Task Board, runtime, dashboard, and runbook paths to the new owners without
+  changing unrelated monitor entries.
+- Prepared the compatible `v0.2.1` plugin and application release with the
+  updated checkout-independent runtime and installation references.
+
 ## 2026-08-15
 
 - Consolidated Context Loop into the Agent OS plugin as a bundled skill, removed

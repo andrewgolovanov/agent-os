@@ -4,7 +4,7 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { ensureAgentOSRuntime } from "./bootstrap.mjs";
 
-const serverVersion = "0.2.0";
+const serverVersion = "0.2.1";
 const { homeRoot, sourceRoot } = ensureAgentOSRuntime();
 if (homeRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_HOME");
 if (sourceRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_SOURCE_ROOT");
@@ -126,6 +126,23 @@ const tools = [
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
   },
   {
+    name: "agent_os_relink_project",
+    title: "Relink an Agent OS project",
+    description: "Preview or update registry metadata after an already registered Git repository was moved locally. The tool never moves repository files or changes Git state.",
+    inputSchema: {
+      type: "object",
+      required: ["key", "repositoryPath"],
+      properties: {
+        key: { type: "string", description: "Existing lowercase kebab-case project key." },
+        repositoryPath: { type: "string", description: "Absolute new path to the same Git repository." },
+        repositoryId: { type: "string", description: "Repository id when the project registers multiple repositories." },
+        apply: { type: "boolean", description: "False previews; true applies only the reviewed registry and wrapper metadata path changes." },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+  },
+  {
     name: "agent_os_create_task",
     title: "Create an Agent OS outcome",
     description: "Create one canonical outcome through tools/task-board.",
@@ -205,6 +222,20 @@ function callTool(name, args = {}) {
       ];
       if (args.key) command.push("--key", args.key);
       if (args.displayName) command.push("--display-name", args.displayName);
+      if (args.apply === true) command.push("--apply");
+      return textResult(JSON.parse(runAgentOS(command)));
+    }
+
+    if (name === "agent_os_relink_project") {
+      const command = [
+        "relink-project",
+        "--source", sourceRoot,
+        "--home", homeRoot,
+        "--key", args.key,
+        "--repository", args.repositoryPath,
+        "--json",
+      ];
+      if (args.repositoryId) command.push("--repository-id", args.repositoryId);
       if (args.apply === true) command.push("--apply");
       return textResult(JSON.parse(runAgentOS(command)));
     }

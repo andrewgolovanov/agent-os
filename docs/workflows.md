@@ -5,14 +5,33 @@
 1. Вызвать `$onboard-project`.
 2. Передать project key, display name и абсолютные пути существующих репозиториев.
 3. Проверить для каждого репозитория root, remotes, branch, HEAD и dirty state.
-4. Определить layout: `wrapper` по умолчанию или `direct-repository`, если один Git root уже совпадает с `projects/<key>/`.
+4. Использовать private `wrapper` по умолчанию. `direct-repository` допустим
+   только когда Git root уже точно совпадает с private
+   `AGENT_OS_HOME/projects/<key>/`; после отдельного пользовательского переноса
+   identity-checked relink может сохранить direct layout в другом абсолютном
+   каталоге.
 5. Просмотреть план создаваемых файлов и registry entry.
-6. Для wrapper создать `projects/<key>/` из `templates/project/`. Для direct repository не добавлять файлы Agent OS внутрь проекта и исключить точный каталог из Git index Agent OS.
-7. Обновить `config/projects.yaml`.
-8. Запустить `ruby tools/validate-agent-os`.
+6. Для wrapper создать private `AGENT_OS_HOME/projects/<key>/` из
+   `templates/project/`. Source repository остаётся в исходной папке.
+7. Обновить private `AGENT_OS_HOME/config/projects.yaml` только через MCP/CLI.
+8. Запустить `ruby tools/validate-agent-os` и `tools/task-board validate` для
+   выбранного private home.
 9. Отдельно отметить verified и unknown facts.
 
 Подключение не даёт разрешения на clone, move, remote changes, commit или publish.
+
+## Перепривязать перенесённый repository
+
+1. Убедиться, что физический перенос уже выполнен по явному запросу пользователя.
+2. Проверить новый Git root, origin, branch, HEAD и dirty state.
+3. Вызвать `agent_os_relink_project` с существующим project key и новым
+   абсолютным path; для multi-repository project передать repository ID.
+4. Сначала просмотреть preview и убедиться, что меняются только private registry
+   и wrapper metadata.
+5. После approval применить тот же relink и валидировать registry/Task Board.
+
+Relink никогда не перемещает repository и не меняет Git files, remotes, branch
+или history.
 
 ## Начать проектную работу
 

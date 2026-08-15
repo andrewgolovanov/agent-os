@@ -33,6 +33,8 @@ tool_files = %w[
 source_files = [
   "LICENSE",
   "bin/agent-os",
+  "docs/optional-integrations.md",
+  "docs/slack-monitor.md",
   *Dir.glob(File.join(ROOT, "lib", "agent_os", "*.rb")).map { |path| path.delete_prefix("#{ROOT}/") },
   *Dir.glob(File.join(ROOT, "config", "examples", "*"), File::FNM_DOTMATCH)
     .select { |path| File.file?(path) }

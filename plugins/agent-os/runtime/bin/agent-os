@@ -9,6 +9,7 @@ require "rbconfig"
 require "rubygems/version"
 require "tempfile"
 require_relative "../lib/agent_os/paths"
+require_relative "../lib/agent_os/home_migrator"
 require_relative "../lib/agent_os/project_registry"
 require_relative "../lib/agent_os/slack_monitor_setup"
 require_relative "../lib/agent_os/task_board"
@@ -31,12 +32,14 @@ module AgentOS
       case command
       when "init" then initialize_home
       when "bootstrap" then bootstrap_runtime
+      when "migrate-home" then migrate_home
       when "doctor" then doctor
       when "validate" then validate
       when "audit-publication" then audit_publication
       when "activate" then activate_home
       when "install-plugin" then install_plugin
       when "onboard-project" then onboard_project
+      when "relink-project" then relink_project
       when "configure-slack-monitor" then configure_slack_monitor
       when "update" then update
       else
@@ -85,10 +88,11 @@ module AgentOS
     end
 
     def bootstrap_runtime
-      options = common_options(apply: false, json: false)
+      options = common_options(apply: false, json: false, replace_source: false)
       OptionParser.new do |parser|
-        parser.banner = "Usage: agent-os bootstrap [--home PATH] [--source PATH] [--json] [--apply]"
+        parser.banner = "Usage: agent-os bootstrap [--home PATH] [--source PATH] [--replace-source] [--json] [--apply]"
         add_common_options(parser, options)
+        parser.on("--replace-source", "Explicitly replace a valid development source pointer after preview") { options[:replace_source] = true }
         parser.on("--json", "Print the plan or result as JSON") { options[:json] = true }
         parser.on("--apply", "Initialize missing private state and repair stale packaged-runtime pointers") { options[:apply] = true }
         parser.parse!(@arguments)
@@ -98,7 +102,11 @@ module AgentOS
       requested_source = validated_root(options.fetch(:source), "source")
       home = validated_root(options.fetch(:home), "home", allow_missing: true)
       templates = config_templates(requested_source)
-      source_decision = bootstrap_source_decision(home, requested_source)
+      source_decision = bootstrap_source_decision(
+        home,
+        requested_source,
+        replace_source: options.fetch(:replace_source)
+      )
       active_decision = active_home_decision(home)
       plan = init_plan(home, templates).map do |item|
         next item unless item.fetch(:path) == File.join(home, "source-path")
@@ -113,6 +121,7 @@ module AgentOS
       payload = {
         schema_version: 1,
         applied: options.fetch(:apply),
+        replace_source: options.fetch(:replace_source),
         source: source_decision.fetch(:source),
         requested_source: requested_source,
         home: home,
@@ -168,10 +177,11 @@ module AgentOS
     end
 
     def activate_home
-      options = { home: @environment["AGENT_OS_HOME"] || active_home_value || DEFAULT_HOME, apply: false }
+      options = { home: @environment["AGENT_OS_HOME"] || active_home_value || DEFAULT_HOME, apply: false, replace: false }
       OptionParser.new do |parser|
-        parser.banner = "Usage: agent-os activate [--home PATH] [--apply]"
+        parser.banner = "Usage: agent-os activate [--home PATH] [--replace] [--apply]"
         parser.on("--home PATH", "Private Agent OS home") { |value| options[:home] = value }
+        parser.on("--replace", "Replace a different active-home pointer after preview") { options[:replace] = true }
         parser.on("--apply", "Write the active-home pointer") { options[:apply] = true }
         parser.parse!(@arguments)
       end
@@ -180,20 +190,55 @@ module AgentOS
       home = validated_root(options.fetch(:home), "home")
       pointer = active_home_pointer
       existing = File.file?(pointer) ? File.read(pointer).strip : nil
-      if existing && existing != home
+      if existing && existing != home && !options.fetch(:replace)
         raise ArgumentError, "active home already points to #{existing}; it was not overwritten"
       end
 
       @out.puts "Agent OS activation plan"
-      @out.puts "  #{existing == home ? "PRESERVE" : "CREATE"} #{pointer} -> #{home}"
+      action = existing == home ? "PRESERVE" : existing ? "REPLACE" : "CREATE"
+      @out.puts "  #{action} #{pointer} -> #{home}"
       unless options.fetch(:apply)
         @out.puts "Preview only. Re-run with --apply to activate this home."
         return 0
       end
 
-      FileUtils.mkdir_p(File.dirname(pointer))
-      File.write(pointer, "#{home}\n", mode: "wx", perm: 0o600) unless File.exist?(pointer)
+      write_pointer(pointer, home) unless existing == home
       @out.puts "Activated Agent OS home at #{home}"
+      0
+    end
+
+    def migrate_home
+      options = {
+        source: Paths.source_root,
+        from: active_home_value,
+        home: DEFAULT_HOME,
+        apply: false,
+        json: false
+      }
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os migrate-home [--from PATH] [--home PATH] [--source PATH] [--json] [--apply]"
+        parser.on("--from PATH", "Existing private Agent OS home") { |value| options[:from] = value }
+        parser.on("--home PATH", "New private Agent OS home") { |value| options[:home] = value }
+        parser.on("--source PATH", "Runtime selected by the migrated home") { |value| options[:source] = value }
+        parser.on("--json", "Print the plan or result as JSON") { options[:json] = true }
+        parser.on("--apply", "Copy verified private state and switch the active-home pointer") { options[:apply] = true }
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+      raise ArgumentError, "no active home; pass --from PATH" if options[:from].to_s.empty?
+
+      migrator = AgentOS::HomeMigrator.new(
+        source: validated_root(options.fetch(:source), "source"),
+        from: validated_root(options.fetch(:from), "from"),
+        home: validated_root(options.fetch(:home), "home", allow_missing: true),
+        active_home_pointer: active_home_pointer
+      )
+      result = migrator.migrate(apply: options.fetch(:apply))
+      if options.fetch(:json)
+        @out.puts JSON.pretty_generate(result)
+      else
+        print_home_migration(result)
+      end
       0
     end
 
@@ -327,6 +372,47 @@ module AgentOS
       0
     end
 
+    def relink_project
+      options = common_options(apply: false, json: false, repository: nil, key: nil, repository_id: nil)
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os relink-project --key KEY --repository PATH [--repository-id ID] [--home PATH] [--source PATH] [--json] [--apply]"
+        add_common_options(parser, options)
+        parser.on("--repository PATH", "Existing Git repository at its new local path") { |value| options[:repository] = value }
+        parser.on("--key KEY", "Existing lowercase kebab-case project key") { |value| options[:key] = value }
+        parser.on("--repository-id ID", "Repository id for a multi-repository project") { |value| options[:repository_id] = value }
+        parser.on("--json", "Print machine-readable preview or result") { options[:json] = true }
+        parser.on("--apply", "Replace only the reviewed registry and wrapper metadata paths") { options[:apply] = true }
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+      raise OptionParser::MissingArgument, "repository" if options[:repository].to_s.empty?
+      raise OptionParser::MissingArgument, "key" if options[:key].to_s.empty?
+
+      source = validated_root(options.fetch(:source), "source")
+      home = validated_root(options.fetch(:home), "home")
+      outcome = AgentOS::ProjectRegistry.new(source: source, home: home).relink(
+        repository: options.fetch(:repository),
+        key: options.fetch(:key),
+        repository_id: options[:repository_id],
+        apply: options.fetch(:apply)
+      )
+      if options.fetch(:json)
+        @out.puts JSON.pretty_generate(outcome)
+      else
+        project = outcome.fetch(:project)
+        repository = outcome.fetch(:repository)
+        @out.puts options.fetch(:apply) ? "Agent OS project relink result" : "Agent OS project relink plan"
+        @out.puts "  #{outcome.fetch(:action).upcase.ljust(8)} #{project.fetch(:key)} (#{project.fetch(:layout)})"
+        @out.puts "  previous   #{outcome.fetch(:previous_path)}"
+        @out.puts "  repository #{repository.fetch(:path)}"
+        @out.puts "  HEAD #{repository.fetch(:head)} on #{repository.fetch(:checked_out_branch) || "detached HEAD"}"
+        @out.puts "  remote #{repository.fetch(:remote) || "unknown"}"
+        outcome.fetch(:files).each { |path| @out.puts "  file #{path}" }
+        @out.puts "Preview only. Re-run with --apply after verifying the repository identity and exact path." unless options.fetch(:apply)
+      end
+      0
+    end
+
     def configure_slack_monitor
       options = common_options(
         timezone: nil,
@@ -425,13 +511,14 @@ module AgentOS
       end
     end
 
-    def bootstrap_source_decision(home, requested_source)
+    def bootstrap_source_decision(home, requested_source, replace_source: false)
       pointer = File.join(home, "source-path")
       return { action: :create, source: requested_source } unless File.file?(pointer)
 
       current = File.read(pointer).strip
       return { action: :replace, source: requested_source } unless valid_source_root?(current)
       return { action: :preserve, source: current } if File.expand_path(current) == requested_source
+      return { action: :replace, source: requested_source } if replace_source
 
       current_manifest = runtime_manifest(current)
       requested_manifest = runtime_manifest(requested_source)
@@ -503,6 +590,20 @@ module AgentOS
         @out.puts "  #{item.fetch(:action).to_s.upcase.ljust(8)} #{item.fetch(:path)}#{suffix}"
       end
       @out.puts "Preview only. Re-run with --apply to prepare the bundled runtime." unless payload.fetch(:applied)
+    end
+
+    def print_home_migration(result)
+      @out.puts result.fetch(:applied) ? "Agent OS home migration result" : "Agent OS home migration plan"
+      @out.puts "  from:   #{result.fetch(:from)}"
+      @out.puts "  home:   #{result.fetch(:home)}"
+      @out.puts "  source: #{result.fetch(:source)}"
+      result.fetch(:copies).each do |item|
+        @out.puts "  COPY     #{item.fetch(:from)} -> #{item.fetch(:to)}"
+      end
+      pointer = result.fetch(:pointer)
+      @out.puts "  REPLACE  #{pointer.fetch(:path)} -> #{pointer.fetch(:to)}"
+      @out.puts "Preview only. Re-run with --apply after reviewing every path." unless result.fetch(:applied)
+      @out.puts "Previous home preserved at #{result.fetch(:from)} for rollback."
     end
 
     def add_common_options(parser, options)
@@ -590,8 +691,7 @@ module AgentOS
       rescue Errno::ENOENT, Psych::SyntaxError
         false
       end
-      hook_manifest = File.join(source, "plugins", "agent-os", "hooks", "hooks.json")
-      hook_runner = File.join(source, "plugins", "agent-os", "hooks", "agent-os-task-bridge")
+      hook_manifest, hook_runner = task_bridge_hook_paths(source)
       runtime_pattern = File.join(home, ".runtime", "task-bridge", "sessions", "*", "turns", "*.json")
       runtime_evidence = Dir.glob(runtime_pattern).any?
 
@@ -603,7 +703,7 @@ module AgentOS
           detail: monitor_ok ? "enabled in #{monitor_path}" : "not enabled; preview agent-os configure-slack-monitor"
         },
         {
-          name: "source plugin Task Bridge hooks",
+          name: "Task Bridge hook bundle",
           required: false,
           ok: File.file?(hook_manifest) && File.executable?(hook_runner),
           detail: "#{hook_manifest}; refresh the installed plugin, then review trust with /hooks"
@@ -627,6 +727,18 @@ module AgentOS
           detail: "verify in Codex Scheduled; local CLI does not own product automation state"
         }
       ]
+    end
+
+    def task_bridge_hook_paths(source)
+      candidates = [
+        File.join(source, "plugins", "agent-os", "hooks"),
+        File.join(File.dirname(source), "hooks")
+      ].uniq
+      root = candidates.find do |candidate|
+        File.file?(File.join(candidate, "hooks.json")) &&
+          File.executable?(File.join(candidate, "agent-os-task-bridge"))
+      end || candidates.first
+      [File.join(root, "hooks.json"), File.join(root, "agent-os-task-bridge")]
     end
 
     def registry_timezone(home)
@@ -709,12 +821,14 @@ module AgentOS
         Commands:
           init       Preview or create a private Agent OS home
           bootstrap  Prepare app/plugin bundled runtime and private state
+          migrate-home  Copy legacy private state to a separate home and activate it
           doctor     Read-only dependency and path checks
           validate   Validate source structure and private state
           audit-publication  Block known private data from a release candidate
           activate   Preview or select the home used by app and plugin processes
           install-plugin  Preview or install the Agent OS Codex plugin
           onboard-project  Preview or register an existing Git repository
+          relink-project  Preview or update the path of an already registered repository
           configure-slack-monitor  Preview or configure the optional read-only Slack monitor
           update     Check release tags; optionally fast-forward core and refresh plugin
       USAGE

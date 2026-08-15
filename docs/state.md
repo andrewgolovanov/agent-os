@@ -1,6 +1,6 @@
 # Current state
 
-Verified: 2026-08-15
+Verified: 2026-08-16
 
 ## Product source
 
@@ -43,15 +43,23 @@ Verified: 2026-08-15
   valid explicitly selected development checkout remains authoritative.
 - MCP and CLI onboarding can preview and register an existing Git repository
   from any absolute location without moving, cloning, renaming, or modifying it.
+- MCP and CLI relinking can verify a moved repository by its registered origin
+  and update only private registry and wrapper paths.
+- Leaving an explicitly selected development checkout now requires the separate
+  preview-first `bootstrap --replace-source` action; automatic packaged
+  bootstrap continues to preserve valid development selection.
 
 ## Private instance boundary
 
-- The current installation remains usable as a legacy one-directory source and
-  home.
+- The current development installation has been migrated from the legacy
+  one-directory topology to a separate private home; the source checkout is now
+  retained only for Agent OS development.
 - New installations default to a separate `~/.agent-os` private home.
 - Real configs, Task Board state, reports, runtime state, source pointers, and
   registered project paths are ignored by the source repository. Project code
   remains in its existing repository location.
+- The verified local project repositories now live independently of the Agent
+  OS source checkout and resolve through absolute paths in the private registry.
 - Packaged bootstrap preserves existing files, creates no project entries, and
   enables no monitor or provider integration. Project onboarding remains a
   separate preview-first operation.
@@ -61,7 +69,9 @@ Verified: 2026-08-15
 - `agent-os doctor` passes for the current instance and for a fresh temporary
   home.
 - The full Agent OS validator passes against both homes.
-- The current and clean-home Ruby suites pass 46 tests and 328 assertions.
+- The current Ruby suite passes 54 tests and 420 assertions, including active
+  private-home resolution, safe home migration, monitor-path rewriting, and
+  identity-checked repository relinking.
 - Agent OS app builds and its 17 Swift tests pass; bundle launch verification
   succeeds with both the active home and a fresh empty private home.
 - The app now maps the official shadcn default Neutral dark tokens directly into

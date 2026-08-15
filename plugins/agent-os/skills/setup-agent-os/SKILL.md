@@ -23,7 +23,11 @@ Keep reusable configuration in the active Agent OS runtime, private configuratio
    ```
 
 6. Show the preview and obtain approval before adding `--apply`. Never use `--replace` unless the user has reviewed the conflict and explicitly approves replacing only `agent-os-slack-monitor`.
-7. Run one manual monitor pass using `docs/slack-monitor.md` before scheduling it. Confirm the bounded read-only scan, local Task Board preparation, cursor behavior, and quiet `DONT_NOTIFY` result on an unchanged run. Do not store raw Slack message text.
+7. Read the absolute `runbook` path from the private monitor entry; it resolves
+   to the Slack runbook bundled in the selected Agent OS runtime. Run one manual
+   monitor pass before scheduling it. Confirm the bounded read-only scan, local
+   Task Board preparation, cursor behavior, and quiet `DONT_NOTIFY` result on an
+   unchanged run. Do not store raw Slack message text.
 8. Create or update the Codex Scheduled task only when the user asked for scheduling and the host exposes its automation capability:
    - inspect existing automations first and update the exact `Agent OS Slack Monitor` task instead of creating a duplicate;
    - attach it to the current Agent OS setup task and use the configured timezone/days/times;
