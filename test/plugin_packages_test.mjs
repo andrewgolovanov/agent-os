@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -12,6 +13,7 @@ const pluginDirectories = fs.readdirSync(path.join(sourceRoot, "plugins"), { wit
   .map((entry) => path.join(sourceRoot, "plugins", entry.name));
 
 assert.equal(marketplace.name, "agent-os");
+execFileSync("ruby", [path.join(sourceRoot, "tools", "sync-plugin-runtime"), "--check"], { stdio: "pipe" });
 
 for (const pluginRoot of pluginDirectories) {
   const manifest = JSON.parse(fs.readFileSync(path.join(pluginRoot, ".codex-plugin", "plugin.json"), "utf8"));
@@ -63,6 +65,8 @@ for (const pluginRoot of pluginDirectories) {
       assert.equal(event[0].hooks[0].command, '\"$PLUGIN_ROOT/hooks/agent-os-task-bridge\"');
     }
     assert((fs.statSync(hookRunner).mode & 0o111) !== 0, "Agent OS hook runner must be executable");
+    assert(fs.existsSync(path.join(pluginRoot, "skills", "onboard-project", "SKILL.md")));
+    assert(fs.existsSync(path.join(pluginRoot, "runtime", ".agent-os-runtime.json")));
   }
 }
 

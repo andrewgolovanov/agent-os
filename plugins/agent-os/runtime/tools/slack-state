@@ -1,0 +1,123 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "optparse"
+require_relative "../lib/agent_os/paths"
+require_relative "../lib/agent_os/slack_state"
+
+DEFAULT_ROOT = File.join(AgentOS::Paths.runtime_root, "dispatcher")
+
+def options_for(arguments)
+  values = { root: ENV["AGENT_OS_SLACK_STATE_ROOT"] || ENV["WORKSPACE_SLACK_STATE_ROOT"] || DEFAULT_ROOT }
+  parser = OptionParser.new do |opts|
+    opts.on("--root PATH") { |value| values[:root] = value }
+    yield(opts, values) if block_given?
+  end
+  parser.parse!(arguments)
+  values
+end
+
+command = ARGV.shift
+
+begin
+  case command
+  when "init"
+    options = options_for(ARGV)
+    state = AgentOS::SlackState.new(options.fetch(:root))
+    state.initialize_store
+    puts "Initialized Slack state at #{state.root}"
+  when "seen"
+    options = options_for(ARGV) do |opts, values|
+      opts.on("--channel ID") { |value| values[:channel_id] = value }
+      opts.on("--thread-ts TS") { |value| values[:thread_ts] = value }
+      opts.on("--message-ts TS") { |value| values[:message_ts] = value }
+      opts.on("--permalink URL") { |value| values[:exact_permalink] = value }
+      opts.on("--disposition VALUE") { |value| values[:disposition] = value }
+      opts.on("--project KEY") { |value| values[:project] = value }
+      opts.on("--task-id ID") { |value| values[:task_id] = value }
+      opts.on("--codex-project-id ID") { |value| values[:codex_project_id] = value }
+      opts.on("--codex-thread-id ID") { |value| values[:codex_thread_id] = value }
+      opts.on("--route-action VALUE") { |value| values[:route_action] = value }
+    end
+    event = options.transform_keys(&:to_s)
+    root = event.delete("root")
+    created = AgentOS::SlackState.new(root).record_seen(event)
+    puts(created ? "RECORDED" : "DUPLICATE")
+  when "watch"
+    options = options_for(ARGV) do |opts, values|
+      opts.on("--channel ID") { |value| values[:channel_id] = value }
+      opts.on("--thread-ts TS") { |value| values[:thread_ts] = value }
+      opts.on("--reason TEXT") { |value| values[:reason] = value }
+      opts.on("--task-id ID") { |value| values[:task_id] = value }
+      opts.on("--expires-at ISO8601") { |value| values[:expires_at] = value }
+    end
+    %i[channel_id thread_ts reason].each { |key| raise OptionParser::MissingArgument, key.to_s unless options[key] }
+    root = options.delete(:root)
+    puts JSON.pretty_generate(AgentOS::SlackState.new(root).watch(**options))
+  when "advance-watch"
+    options = options_for(ARGV) do |opts, values|
+      opts.on("--channel ID") { |value| values[:channel_id] = value }
+      opts.on("--thread-ts TS") { |value| values[:thread_ts] = value }
+      opts.on("--last-seen-message-ts TS") { |value| values[:last_seen_message_ts] = value }
+      opts.on("--complete") { values[:complete] = true }
+    end
+    %i[channel_id thread_ts last_seen_message_ts].each { |key| raise OptionParser::MissingArgument, key.to_s unless options[key] }
+    root = options.delete(:root)
+    puts JSON.pretty_generate(AgentOS::SlackState.new(root).advance_watch(**options))
+  when "close-watch"
+    options = options_for(ARGV) do |opts, values|
+      opts.on("--channel ID") { |value| values[:channel_id] = value }
+      opts.on("--thread-ts TS") { |value| values[:thread_ts] = value }
+      opts.on("--state STATE", "closed or expired") { |value| values[:state] = value }
+    end
+    %i[channel_id thread_ts].each { |key| raise OptionParser::MissingArgument, key.to_s unless options[key] }
+    root = options.delete(:root)
+    puts JSON.pretty_generate(AgentOS::SlackState.new(root).close_watch(**options))
+  when "monitor-success"
+    options = options_for(ARGV) do |opts, values|
+      opts.on("--cursor VALUE") { |value| values[:cursor] = value }
+      opts.on("--complete") { values[:complete] = true }
+    end
+    raise OptionParser::MissingArgument, "cursor" unless options[:cursor]
+    root = options.delete(:root)
+    puts JSON.pretty_generate(AgentOS::SlackState.new(root).monitor_success(**options))
+  when "monitor-failure"
+    options = options_for(ARGV) { |opts, values| opts.on("--code CODE") { |value| values[:code] = value } }
+    raise OptionParser::MissingArgument, "code" unless options[:code]
+    root = options.delete(:root)
+    puts JSON.pretty_generate(AgentOS::SlackState.new(root).monitor_failure(**options))
+  when "status"
+    options = options_for(ARGV)
+    puts JSON.pretty_generate(AgentOS::SlackState.new(options.fetch(:root)).status)
+  when "validate"
+    options = options_for(ARGV)
+    errors = AgentOS::SlackState.new(options.fetch(:root)).validate!
+    if errors.empty?
+      puts "OK: Slack runtime state is valid"
+    else
+      warn "Slack state validation failed:"
+      errors.each { |error| warn "- #{error}" }
+      exit 1
+    end
+  else
+    warn <<~USAGE
+      Usage: tools/slack-state <command> [options]
+
+      Commands:
+        init
+        seen --channel ID --thread-ts TS --message-ts TS --permalink URL --disposition VALUE
+        watch --channel ID --thread-ts TS --reason TEXT [--task-id ID]
+        advance-watch --channel ID --thread-ts TS --last-seen-message-ts TS --complete
+        close-watch --channel ID --thread-ts TS [--state closed|expired]
+        monitor-success --cursor VALUE --complete
+        monitor-failure --code CODE
+        status
+        validate
+    USAGE
+    exit(command.nil? ? 0 : 1)
+  end
+rescue ArgumentError, OptionParser::ParseError, JSON::ParserError => e
+  warn "Error: #{e.message}"
+  exit 2
+end

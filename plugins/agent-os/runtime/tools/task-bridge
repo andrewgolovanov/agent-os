@@ -1,0 +1,97 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "optparse"
+require_relative "../lib/agent_os/paths"
+require_relative "../lib/agent_os/task_bridge"
+
+DEFAULT_HOME = AgentOS::Paths.home_root
+
+def parse_options(arguments)
+  values = {}
+  parser = OptionParser.new do |opts|
+    yield opts, values
+    opts.on("--home PATH") { |value| values[:agent_os_home] = value }
+    opts.on("--board-root PATH") { |value| values[:board_root] = value }
+    opts.on("--registry PATH") { |value| values[:registry_path] = value }
+    opts.on("--config PATH") { |value| values[:config_path] = value }
+    opts.on("--runtime-root PATH") { |value| values[:runtime_root] = value }
+  end
+  parser.parse!(arguments)
+  values
+end
+
+def bridge_from(options)
+  AgentOS::TaskBridge.new(
+    agent_os_home: options.delete(:agent_os_home) || DEFAULT_HOME,
+    source_root: AgentOS::Paths.source_root,
+    board_root: options.delete(:board_root) || ENV["AGENT_OS_TASK_ROOT"] || ENV["WORKSPACE_TASK_ROOT"],
+    registry_path: options.delete(:registry_path) || ENV["AGENT_OS_PROJECTS_CONFIG"] || ENV["WORKSPACE_PROJECTS_CONFIG"],
+    config_path: options.delete(:config_path) || ENV["AGENT_OS_TASK_BRIDGE_CONFIG"] || ENV["WORKSPACE_TASK_BRIDGE_CONFIG"],
+    runtime_root: options.delete(:runtime_root) || ENV["AGENT_OS_TASK_BRIDGE_RUNTIME"] || ENV["WORKSPACE_TASK_BRIDGE_RUNTIME"]
+  )
+end
+
+begin
+  command = ARGV.shift
+  case command
+  when "claim"
+    task_id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options = parse_options(ARGV) do |opts, values|
+      opts.on("--session-id ID") { |value| values[:session_id] = value }
+      opts.on("--turn-id ID") { |value| values[:turn_id] = value }
+      opts.on("--project KEY") { |value| values[:project_key] = value }
+      opts.on("--role ROLE") { |value| values[:role] = value }
+    end
+    %i[session_id turn_id].each { |key| raise OptionParser::MissingArgument, key.to_s.tr("_", "-") unless options[key] }
+    bridge = bridge_from(options)
+    task = bridge.claim(task_id, **options)
+    puts JSON.pretty_generate(task)
+  when "checkpoint"
+    task_id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options = parse_options(ARGV) do |opts, values|
+      opts.on("--session-id ID") { |value| values[:session_id] = value }
+      opts.on("--turn-id ID") { |value| values[:turn_id] = value }
+      opts.on("--summary TEXT") { |value| values[:summary] = value }
+      opts.on("--next-action TEXT") { |value| values[:next_action] = value }
+      opts.on("--status STATUS") { |value| values[:status] = value }
+      opts.on("--waiting-on TEXT") { |value| values[:waiting_on] = value }
+    end
+    %i[session_id turn_id summary next_action].each do |key|
+      raise OptionParser::MissingArgument, key.to_s.tr("_", "-") unless options[key]
+    end
+    bridge = bridge_from(options)
+    task = bridge.checkpoint(task_id, **options)
+    puts JSON.pretty_generate(task)
+  when "context"
+    options = parse_options(ARGV) do |opts, values|
+      opts.on("--session-id ID") { |value| values[:session_id] = value }
+      opts.on("--turn-id ID") { |value| values[:turn_id] = value }
+    end
+    raise OptionParser::MissingArgument, "session-id" unless options[:session_id]
+    bridge = bridge_from(options)
+    puts bridge.context(**options)
+  when "reconcile"
+    options = parse_options(ARGV) do |opts, values|
+      opts.on("--at TIME") { |value| values[:now] = value }
+      opts.on("--session-id ID") { |value| values[:session_id] = value }
+    end
+    bridge = bridge_from(options)
+    puts JSON.pretty_generate("closed_turns" => bridge.reconcile_stale(**options))
+  else
+    warn <<~USAGE
+      Usage: tools/task-bridge <command> [options]
+
+      Commands:
+        claim TASK_ID --session-id ID --turn-id ID [--project KEY]
+        checkpoint TASK_ID --session-id ID --turn-id ID --summary TEXT --next-action TEXT [--status active|waiting|review]
+        context --session-id ID [--turn-id ID]
+        reconcile [--session-id ID] [--at ISO8601_OR_EPOCH]
+    USAGE
+    exit(command.nil? ? 0 : 1)
+  end
+rescue KeyError, ArgumentError, OptionParser::ParseError => e
+  warn "Error: #{e.message}"
+  exit 2
+end

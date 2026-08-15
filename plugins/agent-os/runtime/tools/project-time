@@ -1,0 +1,81 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "optparse"
+require_relative "../lib/agent_os/paths"
+require_relative "../lib/agent_os/project_time"
+
+DEFAULT_HOME = AgentOS::Paths.home_root
+
+def parse_options(arguments)
+  values = { agent_os_home: DEFAULT_HOME, session_roots: [] }
+  parser = OptionParser.new do |opts|
+    opts.on("--project KEY") { |value| values[:project_key] = value }
+    opts.on("--home PATH") { |value| values[:agent_os_home] = value }
+    opts.on("--registry PATH") { |value| values[:registry_path] = value }
+    opts.on("--report-root PATH") { |value| values[:report_root] = value }
+    opts.on("--sessions-root PATH") { |value| values[:session_roots] << value }
+    opts.on("--json") { values[:json] = true }
+  end
+  parser.parse!(arguments)
+  values
+end
+
+def tracker_from(options)
+  AgentOS::ProjectTime.new(
+    agent_os_home: options.fetch(:agent_os_home),
+    registry_path: options[:registry_path],
+    report_root: options[:report_root]
+  )
+end
+
+begin
+  command = ARGV.shift
+  options = parse_options(ARGV)
+  tracker = tracker_from(options)
+
+  case command
+  when "refresh"
+    raise OptionParser::MissingArgument, "project" unless options[:project_key]
+    roots = options[:session_roots].empty? ? nil : options[:session_roots]
+    report = tracker.refresh(project_key: options.fetch(:project_key), session_roots: roots)
+    if options[:json]
+      puts JSON.pretty_generate(report)
+    else
+      report_path = File.join(tracker.report_root, "#{options.fetch(:project_key)}.md")
+      puts "Updated #{report_path}"
+      puts "Tracked: #{report.dig("summary", "total_seconds")} seconds across #{report.dig("summary", "thread_count")} threads"
+    end
+  when "show"
+    raise OptionParser::MissingArgument, "project" unless options[:project_key]
+    report = tracker.report(options.fetch(:project_key))
+    if options[:json]
+      puts JSON.pretty_generate(report)
+    else
+      puts File.read(File.join(tracker.report_root, "#{options.fetch(:project_key)}.md"))
+    end
+  when "validate"
+    errors = tracker.validate(project_key: options[:project_key])
+    if errors.empty?
+      puts "OK: project time reports are valid"
+    else
+      warn "Project time validation failed:"
+      errors.each { |error| warn "- #{error}" }
+      exit 1
+    end
+  else
+    warn <<~USAGE
+      Usage: tools/project-time <command> [options]
+
+      Commands:
+        refresh --project KEY [--sessions-root PATH] [--json]
+        show --project KEY [--json]
+        validate [--project KEY]
+    USAGE
+    exit(command.nil? ? 0 : 1)
+  end
+rescue ArgumentError, KeyError, OptionParser::ParseError => e
+  warn "Error: #{e.message}"
+  exit 2
+end

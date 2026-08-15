@@ -1,0 +1,50 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require_relative "../lib/agent_os/paths"
+require_relative "../lib/agent_os/project_time"
+require_relative "../lib/agent_os/task_bridge"
+
+def track_project_time(tracker, action, payload)
+  tracker.public_send(action, payload)
+rescue StandardError => e
+  warn "codex-project-time-hook: #{e.message}"
+  nil
+end
+
+begin
+  payload = JSON.parse($stdin.read)
+  event = payload["hook_event_name"]
+  exit 0 unless %w[UserPromptSubmit PostToolUse Stop].include?(event)
+
+  agent_os_home = AgentOS::Paths.home_root
+  bridge = AgentOS::TaskBridge.new(
+    agent_os_home: agent_os_home,
+    source_root: AgentOS::Paths.source_root,
+    board_root: ENV["AGENT_OS_TASK_ROOT"] || ENV["WORKSPACE_TASK_ROOT"],
+    registry_path: ENV["AGENT_OS_PROJECTS_CONFIG"] || ENV["WORKSPACE_PROJECTS_CONFIG"],
+    config_path: ENV["AGENT_OS_TASK_BRIDGE_CONFIG"] || ENV["WORKSPACE_TASK_BRIDGE_CONFIG"],
+    runtime_root: ENV["AGENT_OS_TASK_BRIDGE_RUNTIME"] || ENV["WORKSPACE_TASK_BRIDGE_RUNTIME"]
+  )
+  project_time = AgentOS::ProjectTime.new(
+    agent_os_home: agent_os_home,
+    registry_path: ENV["AGENT_OS_PROJECTS_CONFIG"] || ENV["WORKSPACE_PROJECTS_CONFIG"],
+    report_root: ENV["AGENT_OS_PROJECT_TIME_ROOT"] || ENV["WORKSPACE_PROJECT_TIME_ROOT"]
+  )
+  result = case event
+           when "UserPromptSubmit"
+             track_project_time(project_time, :start, payload)
+             bridge.handle_prompt(payload)
+           when "PostToolUse" then bridge.mark_material(payload)
+           when "Stop"
+             bridge_result = bridge.handle_stop(payload)
+             track_project_time(project_time, :stop, payload) unless bridge_result.is_a?(Hash) && bridge_result["decision"] == "block"
+             bridge_result
+           end
+  puts JSON.generate(result) if result
+rescue StandardError => e
+  warn "codex-task-hook: #{e.message}"
+  puts JSON.generate("continue" => true) if defined?(event) && %w[PostToolUse Stop].include?(event)
+  exit 0
+end

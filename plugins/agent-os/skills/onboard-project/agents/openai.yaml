@@ -1,0 +1,4 @@
+interface:
+  display_name: "Onboard an Agent OS project"
+  short_description: "Register a repository from any local folder."
+  default_prompt: "Onboard this repository into Agent OS safely."

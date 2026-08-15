@@ -1,0 +1,10 @@
+schema_version: 1
+
+defaults:
+  enabled: true
+  auto_claim: exact_sources
+  require_checkpoint: true
+  max_candidates: 5
+  idle_timeout_minutes: 30
+
+projects: {}

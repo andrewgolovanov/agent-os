@@ -19,6 +19,8 @@ APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_BINARY="$APP_MACOS/$PRODUCT_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
 APP_ICON="$ROOT_DIR/Resources/AppIcon.icns"
+RUNTIME_SOURCE="$ROOT_DIR/../../plugins/agent-os/runtime"
+RUNTIME_DESTINATION="$APP_RESOURCES/AgentOSRuntime"
 
 case "$APP_BUNDLE" in
   "$ROOT_DIR/dist/Agent OS.app") ;;
@@ -39,6 +41,10 @@ BUILD_FRAMEWORK="$BUILD_DIR/Sparkle.framework"
 [[ -x "$BUILD_BINARY" ]] || { echo "missing app binary: $BUILD_BINARY" >&2; exit 1; }
 [[ -d "$BUILD_FRAMEWORK" ]] || { echo "missing Sparkle framework: $BUILD_FRAMEWORK" >&2; exit 1; }
 [[ -f "$APP_ICON" && ! -L "$APP_ICON" ]] || { echo "missing app icon: $APP_ICON" >&2; exit 1; }
+[[ -f "$RUNTIME_SOURCE/.agent-os-runtime.json" && -x "$RUNTIME_SOURCE/tools/task-board" ]] || {
+  echo "missing synchronized Agent OS runtime: $RUNTIME_SOURCE" >&2
+  exit 1
+}
 
 /bin/rm -rf -- "$APP_BUNDLE"
 mkdir -p "$APP_MACOS" "$APP_FRAMEWORKS" "$APP_RESOURCES"
@@ -46,6 +52,7 @@ cp "$BUILD_BINARY" "$APP_BINARY"
 cp "$APP_ICON" "$APP_RESOURCES/AppIcon.icns"
 chmod +x "$APP_BINARY"
 /usr/bin/ditto "$BUILD_FRAMEWORK" "$APP_FRAMEWORKS/Sparkle.framework"
+/usr/bin/ditto "$RUNTIME_SOURCE" "$RUNTIME_DESTINATION"
 /usr/bin/install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP_BINARY"
 
 /usr/bin/plutil -create xml1 "$INFO_PLIST"

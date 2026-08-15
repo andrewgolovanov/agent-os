@@ -1,36 +1,16 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { homedir } from "node:os";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline";
+import { ensureAgentOSRuntime } from "./bootstrap.mjs";
 
 const serverVersion = "0.2.0";
-const legacyRoot = process.env.WORKSPACE_CONSOLE_ROOT;
-const activeHomePointer = process.env.AGENT_OS_HOME_POINTER
-  || join(homedir(), ".config", "agent-os", "home");
-const activeHome = existsSync(activeHomePointer)
-  ? readFileSync(activeHomePointer, "utf8").trim()
-  : "";
-const configuredHome = process.env.AGENT_OS_HOME || legacyRoot || activeHome || join(homedir(), ".agent-os");
-
-if (!isAbsolute(configuredHome)) {
-  throw new Error("AGENT_OS_HOME must be an absolute path");
-}
-
-const homeRoot = realpathSync(configuredHome);
+const { homeRoot, sourceRoot } = ensureAgentOSRuntime();
 if (homeRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_HOME");
-const sourcePointerPath = join(homeRoot, "source-path");
-const configuredSource = process.env.AGENT_OS_SOURCE_ROOT
-  || process.env.WORKSPACE_CONSOLE_SOURCE_ROOT
-  || legacyRoot
-  || (existsSync(sourcePointerPath) ? readFileSync(sourcePointerPath, "utf8").trim() : "");
-if (!configuredSource || !isAbsolute(configuredSource)) {
-  throw new Error("AGENT_OS_SOURCE_ROOT must be absolute or AGENT_OS_HOME/source-path must exist");
-}
-const sourceRoot = realpathSync(configuredSource);
 if (sourceRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_SOURCE_ROOT");
 const taskRoot = realpathSync(join(homeRoot, "work"));
 const taskBoardBin = realpathSync(join(sourceRoot, "tools", "task-board"));
+const agentOSBin = realpathSync(join(sourceRoot, "bin", "agent-os"));
 const registryPath = realpathSync(join(homeRoot, "config", "projects.yaml"));
 
 function assertInsideRoot(root, candidate, label) {
@@ -45,6 +25,7 @@ function assertInsideRoot(root, candidate, label) {
 assertInsideRoot(homeRoot, taskRoot, "Agent OS home");
 assertInsideRoot(homeRoot, registryPath, "Agent OS home");
 assertInsideRoot(sourceRoot, taskBoardBin, "Agent OS source");
+assertInsideRoot(sourceRoot, agentOSBin, "Agent OS source");
 if (!statSync(taskRoot).isDirectory()) throw new Error("Task root is not a directory");
 if (!statSync(taskBoardBin).isFile()) throw new Error("Task Board executable is missing");
 
@@ -74,6 +55,10 @@ function run(executable, args, cwd = homeRoot) {
 
 function runTaskBoard(args) {
   return run(taskBoardBin, [...args, "--root", taskRoot]);
+}
+
+function runAgentOS(args) {
+  return run(agentOSBin, args, sourceRoot);
 }
 
 function eventCount(taskId) {
@@ -122,6 +107,23 @@ const tools = [
     description: "List canonical Task Board outcomes from the configured root.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+  },
+  {
+    name: "agent_os_onboard_project",
+    title: "Onboard an Agent OS project",
+    description: "Preview or register an existing local Git repository without moving it or changing Git state.",
+    inputSchema: {
+      type: "object",
+      required: ["repositoryPath"],
+      properties: {
+        repositoryPath: { type: "string", description: "Absolute path to a Git repository or a directory inside it." },
+        key: { type: "string", description: "Optional lowercase kebab-case project key." },
+        displayName: { type: "string", description: "Optional human-readable project name." },
+        apply: { type: "boolean", description: "False previews; true applies the reviewed registry and wrapper change." },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
   },
   {
     name: "agent_os_create_task",
@@ -191,6 +193,20 @@ function callTool(name, args = {}) {
           eventCount: eventCount(task.id),
         })),
       });
+    }
+
+    if (name === "agent_os_onboard_project") {
+      const command = [
+        "onboard-project",
+        "--source", sourceRoot,
+        "--home", homeRoot,
+        "--repository", args.repositoryPath,
+        "--json",
+      ];
+      if (args.key) command.push("--key", args.key);
+      if (args.displayName) command.push("--display-name", args.displayName);
+      if (args.apply === true) command.push("--apply");
+      return textResult(JSON.parse(runAgentOS(command)));
     }
 
     if (name === "agent_os_create_task") {

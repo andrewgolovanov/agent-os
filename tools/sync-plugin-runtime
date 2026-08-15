@@ -1,0 +1,126 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "digest"
+require "fileutils"
+require "json"
+require "optparse"
+require "tempfile"
+
+ROOT = File.expand_path("..", __dir__)
+PLUGIN_ROOT = File.join(ROOT, "plugins", "agent-os")
+RUNTIME_ROOT = File.join(PLUGIN_ROOT, "runtime")
+PLUGIN_MANIFEST = File.join(PLUGIN_ROOT, ".codex-plugin", "plugin.json")
+RUNTIME_MANIFEST = File.join(RUNTIME_ROOT, ".agent-os-runtime.json")
+
+options = { apply: false, check: false }
+OptionParser.new do |parser|
+  parser.banner = "Usage: tools/sync-plugin-runtime [--check|--apply]"
+  parser.on("--check", "Fail unless the bundled runtime matches canonical source files") { options[:check] = true }
+  parser.on("--apply", "Synchronize canonical runtime files into the Agent OS plugin") { options[:apply] = true }
+  parser.parse!(ARGV)
+end
+abort "choose either --check or --apply" if options.values_at(:check, :apply).all?
+abort "unexpected arguments: #{ARGV.join(" ")}" unless ARGV.empty?
+
+tool_files = %w[
+  tools/codex-activity-hook
+  tools/project-time
+  tools/slack-state
+  tools/task-board
+  tools/task-bridge
+]
+source_files = [
+  "LICENSE",
+  "bin/agent-os",
+  *Dir.glob(File.join(ROOT, "lib", "agent_os", "*.rb")).map { |path| path.delete_prefix("#{ROOT}/") },
+  *Dir.glob(File.join(ROOT, "config", "examples", "*"), File::FNM_DOTMATCH)
+    .select { |path| File.file?(path) }
+    .map { |path| path.delete_prefix("#{ROOT}/") },
+  *Dir.glob(File.join(ROOT, "templates", "project", "**", "*"), File::FNM_DOTMATCH)
+    .select { |path| File.file?(path) }
+    .map { |path| path.delete_prefix("#{ROOT}/") },
+  *tool_files
+].uniq.sort
+
+plugin = JSON.parse(File.read(PLUGIN_MANIFEST))
+plugin_version = plugin.fetch("version")
+runtime_version = plugin_version.split("+", 2).first
+files = source_files.to_h do |relative|
+  source = File.join(ROOT, relative)
+  abort "missing runtime source file: #{relative}" unless File.file?(source) && !File.symlink?(source)
+  [
+    relative,
+    {
+      "sha256" => Digest::SHA256.file(source).hexdigest,
+      "executable" => (File.stat(source).mode & 0o111).positive?
+    }
+  ]
+end
+manifest = {
+  "schema_version" => 1,
+  "version" => runtime_version,
+  "plugin_version" => plugin_version,
+  "files" => files
+}
+manifest_json = "#{JSON.pretty_generate(manifest)}\n"
+
+if options[:apply]
+  source_files.each do |relative|
+    source = File.join(ROOT, relative)
+    destination = File.join(RUNTIME_ROOT, relative)
+    FileUtils.mkdir_p(File.dirname(destination))
+    temporary = Tempfile.new([".#{File.basename(destination)}", ".tmp"], File.dirname(destination))
+    begin
+      temporary.binmode
+      temporary.write(File.binread(source))
+      temporary.flush
+      temporary.fsync
+      temporary.chmod(File.stat(source).mode & 0o777)
+      temporary.close
+      File.rename(temporary.path, destination)
+    ensure
+      temporary.close! rescue nil
+    end
+  end
+  FileUtils.mkdir_p(RUNTIME_ROOT)
+  temporary = Tempfile.new([".agent-os-runtime", ".tmp"], RUNTIME_ROOT)
+  begin
+    temporary.chmod(0o644)
+    temporary.write(manifest_json)
+    temporary.flush
+    temporary.fsync
+    temporary.close
+    File.rename(temporary.path, RUNTIME_MANIFEST)
+  ensure
+    temporary.close! rescue nil
+  end
+  puts "Synchronized #{source_files.length} files into #{RUNTIME_ROOT} (runtime #{runtime_version})."
+  exit 0
+end
+
+errors = []
+source_files.each do |relative|
+  source = File.join(ROOT, relative)
+  bundled = File.join(RUNTIME_ROOT, relative)
+  if !File.file?(bundled)
+    errors << "missing bundled file: #{relative}"
+  elsif File.binread(source) != File.binread(bundled)
+    errors << "stale bundled file: #{relative}"
+  elsif (File.stat(source).mode & 0o111).positive? != (File.stat(bundled).mode & 0o111).positive?
+    errors << "executable mode mismatch: #{relative}"
+  end
+end
+if !File.file?(RUNTIME_MANIFEST)
+  errors << "missing runtime manifest"
+elsif File.read(RUNTIME_MANIFEST) != manifest_json
+  errors << "stale runtime manifest"
+end
+
+if errors.empty?
+  puts "OK: Agent OS plugin runtime matches #{source_files.length} canonical files."
+else
+  warn "Agent OS plugin runtime is stale:"
+  errors.each { |error| warn "- #{error}" }
+  exit 1
+end

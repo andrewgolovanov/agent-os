@@ -91,6 +91,41 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(configuration.homeURL.path, "/tmp/legacy-agent-os")
     }
 
+    func testBundledRuntimeBootstrapsAHomeWithoutSourceCheckout() throws {
+        let temporary = FileManager.default.temporaryDirectory
+            .appendingPathComponent("agent-os-app-bootstrap-\(UUID().uuidString)", isDirectory: true)
+        let privateHome = temporary.appendingPathComponent("private-home", isDirectory: true)
+        try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: temporary) }
+
+        let appRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let runtime = appRoot
+            .appendingPathComponent("..", isDirectory: true)
+            .appendingPathComponent("..", isDirectory: true)
+            .appendingPathComponent("plugins/agent-os/runtime", isDirectory: true)
+            .standardizedFileURL
+        let configuration = AgentOSRuntimeBootstrap.prepare(
+            environment: [
+                "HOME": temporary.path,
+                "AGENT_OS_HOME": privateHome.path,
+            ],
+            bundledRuntimeURL: runtime,
+            userHomeURL: temporary
+        )
+
+        XCTAssertEqual(configuration.homeURL.path, privateHome.path)
+        XCTAssertEqual(configuration.sourceURL.path, runtime.resolvingSymlinksInPath().path)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: privateHome.appendingPathComponent("config/projects.yaml").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: privateHome.appendingPathComponent("work/board.json").path))
+        XCTAssertEqual(
+            try String(contentsOf: privateHome.appendingPathComponent("source-path"), encoding: .utf8),
+            "\(runtime.resolvingSymlinksInPath().path)\n"
+        )
+    }
+
     func testProcessRunnerUsesArgumentVector() async throws {
         let output = try await ProcessRunner.run(
             executable: URL(fileURLWithPath: "/usr/bin/printf"),

@@ -64,6 +64,57 @@ class AgentOSCLITest < Minitest::Test
     assert_equal @home, payload.fetch("home")
   end
 
+  def test_bootstrap_initializes_private_home_and_active_pointer
+    environment = { "HOME" => @temporary, "AGENT_OS_HOME" => nil }
+    stdout, stderr, status = Open3.capture3(
+      environment,
+      @executable, "bootstrap", "--source", @source, "--home", @home, "--apply", "--json"
+    )
+
+    assert status.success?, stderr
+    payload = JSON.parse(stdout)
+    assert_equal true, payload.fetch("applied")
+    assert_equal @source, payload.fetch("source")
+    assert File.file?(File.join(@home, "config", "projects.yaml"))
+    assert File.file?(File.join(@home, "work", "board.json"))
+    assert_equal "#{@source}\n", File.read(File.join(@home, "source-path"))
+    assert_equal "#{@home}\n", File.read(File.join(@temporary, ".config", "agent-os", "home"))
+  end
+
+  def test_bootstrap_upgrades_packaged_runtime_but_preserves_development_checkout
+    runtime_one = fake_runtime("0.1.0")
+    runtime_two = fake_runtime("0.2.0")
+    packaged_home = File.join(@temporary, "packaged-home")
+    environment = { "HOME" => @temporary, "AGENT_OS_HOME" => nil }
+
+    _stdout, stderr, status = Open3.capture3(
+      environment,
+      @executable, "bootstrap", "--source", runtime_one, "--home", packaged_home, "--apply", "--json"
+    )
+    assert status.success?, stderr
+    assert_equal "#{runtime_one}\n", File.read(File.join(packaged_home, "source-path"))
+
+    _stdout, stderr, status = Open3.capture3(
+      environment,
+      @executable, "bootstrap", "--source", runtime_two, "--home", packaged_home, "--apply", "--json"
+    )
+    assert status.success?, stderr
+    assert_equal "#{runtime_two}\n", File.read(File.join(packaged_home, "source-path"))
+
+    development_home = File.join(@temporary, "development-home")
+    _stdout, stderr, status = Open3.capture3(
+      environment,
+      @executable, "bootstrap", "--source", @source, "--home", development_home, "--apply", "--json"
+    )
+    assert status.success?, stderr
+    _stdout, stderr, status = Open3.capture3(
+      environment,
+      @executable, "bootstrap", "--source", runtime_two, "--home", development_home, "--apply", "--json"
+    )
+    assert status.success?, stderr
+    assert_equal "#{@source}\n", File.read(File.join(development_home, "source-path"))
+  end
+
   def test_slack_monitor_setup_is_preview_first_idempotent_and_conflict_safe
     _, stderr, status = Open3.capture3(
       { "TZ" => "Europe/Madrid" },
@@ -283,7 +334,38 @@ class AgentOSCLITest < Minitest::Test
     assert_includes stderr, "invalid Git remote name"
   end
 
+  def test_update_recognizes_a_packaged_runtime_as_app_managed
+    runtime = fake_runtime("0.2.0")
+
+    stdout, stderr, status = Open3.capture3(
+      @executable, "update", "--source", runtime, "--no-plugin", "--json"
+    )
+
+    assert status.success?, stderr
+    payload = JSON.parse(stdout)
+    assert_equal false, payload.fetch("update_available")
+    assert_equal true, payload.dig("source", "configured")
+    assert_equal "0.2.0", payload.dig("source", "current_version")
+    assert_equal "managed-by-app", payload.dig("source", "action")
+  end
+
   private
+
+  def fake_runtime(version)
+    root = File.join(@temporary, "runtime-#{version}")
+    FileUtils.mkdir_p(File.join(root, "config", "examples"))
+    FileUtils.mkdir_p(File.join(root, "tools"))
+    %w[projects.yaml monitors.yaml task-bridge.yaml].each do |name|
+      FileUtils.cp(File.join(@source, "config", "examples", name), File.join(root, "config", "examples", name))
+    end
+    File.write(File.join(root, "tools", "task-board"), "#!/bin/sh\nexit 0\n")
+    File.chmod(0o755, File.join(root, "tools", "task-board"))
+    File.write(
+      File.join(root, ".agent-os-runtime.json"),
+      JSON.generate({ schema_version: 1, version: version, plugin_version: version, files: {} })
+    )
+    root
+  end
 
   def git(directory, *arguments)
     _stdout, stderr, status = Open3.capture3("git", *arguments, chdir: directory)

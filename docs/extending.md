@@ -51,6 +51,23 @@ Repo-local skills хранятся в `.agents/skills/<skill-name>/`. Кажды
 на эту bundled-копию. `node test/plugin_packages_test.mjs` проверяет, что обе
 копии побайтово совпадают с канонической иконкой приложения.
 
+## Bundled runtime
+
+`plugins/agent-os/runtime` — generated package payload, а не второй источник
+истины. Канонические runtime-файлы перечислены узким allowlist в
+`tools/sync-plugin-runtime`. После изменения любого из них:
+
+1. обновите plugin cachebuster только системным helper из `plugin-creator`;
+2. выполните `tools/sync-plugin-runtime --apply`;
+3. выполните `tools/sync-plugin-runtime --check`;
+4. запустите plugin package tests и Swift package/release tests.
+
+Native packager копирует этот же payload в
+`Contents/Resources/AgentOSRuntime`. Не добавляйте в runtime docs, tests,
+private state, Git metadata или project source. Новый bundled-файл должен быть
+нужен для clean-home bootstrap, onboarding или выполнения канонических MCP/app
+operations и обязан иметь изолированный тест.
+
 ## Новый tool
 
 Tool должен иметь:

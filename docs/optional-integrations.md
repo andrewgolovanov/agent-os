@@ -13,11 +13,12 @@ The local CLI never claims it can inspect or change Codex Scheduled or a connect
 
 ## Quick setup
 
-Install the plugin, review its hooks, and start a fresh Agent OS task:
+Install the public plugin snapshot, review its hooks, and start a fresh Agent OS
+task:
 
 ```bash
-./bin/agent-os install-plugin
-./bin/agent-os install-plugin --apply
+codex plugin marketplace add andrewgolovanov/agent-os --ref CURRENT_RELEASE_TAG
+codex plugin add agent-os@agent-os
 ```
 
 In Codex, open `/hooks`, review the Agent OS command hooks, and trust them only if their command resolves to the installed `agent-os@agent-os` plugin. Start a fresh task after that review; an already running task cannot load a newly installed or changed hook bundle.
@@ -54,12 +55,13 @@ Before scheduling, use a normal Codex task to verify one complete read-only pass
 Use these canonical values:
 
 - name: `Agent OS Slack Monitor`;
-- working directory: the Agent OS source checkout;
+- working directory: any registered project path available to the local Codex
+  environment;
 - schedule: the timezone, days, and local times in private `config/monitors.yaml`;
 - prompt: the block below.
 
 ```text
-Run the Agent OS Slack monitor once. Read the repository AGENTS.md, the active private config/monitors.yaml entry named agent-os-slack-monitor, and docs/slack-monitor.md before acting. Require that monitor to be enabled. Use only the connected Slack integration and only read-only Slack operations. Resolve the current Slack user each run; scan the configured bounded mentions, direct messages, group direct messages, and active watched roots; attribute only through the registered project configuration. Store only stable identifiers, cursors, dispositions, and local Task Board changes through tools/slack-state and tools/task-board; never store raw message text. Do not send Slack messages or reactions, write external tasks, edit repositories, run Git mutations, or deploy. Do not advance any cursor after a partial read. Return DONT_NOTIFY when nothing actionable changed; otherwise return the compact notification required by the runbook.
+Run the Agent OS Slack monitor once. Use the installed Agent OS plugin and its active private home. Read the private config/monitors.yaml entry named agent-os-slack-monitor and the installed setup guidance before acting. Require that monitor to be enabled. Use only the connected Slack integration and only read-only Slack operations. Resolve the current Slack user each run; scan the configured bounded mentions, direct messages, group direct messages, and active watched roots; attribute only through the registered project configuration. Store only stable identifiers, cursors, dispositions, and local Task Board changes through the installed Agent OS runtime; never store raw message text. Do not send Slack messages or reactions, write external tasks, edit repositories, run Git mutations, or deploy. Do not advance any cursor after a partial read. Return DONT_NOTIFY when nothing actionable changed; otherwise return the compact notification required by the runbook.
 ```
 
 Codex Scheduled is the authority for whether this automation exists and is enabled. Inspect an existing task with the exact name before creating another one. If the current Codex surface cannot manage Scheduled tasks, create it from Codex desktop or web rather than inventing a CLI fallback. A local-project schedule runs only while its required desktop environment and machine are available, so verify the first two executions in the Scheduled task history.
@@ -71,6 +73,11 @@ Codex Scheduled is the authority for whether this automation exists and is enabl
 ./tools/slack-state validate
 ```
 
-`doctor --integrations` distinguishes core readiness from optional evidence. It can verify local monitor config and the source plugin's bundled hook files. It cannot prove that an installed snapshot is current, Slack authentication, hook trust in the current task, or the enabled state of a Codex Scheduled task. Historical Task Bridge runtime files are not proof that the currently open task loaded the latest hooks.
+`doctor --integrations` distinguishes core readiness from optional evidence. It
+can verify local monitor config and the selected runtime's bundled hook files.
+It cannot prove that an installed snapshot is current, Slack authentication,
+hook trust in the current task, or the enabled state of a Codex Scheduled task.
+Historical Task Bridge runtime files are not proof that the currently open task
+loaded the latest hooks.
 
 On repeated Slack failure, keep the last successful cursor, fix the connected integration, and run one manual pass before re-enabling the schedule. To remove the integration, disable or delete `Agent OS Slack Monitor` in Codex Scheduled and remove or set `enabled: false` on only the private `agent-os-slack-monitor` entry. Disable the Agent OS plugin as well only if Task Bridge hooks and MCP task operations are no longer wanted.

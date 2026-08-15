@@ -23,40 +23,31 @@ transcripts or introducing another hosted task database.
 
 ## Installation
 
-Requirements: macOS or Linux, Ruby, and Node.js. The first downloadable macOS
-app release supports Apple Silicon (`arm64`) on macOS 14 or newer; an Intel or
-universal binary is not included yet. Swift is needed only to build the optional
-macOS app from source, and the Codex CLI is needed only for Codex handoff
-features.
+Requirements: Codex desktop or CLI with plugin support, Ruby, and Node.js. The
+downloadable macOS app supports Apple Silicon (`arm64`) on macOS 14 or newer;
+an Intel or universal binary is not included yet.
 
 ```bash
-git clone https://github.com/andrewgolovanov/agent-os.git
-cd agent-os
-./bin/agent-os init
-./bin/agent-os init --apply
-./bin/agent-os activate --apply
-./bin/agent-os doctor
-./bin/agent-os install-plugin
-./bin/agent-os install-plugin --apply
-./bin/agent-os update
-./bin/agent-os validate
+codex plugin marketplace add andrewgolovanov/agent-os --ref CURRENT_RELEASE_TAG
+codex plugin add agent-os@agent-os
 ```
 
-`init` and `activate` are preview-only until `--apply` is supplied. Initialization creates private state in
-`~/.agent-os` by default and never overwrites existing configuration. Choose a
-different private home with `--home /absolute/path` or `AGENT_OS_HOME`;
-`activate` records that selection for app and plugin processes.
+Install the matching Agent OS app from the same GitHub Release. The first
+component you open bootstraps the bundled runtime and private state in
+`~/.agent-os`; there is no repository to clone or source path to configure.
+Codex manages its plugin snapshot. Start a fresh Codex task after installing or
+updating the plugin so the MCP tools, skills, and hooks are loaded.
 
-After initialization, use the `onboard-project` skill to register an existing
-repository. Create a durable outcome with:
+Open any existing Git repository from any folder in Codex and ask:
 
-```bash
-./tools/task-board create \
-  --title "Ship the verified change" \
-  --project PROJECT_KEY \
-  --goal "Describe the stable result" \
-  --next-action "Describe one concrete next step"
+```text
+Onboard this repository into Agent OS safely.
 ```
+
+The plugin previews the registry and wrapper changes before applying them. It
+does not move, copy, rename, commit, or otherwise modify the project repository.
+See the complete [installation guide](docs/installation.md), including the
+macOS Gatekeeper flow and development-source setup.
 
 ## Source and private state
 
@@ -74,46 +65,37 @@ agent-os/
 └── test/                       isolated and clean-home verification
 ```
 
-Each user's private home owns `config/*.yaml`, `work/`, `.runtime/`, and local
-project checkouts. Those paths are ignored when the checkout itself is also the
-active home, so real tasks, provider identifiers, and repository paths cannot
-enter a release candidate accidentally.
+Each user's private home owns `config/*.yaml`, `work/`, `.runtime/`, generated
+project wrappers, and a pointer to the selected packaged runtime. Registered
+project repositories remain wherever the user already keeps them; Agent OS
+stores their paths but does not copy their code. Private tasks, provider
+identifiers, and repository paths never belong in a release candidate.
 
 ## Codex plugin
 
-`install-plugin` previews its changes first. With `--apply`, it registers this
-checkout as the `agent-os` marketplace and installs `agent-os@agent-os`. Start a
-fresh Codex task afterward so Codex loads the new MCP tools and skill.
+The installed plugin contains its own minimal Agent OS runtime. On first use it
+creates or repairs the private home, then exposes Task Board and project
+onboarding through MCP. No manually managed Agent OS checkout is required.
 
 The plugin also contains the Task Bridge hooks and the `setup-agent-os` skill.
 Review the hook commands with `/hooks`, start a fresh task, and ask `Set up
 optional Agent OS integrations safely.` Slack and recurring monitoring remain
 separate opt-ins; see [Optional integrations](docs/optional-integrations.md).
 
-The local Slack monitor configuration is preview-first:
+The local Slack monitor configuration remains preview-first. Ask the plugin to
+set up optional integrations; it resolves the packaged runtime and shows every
+local mutation before applying it.
 
-```bash
-./bin/agent-os configure-slack-monitor --timezone Europe/Madrid
-./bin/agent-os configure-slack-monitor --timezone Europe/Madrid --apply
-./bin/agent-os doctor --integrations
-```
-
-`update` is also preview-first. `update --apply` accepts only a clean
-fast-forward to the newest `vN.N.N` release tag, preserves the private home, and
-refreshes the installed plugin when its manifest version changes. Dirty or
-diverged checkouts are never reset.
+Plugin updates come from versioned marketplace snapshots. The native app uses
+signed Sparkle release archives. A development checkout keeps the older
+preview-first Git update path and is never overwritten when the packaged
+runtime bootstraps.
 
 ## Optional macOS app
 
-```bash
-cd apps/agent-os
-AGENT_OS_SOURCE_ROOT=/absolute/path/to/agent-os \
-AGENT_OS_HOME="$HOME/.agent-os" \
-./script/build_and_run.sh --verify
-```
-
-The app owns no database. It reads the private registry and invokes the source
-checkout's `tools/task-board` executable with argument arrays.
+The app owns no database. Its bundle contains the same minimal runtime as the
+plugin, initializes `~/.agent-os` when needed, reads the private registry, and
+invokes the packaged `tools/task-board` executable with argument arrays.
 
 For a release artifact, run `./script/package_release.sh`. It creates an ad-hoc
 signed zip, SHA-256 checksum, and Sparkle appcast without Developer ID or
@@ -144,6 +126,19 @@ See [installation](docs/installation.md), [the documentation map](docs/README.md
 and [the security policy](SECURITY.md).
 
 ## Contributing
+
+Contributors and local developers still work from a source checkout:
+
+```bash
+git clone https://github.com/andrewgolovanov/agent-os.git
+cd agent-os
+./bin/agent-os init --apply
+./bin/agent-os activate --apply
+./bin/agent-os doctor
+```
+
+An explicitly selected valid development checkout takes precedence over the
+packaged runtime and is preserved by app/plugin bootstrap.
 
 Documentation is part of a complete change. Update the nearest `AGENTS.md` when
 agent workflows, commands, paths, validation, or ownership rules change; update

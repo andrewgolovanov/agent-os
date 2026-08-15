@@ -4,6 +4,24 @@ This roadmap contains only the next verifiable product outcomes.
 
 ## Now
 
+### Publish and verify the no-checkout packaged setup
+
+The next tagged release packages the minimal runtime in both the Codex plugin
+and macOS app. Complete the clean-install proof using only those two public
+artifacts: launch either component first, onboard a repository located outside
+any Agent OS directory, create and resume one durable outcome, then launch the
+other component and confirm it sees the same private state.
+
+Done when:
+
+- the versioned Git marketplace installation requires no manual clone;
+- the app initializes the same clean private home when installed first;
+- onboarding previews and registers an arbitrary existing repository without
+  changing its Git status, HEAD, remotes, or filesystem location;
+- a fresh Codex task loads the packaged runtime, onboarding skill, MCP tools,
+  and Task Bridge hooks;
+- the packaged app reads the same project and task immediately afterward.
+
 ### Validate the first public release with a second Mac
 
 Stage 1 source/home separation, monorepo consolidation, clean initialization,
@@ -69,12 +87,12 @@ Done when:
 
 ### Prove setup with a second user
 
-Provide only the repository and installation guide. Capture every undocumented
-assumption, then repair the installer/docs without copying that user's private
-state into the source tree. If that user opts into Slack monitoring, verify the
-documented sequence end to end: minimal connected-Slack read, reviewed `/hooks`,
-fresh-task Task Bridge pickup, one manual bounded monitor pass, and the first two
-Codex Scheduled executions.
+Provide only the app release, versioned plugin command, and installation guide.
+Capture every undocumented assumption, then repair the packages/docs without
+copying that user's private state into the source tree. If that user opts into
+Slack monitoring, verify the documented sequence end to end: minimal connected-
+Slack read, reviewed `/hooks`, fresh-task Task Bridge pickup, one manual bounded
+monitor pass, and the first two Codex Scheduled executions.
 
 ### Complete uninstall contract
 

@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "version": "0.2.0",
+  "plugin_version": "0.2.0+codex.20260815233351",
+  "files": {
+    "LICENSE": {
+      "sha256": "56fdec8396b0f0564c3f9795b48fd025ce8bb85535ee9c1abfc0ce9ac4a27f6c",
+      "executable": false
+    },
+    "bin/agent-os": {
+      "sha256": "5a5b390bb1a4935dd2b410650a4b90dc6ceed02c0b96273c045523a024fe8723",
+      "executable": true
+    },
+    "config/examples/monitors.yaml": {
+      "sha256": "8e85ddb43af56083428df1ff45007ad7f9c9f17d62c488210a77d69b7e2fab4f",
+      "executable": false
+    },
+    "config/examples/projects.yaml": {
+      "sha256": "ce059b4be3a049e4816e48e2fd0b76b0f499e2970ee9556bcc9e6cd877352447",
+      "executable": false
+    },
+    "config/examples/slack-monitor.yaml": {
+      "sha256": "cdf465cff55852a961463f7d1ac2144e6139ad922913c81c6c276020a1dc4b0c",
+      "executable": false
+    },
+    "config/examples/task-bridge.yaml": {
+      "sha256": "42292331a5d4ff7fa5fdb50b189a29ee7faa60b54c4429ae903f47c5ce34f92e",
+      "executable": false
+    },
+    "lib/agent_os/paths.rb": {
+      "sha256": "441e0aafde60e1fee46be7354d2524f1477980c1d1d00029117d887688ef1013",
+      "executable": false
+    },
+    "lib/agent_os/project_registry.rb": {
+      "sha256": "bac30b08a6785ec622bfb775c9478c054f45587092df568a9a6f0cd983a9ea78",
+      "executable": false
+    },
+    "lib/agent_os/project_time.rb": {
+      "sha256": "007b3b2bd41e22d74194780c1720e9c66c2e67a7bffde34d266d0419f792fbc8",
+      "executable": false
+    },
+    "lib/agent_os/slack_monitor_setup.rb": {
+      "sha256": "604e7495d49fc05bf71f6cc12649872dc69d723af2e47c186e24e4e097f7f1dc",
+      "executable": false
+    },
+    "lib/agent_os/slack_state.rb": {
+      "sha256": "2d5c186a9a087ef8e2ecb4012475f920da78964eb2260ac9c4ade698952dc5ea",
+      "executable": false
+    },
+    "lib/agent_os/task_board.rb": {
+      "sha256": "df8e6ec2a1c197526a8d5b7a779cad2fa53d0b4ee5cbf85bf53804b51bc00c79",
+      "executable": false
+    },
+    "lib/agent_os/task_bridge.rb": {
+      "sha256": "f038c9658a9ba9ff35aa70d8d369233726e21f40db7dfd53f64dec9f70e50a96",
+      "executable": false
+    },
+    "lib/agent_os/updater.rb": {
+      "sha256": "48fb39eacdfffaf7bdaef9df85e33f0f6a214e0e2ee460c80c2a7c1c8897c603",
+      "executable": false
+    },
+    "templates/project/AGENTS.md": {
+      "sha256": "e669cc5f5511f7ddef32ce58b59d17d8a2bfac0276b39c2e40eedf5438827615",
+      "executable": false
+    },
+    "templates/project/README.md": {
+      "sha256": "6438f7c37ea4f836852d338b3cd595f20152bf358cd3f687d7315efffe7aedbb",
+      "executable": false
+    },
+    "templates/project/docs/PROJECT.md": {
+      "sha256": "993c47602cfb0fcd8d9e64032d013a9f2132aae223f0e6e3577e8abbf0fbfce0",
+      "executable": false
+    },
+    "templates/project/project.yaml": {
+      "sha256": "1351c8136fbd38f7f0b0f3e870ad5942b2ab45c1c60cb485472853df3e8fe292",
+      "executable": false
+    },
+    "templates/project/repos/README.md": {
+      "sha256": "951cadef7903a96499fec8234112c0fb4441d7ee34b909f3c0cef08ad8c3f45f",
+      "executable": false
+    },
+    "templates/project/tools/README.md": {
+      "sha256": "e9a423f24275af1bc0f7d3b4e66e658ef8a152e4d57e41cf0475c4dfd78a8c4f",
+      "executable": false
+    },
+    "tools/codex-activity-hook": {
+      "sha256": "33db37c33bcd80c90b83876f117a5b9a3ea244da8c685e00684ae98ae299756a",
+      "executable": true
+    },
+    "tools/project-time": {
+      "sha256": "0b17697e0310b0b3f5c4aabbc1f09677a369554fe18b090f2425ac977b27b1bc",
+      "executable": true
+    },
+    "tools/slack-state": {
+      "sha256": "2694c086ab555c6835a2ebaa4eb1b83fdc7484bdf5b471463bcdcfe767590bca",
+      "executable": true
+    },
+    "tools/task-board": {
+      "sha256": "652ad9525646727e84e6ae2bdf87d5f85fc3c53bda5a977aabe272da483e14e2",
+      "executable": true
+    },
+    "tools/task-bridge": {
+      "sha256": "96dfc19534b40fa18977249a5831a36ae75279406e4226594dff6cbf153fbd89",
+      "executable": true
+    }
+  }
+}

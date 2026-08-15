@@ -7,18 +7,18 @@ Agent OS должен снижать стоимость переключения
 ## Слои
 
 ```text
-Human entry point      source/README.md
-Agent routing          source/AGENTS.md
+Human entry point      README.md or installed app/plugin
+Agent routing          packaged skills + registered project AGENTS.md
 Structured facts       AGENT_OS_HOME/config/projects.yaml
 Durable documentation docs/
 Project context        AGENT_OS_HOME/projects/<key>/
-Reusable workflows     .agents/skills/<skill>/
-Deterministic helpers  tools/ + lib/agent_os/
+Reusable workflows     installed plugin skills or .agents/skills/<skill>/
+Deterministic helpers  selected packaged/development runtime
 Durable task state     AGENT_OS_HOME/work/items/<task-id>/
 Project time reports   AGENT_OS_HOME/work/reports/project-time/
 Ephemeral cursors      AGENT_OS_HOME/.runtime/dispatcher/
 Ephemeral task hooks   AGENT_OS_HOME/.runtime/task-bridge/
-Optional operator UI   source/apps/agent-os/
+Optional operator UI   installed Agent OS.app
 ```
 
 Каждый слой имеет одну функцию. Корневой `AGENTS.md` маршрутизирует, но не дублирует архитектуру. Skills описывают исполняемые процессы, но не становятся энциклопедиями. Private `work/` хранит current snapshot задачи, а не полную историю чата.
@@ -39,7 +39,8 @@ Optional operator UI   source/apps/agent-os/
 | Exact Slack events, watched roots and cursors | `AGENT_OS_HOME/.runtime/dispatcher/` |
 | Exact Codex hook turn/candidate/checkpoint state | `AGENT_OS_HOME/.runtime/task-bridge/` |
 | Slack connection and Codex recurring execution | connected Slack integration and Codex Scheduled |
-| Reusable Task Bridge event commands | installed `plugins/agent-os/hooks/hooks.json` bundle |
+| Selected executable runtime | `AGENT_OS_HOME/source-path`; packaged runtime by default, explicit valid development checkout when selected |
+| Reusable Task Bridge event commands | installed Agent OS plugin hook bundle |
 | Повторяемая процедура | `.agents/skills/<skill>/SKILL.md` |
 | Код проекта, Git history and CI | соответствующий project repository |
 | Issues, PR, provider state and conversations | соответствующая внешняя система |
@@ -47,6 +48,11 @@ Optional operator UI   source/apps/agent-os/
 ## Project layouts
 
 `AGENT_OS_HOME/projects/<key>/` имеет один из двух layout, явно записанный в registry.
+
+Project onboarding принимает существующий абсолютный Git root из любой папки.
+Agent OS хранит routing path и при необходимости создаёт приватный wrapper, но
+не перемещает и не копирует repository. Каталог `projects/` — приватное место
+для Agent OS wrappers, а не обязательный родительский каталог исходного кода.
 
 ### Wrapper
 
@@ -97,6 +103,12 @@ Optional integration setup не смешивает владельцев: Agent O
 Slack integration владеет provider access, а Codex Scheduled владеет recurring
 execution. Setup skill оркестрирует эти шаги, но не сохраняет credentials и не
 эмулирует отсутствующий product API.
+
+Packaged bootstrap также не смешивает владельцев. Версионированные plugin/app
+bundles владеют только read-only runtime payload, `AGENT_OS_HOME` владеет
+mutable state и выбранным runtime pointer, а project repositories остаются
+самостоятельными Git roots. Первый запущенный компонент выполняет idempotent
+bootstrap; второй использует тот же private home.
 
 Agent OS for macOS реализуется как replaceable presentation/action layer над этими владельцами данных. Native app не получает собственную task database и выполняет mutations только через deterministic Agent OS tools. Agent-facing integration оформлена как installed skills + root-confined MCP. Native app создаёт и именует idle Codex task через stable App Server `stdio`, записывает exact membership, копирует подготовленный prompt и открывает публичный `codex://threads/<id>` handoff; старт turn остаётся в desktop-клиенте, чтобы два App Server client не конкурировали за один task. App/plugin source живёт в monorepo, а mutable routing и durable context — только в private home.
 

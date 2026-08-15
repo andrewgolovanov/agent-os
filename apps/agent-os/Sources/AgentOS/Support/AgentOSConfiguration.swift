@@ -4,13 +4,16 @@ struct AgentOSConfiguration: Sendable {
     let sourceURL: URL
     let homeURL: URL
 
-    static func current(environment: [String: String] = ProcessInfo.processInfo.environment) -> AgentOSConfiguration {
-        let defaultHome = FileManager.default.homeDirectoryForCurrentUser
+    static func current(
+        environment: [String: String] = ProcessInfo.processInfo.environment,
+        userHomeURL: URL = FileManager.default.homeDirectoryForCurrentUser
+    ) -> AgentOSConfiguration {
+        let defaultHome = userHomeURL
             .appendingPathComponent(".agent-os", isDirectory: true)
         let legacyRoot = absoluteURL(environment["WORKSPACE_CONSOLE_ROOT"])
         let home = absoluteURL(environment["AGENT_OS_HOME"])
             ?? legacyRoot
-            ?? activeHome()
+            ?? activeHome(in: userHomeURL)
             ?? defaultHome
 
         if let source = absoluteURL(environment["AGENT_OS_SOURCE_ROOT"])
@@ -35,8 +38,8 @@ struct AgentOSConfiguration: Sendable {
         return absoluteURL(content.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
-    private static func activeHome() -> URL? {
-        let pointer = FileManager.default.homeDirectoryForCurrentUser
+    private static func activeHome(in userHomeURL: URL) -> URL? {
+        let pointer = userHomeURL
             .appendingPathComponent(".config", isDirectory: true)
             .appendingPathComponent("agent-os", isDirectory: true)
             .appendingPathComponent("home", isDirectory: false)

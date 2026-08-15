@@ -2,6 +2,19 @@
 
 ## 2026-08-15
 
+- Removed the manual repository checkout from the packaged installation path:
+  the Codex plugin now contains an allowlisted minimal Agent OS runtime, the
+  macOS app embeds the same generated payload, and either component can
+  initialize the shared private home on first use.
+- Added preview-first MCP and CLI onboarding for an existing Git repository in
+  any folder, preserving its path, Git state, remotes, and files while writing
+  only private Agent OS registry and wrapper metadata.
+- Added runtime source/package hashes, executable-mode checks, isolated
+  clean-home bootstrap coverage, app-bundle packaging checks, and documented
+  the new app-plus-plugin installation and update boundary.
+- Made the app's Updates screen recognize the embedded runtime as app-managed,
+  removing the obsolete Git-checkout requirement from packaged installations
+  while retaining preview-first tag updates for development checkouts.
 - Clarified the public positioning as Agent OS for Codex: the repository
   description and topics now cover the Codex task board, MCP plugin, native
   macOS app, local-first workflow, and AI-agent use cases, while the README

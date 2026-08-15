@@ -1,0 +1,66 @@
+schema_version: 1
+
+# This opt-in template is merged into the private monitors.yaml only by
+# `agent-os configure-slack-monitor --apply`. It is never enabled by init.
+monitors:
+  agent-os-slack-monitor:
+    scope: agent_os
+    enabled: true
+    schedule:
+      timezone: __TIMEZONE__
+      days:
+        - MO
+        - TU
+        - WE
+        - TH
+        - FR
+      local_times:
+        - "10:00"
+        - "14:00"
+        - "18:00"
+    runbook: __AGENT_OS_SOURCE__/docs/slack-monitor.md
+    source_registry: __AGENT_OS_HOME__/config/projects.yaml
+    task_board_root: __AGENT_OS_HOME__/work
+    runtime_state_root: __AGENT_OS_HOME__/.runtime/dispatcher
+    scan:
+      overlap_minutes: 15
+      max_open_task_reconciliation: 20
+      max_watched_threads: 30
+      max_results_per_search_page: 20
+      max_pages_per_source: 5
+    slack_sources:
+      resolve_current_user_each_run: true
+      direct_mentions:
+        enabled: true
+        channel_types:
+          - public_channel
+          - private_channel
+      direct_messages:
+        enabled: true
+      group_direct_messages:
+        enabled: true
+      active_watched_threads:
+        enabled: true
+      registered_project_channels:
+        mode: attribution-only
+    routing:
+      mode: prepare-only
+      saved_project_resolution: runtime-by-registered-path
+    notifications:
+      task_board_dashboard:
+        label: Open all tasks
+        path: __AGENT_OS_HOME__/work/BOARD.md
+      include_unfinished_total: true
+      unfinished_excludes:
+        - done
+        - cancelled
+    authority:
+      observe: true
+      recommend: true
+      prepare_local_tasks: true
+      route_analysis_only: true
+      slack_write: false
+      external_task_write: false
+      repository_write: false
+      git_write: false
+      deploy: false

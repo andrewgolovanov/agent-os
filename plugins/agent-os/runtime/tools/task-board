@@ -1,0 +1,213 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "optparse"
+require_relative "../lib/agent_os/paths"
+require_relative "../lib/agent_os/task_board"
+
+DEFAULT_ROOT = AgentOS::Paths.work_root
+
+def common_options(arguments)
+  options = { root: ENV["AGENT_OS_TASK_ROOT"] || ENV["WORKSPACE_TASK_ROOT"] || DEFAULT_ROOT }
+  parser = OptionParser.new do |opts|
+    opts.on("--root PATH", "Task Board root (default: work/)") { |value| options[:root] = value }
+    yield(opts, options) if block_given?
+  end
+  parser.parse!(arguments)
+  [options, parser]
+end
+
+command = ARGV.shift
+
+begin
+  case command
+  when "init"
+    options, = common_options(ARGV)
+    board = AgentOS::TaskBoard.new(options.fetch(:root))
+    board.initialize_store
+    puts "Initialized Task Board at #{board.root}"
+  when "create"
+    options, parser = common_options(ARGV) do |opts, values|
+      opts.on("--id ID") { |value| values[:id] = value }
+      opts.on("--title TITLE") { |value| values[:title] = value }
+      opts.on("--project KEY", "Repeat for multiple projects") { |value| (values[:projects] ||= []) << value }
+      opts.on("--kind KIND") { |value| values[:kind] = value }
+      opts.on("--status STATUS") { |value| values[:status] = value }
+      opts.on("--goal TEXT") { |value| values[:goal] = value }
+      opts.on("--summary TEXT") { |value| values[:summary] = value }
+      opts.on("--constraint TEXT", "Repeat for multiple constraints") { |value| (values[:constraints] ||= []) << value }
+      opts.on("--next-action TEXT") { |value| values[:next_action] = value }
+      opts.on("--waiting-on TEXT") { |value| values[:waiting_on] = value }
+    end
+    required = %i[title goal next_action]
+    missing = required.select { |key| options[key].nil? || options[key].respond_to?(:empty?) && options[key].empty? }
+    raise OptionParser::MissingArgument, missing.join(", ") unless missing.empty?
+
+    attributes = options.transform_keys(&:to_s)
+    attributes.delete("root")
+    task = AgentOS::TaskBoard.new(options.fetch(:root)).create(attributes)
+    puts JSON.pretty_generate(task)
+  when "update"
+    id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options, = common_options(ARGV) do |opts, values|
+      opts.on("--title TITLE") { |value| values[:title] = value }
+      opts.on("--project KEY", "Repeat to replace project list") { |value| (values[:projects] ||= []) << value }
+      opts.on("--kind KIND") { |value| values[:kind] = value }
+      opts.on("--status STATUS") { |value| values[:status] = value }
+      opts.on("--goal TEXT") { |value| values[:goal] = value }
+      opts.on("--summary TEXT") { |value| values[:summary] = value }
+      opts.on("--constraint TEXT", "Repeat to replace constraints") { |value| (values[:constraints] ||= []) << value }
+      opts.on("--next-action TEXT") { |value| values[:next_action] = value }
+      opts.on("--waiting-on TEXT") { |value| values[:waiting_on] = value }
+      opts.on("--clear-waiting", "Set waiting_on to null") { values[:waiting_on] = nil }
+    end
+    attributes = options.transform_keys(&:to_s)
+    attributes.delete("root")
+    raise OptionParser::MissingArgument, "at least one update option" if attributes.empty?
+
+    puts JSON.pretty_generate(AgentOS::TaskBoard.new(options.fetch(:root)).update(id, attributes))
+  when "source"
+    id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options, = common_options(ARGV) do |opts, values|
+      opts.on("--kind KIND") { |value| values[:kind] = value }
+      opts.on("--value URL_OR_ID") { |value| values[:value] = value }
+    end
+    raise OptionParser::MissingArgument, "kind" unless options[:kind]
+    raise OptionParser::MissingArgument, "value" unless options[:value]
+
+    task = AgentOS::TaskBoard.new(options.fetch(:root)).attach_source(id, kind: options.fetch(:kind), value: options.fetch(:value))
+    puts JSON.pretty_generate(task)
+  when "codex"
+    id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options, = common_options(ARGV) do |opts, values|
+      opts.on("--thread-id ID") { |value| values[:thread_id] = value }
+      opts.on("--role ROLE") { |value| values[:role] = value }
+      opts.on("--status STATUS") { |value| values[:status] = value }
+      opts.on("--origin ORIGIN") { |value| values[:origin] = value }
+      opts.on("--project KEY") { |value| values[:project] = value }
+      opts.on("--title TITLE") { |value| values[:title] = value }
+      opts.on("--parent-thread-id ID") { |value| values[:parent_thread_id] = value }
+    end
+    raise OptionParser::MissingArgument, "thread-id" unless options[:thread_id]
+    raise OptionParser::MissingArgument, "role" unless options[:role]
+
+    kwargs = options.reject { |key, _| key == :root }
+    puts JSON.pretty_generate(AgentOS::TaskBoard.new(options.fetch(:root)).attach_codex(id, **kwargs))
+  when "activity-start", "activity-stop"
+    id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options, = common_options(ARGV) do |opts, values|
+      opts.on("--session-id ID") { |value| values[:session_id] = value }
+      opts.on("--turn-id ID") { |value| values[:turn_id] = value }
+      opts.on("--at TIMESTAMP", "ISO 8601 or Unix seconds") { |value| values[:at] = value }
+    end
+    %i[session_id turn_id].each { |key| raise OptionParser::MissingArgument, key.to_s.tr("_", "-") unless options[key] }
+    kwargs = options.reject { |key, _| key == :root }
+    board = AgentOS::TaskBoard.new(options.fetch(:root))
+    method = command == "activity-start" ? :activity_start : :activity_stop
+    puts JSON.pretty_generate(board.public_send(method, id, **kwargs))
+  when "routing"
+    id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options, = common_options(ARGV) do |opts, values|
+      opts.on("--project KEY") { |value| values[:project] = value }
+      opts.on("--role ROLE") { |value| values[:role] = value }
+      opts.on("--reason-code CODE") { |value| values[:reason_code] = value }
+      opts.on("--reason TEXT") { |value| values[:reason] = value }
+      opts.on("--repository PATH", "Repeat for multiple repositories") { |value| (values[:repository_paths] ||= []) << value }
+    end
+    %i[project role reason_code reason].each do |key|
+      raise OptionParser::MissingArgument, key.to_s.tr("_", "-") unless options[key]
+    end
+    kwargs = options.reject { |key, _| key == :root }
+    puts JSON.pretty_generate(AgentOS::TaskBoard.new(options.fetch(:root)).add_routing(id, **kwargs))
+  when "routing-update"
+    id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options, = common_options(ARGV) do |opts, values|
+      opts.on("--route-id ID") { |value| values[:route_id] = value }
+      opts.on("--state STATE") { |value| values[:state] = value }
+      opts.on("--attempt", "Increment bounded attempt count") { values[:attempted] = true }
+      opts.on("--reason TEXT") { |value| values[:reason] = value }
+      opts.on("--codex-thread-id ID") { |value| values[:codex_thread_id] = value }
+    end
+    %i[route_id state].each { |key| raise OptionParser::MissingArgument, key.to_s.tr("_", "-") unless options[key] }
+    kwargs = options.reject { |key, _| key == :root }
+    puts JSON.pretty_generate(AgentOS::TaskBoard.new(options.fetch(:root)).update_routing(id, **kwargs))
+  when "show"
+    id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options, = common_options(ARGV)
+    puts JSON.pretty_generate(AgentOS::TaskBoard.new(options.fetch(:root)).read_task(id))
+  when "list"
+    options, = common_options(ARGV) do |opts, values|
+      opts.on("--status STATUS") { |value| values[:status] = value }
+      opts.on("--project KEY") { |value| values[:project] = value }
+      opts.on("--json") { values[:json] = true }
+    end
+    tasks = AgentOS::TaskBoard.new(options.fetch(:root)).tasks
+    tasks.select! { |task| task["status"] == options[:status] } if options[:status]
+    tasks.select! { |task| task["projects"].include?(options[:project]) } if options[:project]
+    if options[:json]
+      puts JSON.pretty_generate(tasks)
+    else
+      tasks.each { |task| puts [task["id"], task["status"], task["projects"].join(","), task["title"]].join("\t") }
+    end
+  when "summary"
+    options, = common_options(ARGV) do |opts, values|
+      opts.on("--project KEY") { |value| values[:project] = value }
+      opts.on("--json") { values[:json] = true }
+    end
+    summary = AgentOS::TaskBoard.new(options.fetch(:root)).summary(project: options[:project])
+    if options[:json]
+      puts JSON.pretty_generate(summary)
+    else
+      puts "Unfinished: #{summary.fetch("unfinished_total")}"
+      summary.fetch("unfinished_by_status").each do |status, count|
+        puts "#{status}: #{count}" if count.positive?
+      end
+      puts "Tracked Codex time: #{summary.fetch("tracked_seconds")} seconds"
+      puts "Active turns: #{summary.fetch("active_turns")}" if summary.fetch("active_turns").positive?
+    end
+  when "find"
+    options, = common_options(ARGV) do |opts, values|
+      opts.on("--source URL_OR_ID") { |value| values[:source] = value }
+    end
+    raise OptionParser::MissingArgument, "source" unless options[:source]
+
+    puts JSON.pretty_generate(AgentOS::TaskBoard.new(options.fetch(:root)).find_by_source(options.fetch(:source)))
+  when "validate"
+    options, = common_options(ARGV)
+    errors = AgentOS::TaskBoard.new(options.fetch(:root)).validate!
+    if errors.empty?
+      puts "OK: Task Board is valid"
+    else
+      warn "Task Board validation failed:"
+      errors.each { |error| warn "- #{error}" }
+      exit 1
+    end
+  else
+    warn <<~USAGE
+      Usage: tools/task-board <command> [options]
+
+      Commands:
+        init
+        create --title TITLE [--project KEY] --goal TEXT --next-action TEXT
+        update TASK_ID [fields]
+        source TASK_ID --kind KIND --value URL_OR_ID
+        codex TASK_ID --thread-id ID --role ROLE [fields]
+        activity-start TASK_ID --session-id ID --turn-id ID [--at TIMESTAMP]
+        activity-stop TASK_ID --session-id ID --turn-id ID [--at TIMESTAMP]
+        routing TASK_ID --project KEY --role ROLE --reason-code CODE --reason TEXT
+        routing-update TASK_ID --route-id ID --state STATE [--attempt]
+        show TASK_ID
+        list [--status STATUS] [--project KEY] [--json]
+        summary [--project KEY] [--json]
+        find --source URL_OR_ID
+        validate
+
+      Set AGENT_OS_TASK_ROOT or pass --root PATH for isolated tests.
+    USAGE
+    exit(command.nil? ? 0 : 1)
+  end
+rescue KeyError, ArgumentError, OptionParser::ParseError => e
+  warn "Error: #{e.message}"
+  exit 2
+end

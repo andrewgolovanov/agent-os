@@ -1,0 +1,9 @@
+schema_version: 1
+
+agent_os:
+  name: agent-os
+  root: __AGENT_OS_HOME__
+  timezone: __TIMEZONE__
+
+# Add projects through the onboard-project workflow after verifying exact paths.
+projects: {}

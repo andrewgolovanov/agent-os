@@ -14,10 +14,12 @@
 - Keep SwiftUI scenes in `Sources/AgentOS/App` and views in `Views`.
 - Keep value models in `Models`, app-wide observable state in `Stores`, process clients in `Services`, and small glue in `Support`.
 - Keep the companion Codex plugin package under `../../plugins/agent-os`.
+- Package the synchronized minimal runtime from `../../plugins/agent-os/runtime` into `Contents/Resources/AgentOSRuntime`; first launch must initialize private state without requiring a source checkout.
 
 ## Validation
 
 - Run `swift build` and `swift test` after Swift changes.
+- Run `../../tools/sync-plugin-runtime --check` before bundle or release verification.
 - Run `./script/build_and_run.sh --verify` for bundle launch verification.
 - Run `./script/package_release.sh` to verify the ad-hoc signed package,
   checksum, Sparkle appcast, and Ed25519 archive signature.

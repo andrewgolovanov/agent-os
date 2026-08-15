@@ -23,22 +23,11 @@ Use `unknown` for missing optional facts. Stop the affected mutation if an unkno
 
 ## Workflow
 
-1. Read root `AGENTS.md`, `config/projects.yaml`, `projects/README.md`, and `templates/project/`.
-2. Check whether the requested key or alias already exists. Repair the existing record instead of creating a duplicate.
-3. For each repository path, verify:
-   - the resolved path and repository root;
-   - `git remote -v`;
-   - current branch and `HEAD`;
-   - worktree status;
-   - the closest repository `AGENTS.md`, when present.
-4. Select `direct-repository` only when exactly one verified Git root already equals `projects/<key>/`; otherwise use `wrapper`. Never move a repository to force either layout.
-5. Present a compact plan containing the selected layout, exact files to create or update, verified facts, unknown facts, and unchanged repositories.
-6. For `wrapper`, create `projects/<key>/` from `templates/project/`, replacing all template values. For `direct-repository`, preserve its files and add one exact root `.gitignore` rule so the Agent OS repository cannot track it as a gitlink.
-7. Add exactly one matching entry to `config/projects.yaml`. Keep this file the canonical structured registry.
-8. For `wrapper`, describe project-only behavior in its `AGENTS.md` and durable context in `docs/PROJECT.md`. For `direct-repository`, use existing repository instructions and do not inject workspace metadata.
-9. Do not create project tools until a deterministic workflow has repeated. Remove template-only rows or prose that would misrepresent current state.
-10. Run `ruby tools/validate-agent-os` from the Agent OS source root.
-11. Report created files, exact verified repository identities, unknowns, validation, and any user-only setup needed in the Codex UI.
+1. Prefer the installed MCP workflow: list current projects, then call `agent_os_onboard_project` with `apply: false`. From a source checkout, the equivalent preview is `bin/agent-os onboard-project --repository /absolute/repository --json`.
+2. Review the returned repository root, remote, current branch, `HEAD`, worktree state, proposed key, selected layout, exact files, and unchanged repository path.
+3. Apply only after the user approves that exact preview. Use the same MCP arguments with `apply: true`, or add `--apply` to the reviewed CLI command.
+4. List projects again and read the registered project root `AGENTS.md` before substantive work.
+5. Run `ruby tools/validate-agent-os` only when working from a full Agent OS source checkout; packaged runtime users validate the resulting MCP response and registry listing.
 
 ## Registry entry
 

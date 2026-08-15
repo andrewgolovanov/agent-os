@@ -23,8 +23,8 @@ final class AgentOSStore {
     private let sourceMetadataService = SourceMetadataService()
     private var watcher: AgentOSFileWatcher?
 
-    init(configuration: AgentOSConfiguration = .current()) {
-        self.configuration = configuration
+    init(configuration: AgentOSConfiguration? = nil) {
+        self.configuration = configuration ?? AgentOSRuntimeBootstrap.prepare()
     }
 
     var unfinishedTasks: [AgentOSTask] {
@@ -48,8 +48,11 @@ final class AgentOSStore {
             }
         }
         await refresh()
+        let packagedRuntime = FileManager.default.fileExists(
+            atPath: configuration.sourceURL.appendingPathComponent(".agent-os-runtime.json").path
+        )
         await checkForComponentUpdates(
-            apply: UserDefaults.standard.bool(forKey: "agent-os.auto-update-core-plugin"),
+            apply: !packagedRuntime && UserDefaults.standard.bool(forKey: "agent-os.auto-update-core-plugin"),
             announceCurrent: false
         )
     }
@@ -184,6 +187,8 @@ final class AgentOSStore {
                 noticeMessage = "Agent OS core/plugin updated. Start a fresh Codex task to load the refreshed plugin."
             } else if status.source.updateAvailable, let latest = status.source.latestVersion {
                 noticeMessage = "Agent OS \(latest) is available. Open Settings → Updates to install it."
+            } else if announceCurrent, status.source.action == "managed-by-app" {
+                noticeMessage = "Agent OS runtime is bundled with the app. Codex manages plugin updates separately."
             } else if announceCurrent, status.source.configured {
                 noticeMessage = "Agent OS core and Codex plugin are up to date."
             }

@@ -32,6 +32,13 @@ Verified: 2026-08-15
   recovery instructions, and optional doctor checks.
 - Agent OS and Context Loop plugin details link their Website field and source
   metadata to the public `andrewgolovanov/agent-os` repository.
+- The current release candidate removes the manual source-checkout requirement
+  for packaged users: the Agent OS plugin contains an allowlisted minimal
+  runtime, and the app packager embeds that exact payload.
+- Either packaged component bootstraps the shared private home idempotently; a
+  valid explicitly selected development checkout remains authoritative.
+- MCP and CLI onboarding can preview and register an existing Git repository
+  from any absolute location without moving, cloning, renaming, or modifying it.
 
 ## Private instance boundary
 
@@ -39,17 +46,19 @@ Verified: 2026-08-15
   home.
 - New installations default to a separate `~/.agent-os` private home.
 - Real configs, Task Board state, reports, runtime state, source pointers, and
-  local project checkouts are ignored by the source repository.
-- The installer is preview-first, does not overwrite existing files, creates no
-  project entries, and enables no monitor or provider integration.
+  registered project paths are ignored by the source repository. Project code
+  remains in its existing repository location.
+- Packaged bootstrap preserves existing files, creates no project entries, and
+  enables no monitor or provider integration. Project onboarding remains a
+  separate preview-first operation.
 
 ## Verified implementation
 
 - `agent-os doctor` passes for the current instance and for a fresh temporary
   home.
 - The full Agent OS validator passes against both homes.
-- The current and clean-home Ruby suites pass 39 tests and 256 assertions.
-- Agent OS app builds and its 16 Swift tests pass; bundle launch verification
+- The current and clean-home Ruby suites pass 46 tests and 328 assertions.
+- Agent OS app builds and its 17 Swift tests pass; bundle launch verification
   succeeds with both the active home and a fresh empty private home.
 - The app now maps the official shadcn default Neutral dark tokens directly into
   SwiftUI: `#0a0a0a` canvas, `#171717` sidebar/cards, `#262626` interactive
@@ -95,8 +104,9 @@ Verified: 2026-08-15
   rounded, padded SVG app-icon composition and as a reproducibly generated
   multi-resolution ICNS asset. Both development and release packagers copy it
   into `Contents/Resources` and declare it through `CFBundleIconFile`.
-- The Agent OS MCP clean-home test proves that tools execute from the
-  source root while task and registry data remain under the private home.
+- The Agent OS MCP clean-home test proves that tools execute from the bundled
+  runtime while task and registry data remain under the private home; separate
+  CLI tests cover packaged-runtime upgrade and development-source preservation.
 - Both monorepo plugin packages are installed and enabled from the `agent-os`
   marketplace; Context Loop passes its isolated lifecycle/hook smoke test. The
   old installed plugin snapshot has been removed.
@@ -118,8 +128,9 @@ Verified: 2026-08-15
   and refuses a differing entry unless `--replace` is explicitly supplied.
 - The built-in publication audit reports zero known private-state boundary
   findings for the current candidate.
-- Preview-first `install-plugin` works against the local marketplace. The macOS
-  packager produces an ad-hoc signed `AgentOS-0.1.0-macOS.zip`, SHA-256
+- Versioned Git marketplace installation is the packaged-user path; the legacy
+  preview-first `install-plugin` command remains available for development
+  checkouts. The macOS packager produces an ad-hoc signed app zip, SHA-256
   checksum, and Sparkle appcast for user-approved Gatekeeper installation.
 - The packaged app passes strict `codesign` bundle verification. `spctl`
   rejects it at the expected trust-policy boundary because there is no Developer

@@ -26,13 +26,18 @@ the canonical Agent OS registry and Task Board remain usable without this app.
 | Provider context | exact source URLs | contextual display and open only; optional read-only `gh` PR lookup |
 
 The app never edits Task Board JSON or Markdown directly and owns no database.
-All task mutations use the source checkout's executable with an argument array.
+All task mutations use the selected packaged or development runtime executable
+with an argument array.
 
 ## Source and home
 
-- `AGENT_OS_SOURCE_ROOT` points to reusable executables.
+- Release builds bundle the synchronized runtime under
+  `Contents/Resources/AgentOSRuntime` and bootstrap it on first launch.
+- `AGENT_OS_SOURCE_ROOT` optionally selects a valid development checkout and
+  takes precedence over packaged runtime.
 - `AGENT_OS_HOME` points to private registry, tasks, and runtime.
-- If the source variable is absent, the app reads `AGENT_OS_HOME/source-path`.
+- If the source variable is absent, the app initializes or upgrades the private
+  runtime pointer from the bundle, then reads `AGENT_OS_HOME/source-path`.
 - The private home defaults to `~/.agent-os`.
 - `WORKSPACE_CONSOLE_ROOT` remains only as a deprecated compatibility alias for older
   one-directory installations.
@@ -85,8 +90,9 @@ competing background turn from a second App Server client.
   template version of the same path geometry for the menu-bar extra;
 - create outcome and validated lifecycle changes;
 - bounded menu-bar counts and quick actions.
-- unified update settings: tagged core/plugin updates plus Sparkle app updates,
-  both automatic-install options disabled until the user opts in.
+- unified update settings: Sparkle owns packaged app/runtime updates, while
+  Codex owns versioned marketplace snapshots of the companion plugin; automatic
+  app installation remains disabled until the user opts in.
 
 There is no team administration, agent runtime, container manager, hosted
 database, transcript store, or provider write integration in the MVP.
@@ -97,6 +103,7 @@ database, transcript store, or provider write integration in the MVP.
 cd apps/agent-os
 swift build
 swift test
+../../tools/sync-plugin-runtime --check
 AGENT_OS_SOURCE_ROOT=/absolute/path/to/agent-os \
 AGENT_OS_HOME="$HOME/.agent-os" \
 ./script/build_and_run.sh --verify

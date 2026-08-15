@@ -15,29 +15,36 @@ tasks, provider identifiers, credentials, runtime cursors, or client history.
 
 ```mermaid
 flowchart LR
-    source["Agent OS source checkout"] --> core["core tools and tests"]
-    source --> app["optional macOS app"]
-    source --> plugins["Codex plugins"]
-    source --> cli["init, doctor, validate"]
-    cli --> home["private AGENT_OS_HOME"]
+    release["versioned GitHub Release"] --> app["macOS app + bundled runtime"]
+    marketplace["Codex Git marketplace"] --> plugins["Codex plugin + bundled runtime"]
+    app --> bootstrap["idempotent bootstrap"]
+    plugins --> bootstrap
+    bootstrap --> home["private AGENT_OS_HOME"]
     home --> registry["project registry"]
     home --> tasks["Task Board"]
     home --> runtime["runtime correlation"]
+    registry --> repos["existing repositories in any folder"]
 ```
 
-The source checkout and private home may be the same directory for a migrated
-installation, but their contracts remain separate. New installations default
-to `~/.agent-os` for private state.
+Normal users do not manage a source checkout. Codex owns its installed plugin
+snapshot; the app owns its packaged resources; both select a minimal versioned
+runtime and share `~/.agent-os` by default. A valid explicitly selected
+development checkout remains supported and is never replaced by packaged
+bootstrap.
 
 ## Approved decisions
 
-- The existing control-plane checkout becomes the in-place Agent OS source.
+- The plugin and app each ship the same synchronized minimal runtime, so either
+  component can initialize a clean private home without a manual clone.
+- A source checkout is a development and contribution surface, not a runtime
+  prerequisite for packaged users.
 - Core, the Agent OS macOS app, the Agent OS plugin, and optional Context
   Loop live in one monorepo.
 - Existing standalone app/plugin directories remain untouched as recoverable
   local backups until the monorepo is published and adopted.
-- Real configs, outcomes, reports, runtime, and project checkouts are private
-  local state and are ignored by the product repository.
+- Real configs, outcomes, reports, runtime pointers, and project paths are
+  private local state and are ignored by the product repository. Project
+  repositories remain in their existing locations.
 - The source repository is public after the initial secret scan, manual review,
   and clean-clone validation gates passed.
 - The initial license is MIT.
@@ -46,6 +53,10 @@ to `~/.agent-os` for private state.
 
 - `AGENT_OS_SOURCE_ROOT` and `AGENT_OS_HOME` separate executable source from
   mutable local state; legacy one-root variables remain compatible.
+- App and plugin bootstrap select their bundled runtime, create missing private
+  state, and preserve a valid selected development source.
+- MCP project onboarding previews and registers any existing Git repository by
+  absolute path without moving or modifying it.
 - `bin/agent-os init` previews exact targets and preserves every existing file.
 - `activate` records the selected home in the standard user config directory so
   app/plugin processes do not need a hard-coded path or shell environment.
@@ -57,13 +68,13 @@ to `~/.agent-os` for private state.
 - The Agent OS plugin ships Task Bridge hooks and a setup skill; Codex remains
   the authority for hook trust, the connected Slack integration, and Scheduled
   task state.
-- The Agent OS app no longer assumes a developer path and reads the source
-  pointer created in the private home.
+- The Agent OS app no longer assumes a developer path and packages the same
+  synchronized runtime used by the plugin.
 - The Agent OS MCP server confines reads/writes independently to the
   configured source and home roots.
 - The app and both plugin packages are consolidated under `apps/` and `plugins/`.
-- Local configs, task history, runtime, project checkouts, and source pointers
-  are excluded from Git candidates.
+- Local configs, task history, runtime, registered project paths, and source
+  pointers are excluded from Git candidates.
 - `audit-publication` blocks known private-state patterns before release work.
 - `agent-os update` checks semantic release tags and can only fast-forward a
   clean checkout; the plugin refresh follows its manifest version.

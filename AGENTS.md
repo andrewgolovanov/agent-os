@@ -42,4 +42,4 @@ This repository is the portable Agent OS source. Keep user project code and muta
 
 ## Validation
 
-Run `ruby tools/validate-agent-os` after structural or registry changes. Run `tools/task-board validate` after task-state tooling changes and `tools/slack-state validate` after dispatcher-state changes. Validate every changed plugin skill, run `node test/plugin_packages_test.mjs` after plugin hook or manifest changes, and start a fresh Codex task for real hook-pickup verification. Run repository-specific checks from the registered repository and its closest `AGENTS.md`.
+Run `ruby tools/validate-agent-os` after structural or registry changes. Run `tools/sync-plugin-runtime --check` after changing any runtime file bundled by the plugin or app. Run `tools/task-board validate` after task-state tooling changes and `tools/slack-state validate` after dispatcher-state changes. Validate every changed plugin skill, run `node test/plugin_packages_test.mjs` after plugin hook or manifest changes, and start a fresh Codex task for real hook-pickup verification. Run repository-specific checks from the registered repository and its closest `AGENTS.md`.

@@ -1,7 +1,7 @@
 {
   "name": "agent-os",
-  "version": "0.2.0+codex.20260815221136",
-  "description": "Use the canonical local Agent OS project registry and Task Board from Codex.",
+  "version": "0.2.0+codex.20260815233351",
+  "description": "Bootstrap Agent OS locally, onboard repositories from any folder, and use its canonical Task Board from Codex.",
   "author": {
     "name": "Andrew Golovanov"
   },
@@ -12,8 +12,8 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Agent OS",
-    "shortDescription": "Manage canonical Agent OS outcomes from Codex.",
-    "longDescription": "Lists projects and outcomes and applies validated Task Board mutations without a second database or direct JSON writes.",
+    "shortDescription": "Bootstrap, onboard, and manage Agent OS from Codex.",
+    "longDescription": "Creates the private Agent OS home automatically, registers existing repositories without moving them, and applies validated Task Board mutations without a second database or direct JSON writes.",
     "developerName": "Andrew Golovanov",
     "category": "Productivity",
     "capabilities": [
@@ -25,7 +25,7 @@
     "logoDark": "./assets/agent-os-icon.svg",
     "defaultPrompt": [
       "Show my unfinished Agent OS outcomes.",
-      "Create an Agent OS outcome for this project.",
+      "Onboard this repository into Agent OS safely.",
       "Set up optional Agent OS integrations safely."
     ]
   }

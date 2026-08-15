@@ -1,80 +1,117 @@
 # Install Agent OS
 
-Agent OS has three separately installable layers. The core is required; the
-Codex plugin and native macOS app are optional views over the same private data.
+Agent OS has two user-facing packages: the Codex plugin and the native macOS
+app. Each package contains the same minimal runtime and can initialize the
+shared private home independently. A normal installation does not require a
+manual repository checkout.
 
 ## Requirements
 
-- macOS or Linux with Ruby 3.x for the core;
+- macOS or Linux with Ruby for the packaged control plane;
 - Node.js for the Codex MCP server;
-- Codex CLI for plugin installation and Codex handoff;
+- Codex desktop or CLI with plugin support;
 - Apple Silicon (`arm64`) with macOS 14 or newer for the first downloadable
   native app release; an Intel or universal binary is not included yet;
-- Swift 6.2 for building the native app from source.
+- Swift 6.2 only when building the native app from source.
 
-## 1. Core
+## 1. Install the Codex plugin
 
-Clone the repository, then initialize a private home. Both mutations are
-preview-only until `--apply` is present.
+Add the public Git marketplace at the release tag you want to install, then add
+the Agent OS plugin from that marketplace:
+
+```bash
+codex plugin marketplace add andrewgolovanov/agent-os --ref CURRENT_RELEASE_TAG
+codex plugin add agent-os@agent-os
+```
+
+Replace `CURRENT_RELEASE_TAG` with the latest published `vN.N.N` tag shown on
+the [Agent OS Releases page](https://github.com/andrewgolovanov/agent-os/releases).
+Codex downloads and manages the plugin snapshot; the user does not clone or
+maintain the Agent OS repository.
+
+Start a fresh Codex task. Plugin startup creates `~/.agent-os` when it does not
+exist, copies no project code, and records the packaged runtime selected for
+that plugin version. An existing valid development checkout selected through
+`AGENT_OS_SOURCE_ROOT` or the private source pointer remains authoritative and
+is never replaced by packaged bootstrap.
+
+The plugin ships Task Board MCP tools, project onboarding, skills, and the Task
+Bridge hook bundle. Review the exact hook commands with `/hooks`; approve them
+only if they resolve to the installed `agent-os@agent-os` plugin. A running task
+cannot hot-reload a newly installed or updated plugin.
+
+## 2. Onboard a project from any folder
+
+Open an existing Git repository from any location on the computer and ask:
+
+```text
+Onboard this repository into Agent OS safely.
+```
+
+The onboarding skill resolves the Git root, remote, branch, and current HEAD,
+previews the exact private registry and wrapper changes, and waits for approval
+before applying them. It never moves, clones, renames, commits, pushes, or
+writes files inside the project repository. Once registered, Agent OS and Codex
+can open that project through its absolute path; no common `projects/` parent
+folder is required.
+
+## 3. Install the macOS app
+
+Download the app zip and matching `.sha256` file from the same GitHub Release.
+The first downloadable package targets Apple Silicon (`arm64`) on macOS 14 or
+newer.
+
+```bash
+shasum -a 256 -c AgentOS-VERSION-macOS.zip.sha256
+```
+
+Unzip the archive and move `Agent OS.app` to `/Applications` or
+`~/Applications`. On first launch, the app initializes the same private home as
+the plugin and selects its bundled runtime if a newer packaged runtime is
+needed. Whichever component starts first can perform this bootstrap; repeated
+launches are idempotent.
+
+The app and plugin communicate only through local private Agent OS files. They
+do not create a second hosted task database, and neither requires the source
+repository after installation.
+
+### First launch on macOS
+
+1. Try to open Agent OS once. macOS should block the launch because Apple
+   cannot verify the developer.
+2. Open **System Settings → Privacy & Security**, scroll to **Security**, and
+   click **Open Anyway** for Agent OS.
+3. Confirm **Open** and authenticate when macOS asks.
+
+macOS saves that app as an exception, so later launches work normally. Apple
+notes that **Open Anyway** is available for about an hour after the blocked
+launch. Do not disable Gatekeeper globally and do not use this override for an
+archive whose source or checksum you cannot verify. See
+[Apple's current instructions](https://support.apple.com/guide/mac-help/mh40616/mac).
+
+## Updates
+
+- Codex updates Agent OS by installing a newer versioned marketplace snapshot;
+  start a fresh task afterward.
+- The native app checks the latest signed Sparkle appcast once per day and
+  notifies before installation by default. Automatic installation is opt-in.
+- A valid explicitly selected development checkout remains separate and keeps
+  the preview-first tagged Git update flow. Packaged bootstrap never resets or
+  overwrites it.
+
+## Development source checkout
+
+Only contributors and advanced local development need the full repository:
 
 ```bash
 git clone https://github.com/andrewgolovanov/agent-os.git
 cd agent-os
-./bin/agent-os init
 ./bin/agent-os init --apply
-./bin/agent-os activate
 ./bin/agent-os activate --apply
 ./bin/agent-os doctor
 ```
 
-Reusable source stays in the checkout. Private project paths, task records, and
-runtime state live in `~/.agent-os` by default.
-
-## 2. Codex plugin
-
-```bash
-./bin/agent-os install-plugin
-./bin/agent-os install-plugin --apply
-```
-
-This registers the checkout as the `agent-os` marketplace and installs
-`agent-os@agent-os`. Start a fresh Codex task after installation or an update;
-running tasks do not reload plugin capabilities in place.
-
-The plugin also ships the Task Bridge hook bundle. Review its exact commands in
-Codex with `/hooks`, approve them only if they resolve to the installed Agent OS
-plugin, and then start a fresh project task. Optional Slack intake and recurring
-execution are configured separately; follow [Optional integrations](optional-integrations.md).
-
-For a read-only status that includes these optional layers:
-
-```bash
-./bin/agent-os doctor --integrations
-```
-
-## Updates
-
-Agent OS updates only from versioned Git tags, never from an arbitrary latest
-commit on `main`:
-
-```bash
-./bin/agent-os update
-./bin/agent-os update --apply
-```
-
-The first command is read-only and prints the plan. `--apply` requires a clean
-checkout and performs only a fast-forward to the newest `vN.N.N` release. It
-refuses local changes and diverged history. If that release changes the Codex
-plugin manifest version, the installed plugin snapshot is refreshed and a new
-Codex task is required.
-
-The macOS app performs the same core/plugin check at startup. In **Agent OS →
-Settings → Updates**, a user can opt into automatic tagged core/plugin updates.
-This option is disabled by default.
-
-## 3. macOS app
-
-For a local source build:
+For a local app build:
 
 ```bash
 cd apps/agent-os
@@ -83,8 +120,8 @@ AGENT_OS_HOME="$HOME/.agent-os" \
 ./script/build_and_run.sh --verify
 ```
 
-The bundle is created at `apps/agent-os/dist/Agent OS.app`. It can be copied to
-`/Applications` or `~/Applications` for local use.
+The bundle is created at `apps/agent-os/dist/Agent OS.app` and includes the
+synchronized minimal runtime from `plugins/agent-os/runtime`.
 
 To create the distributable zip and checksum:
 
@@ -108,22 +145,6 @@ to [Agent OS v0.1.0](https://github.com/andrewgolovanov/agent-os/releases/tag/v0
 ```bash
 shasum -a 256 -c AgentOS-0.1.0-macOS.zip.sha256
 ```
-
-### First launch on macOS
-
-1. Unzip the archive and move `Agent OS.app` to `/Applications` or
-   `~/Applications`.
-2. Try to open it once. macOS should block the launch because Apple cannot
-   verify the developer.
-3. Open **System Settings → Privacy & Security**, scroll to **Security**, and
-   click **Open Anyway** for Agent OS.
-4. Confirm **Open** and authenticate when macOS asks.
-
-macOS saves that app as an exception, so later launches work normally. Apple
-notes that **Open Anyway** is available for about an hour after the blocked
-launch. Do not disable Gatekeeper globally and do not use this override for an
-archive whose source or checksum you cannot verify. See
-[Apple's current instructions](https://support.apple.com/guide/mac-help/mh40616/mac).
 
 ### App updates
 
@@ -163,6 +184,7 @@ first release. Never commit it. Local release builds use the Keychain account
 ## Verify
 
 ```bash
+tools/sync-plugin-runtime --check
 ./bin/agent-os validate
 ./bin/agent-os audit-publication
 ```

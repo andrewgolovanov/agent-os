@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+if ! /usr/bin/env node "${PLUGIN_ROOT:?}/mcp/bootstrap.mjs" >/dev/null; then
+  echo "agent-os hook: bundled runtime bootstrap failed" >&2
+  exit 0
+fi
+
 agent_os_home=${AGENT_OS_HOME:-}
 if [ -z "$agent_os_home" ]; then
   active_pointer=${HOME:?}/.config/agent-os/home

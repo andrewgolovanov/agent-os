@@ -16,30 +16,43 @@ struct UpdateSettingsView: View {
 
     var body: some View {
         Form {
-            Section("Core and Codex plugin") {
-                Toggle("Install tagged Agent OS releases automatically", isOn: $automaticallyUpdatesCorePlugin)
+            Section("Agent OS runtime and Codex plugin") {
+                if usesPackagedRuntime {
+                    LabeledContent("Runtime", value: "Bundled with app")
+                    if let version = store.componentUpdateStatus?.source.currentVersion {
+                        LabeledContent("Version", value: version)
+                    }
+                    if let version = store.componentUpdateStatus?.plugin.installedVersion {
+                        LabeledContent("Codex plugin", value: version)
+                    }
+                    Text("The runtime updates together with the macOS app. Codex owns the separately installed plugin and its updates; no Agent OS source checkout is required.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Toggle("Install tagged Agent OS releases automatically", isOn: $automaticallyUpdatesCorePlugin)
 
-                if let source = store.componentUpdateStatus?.source,
-                   source.updateAvailable,
-                   let latest = source.latestVersion
-                {
-                    Text("Version \(latest) is available.")
+                    if let source = store.componentUpdateStatus?.source,
+                       source.updateAvailable,
+                       let latest = source.latestVersion
+                    {
+                        Text("Version \(latest) is available.")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Button("Check Core and Plugin") {
+                            Task { await store.checkForComponentUpdates() }
+                        }
+                        Button("Install Core and Plugin Update") {
+                            Task { await store.checkForComponentUpdates(apply: true) }
+                        }
+                        .disabled(store.componentUpdateStatus?.source.updateAvailable != true)
+                    }
+
+                    Text("Development checkout updates are accepted only from version tags and only as a clean fast-forward. Local changes and diverged checkouts are never overwritten.")
+                        .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-
-                HStack {
-                    Button("Check Core and Plugin") {
-                        Task { await store.checkForComponentUpdates() }
-                    }
-                    Button("Install Core and Plugin Update") {
-                        Task { await store.checkForComponentUpdates(apply: true) }
-                    }
-                    .disabled(store.componentUpdateStatus?.source.updateAvailable != true)
-                }
-
-                Text("Core updates are accepted only from version tags and only as a clean fast-forward. Local changes and diverged checkouts are never overwritten.")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
             }
 
             Section("macOS app") {
@@ -68,5 +81,12 @@ struct UpdateSettingsView: View {
         .frame(width: 560)
         .background(AgentOSTheme.canvas)
         .tint(AgentOSTheme.accent)
+    }
+
+    private var usesPackagedRuntime: Bool {
+        store.componentUpdateStatus?.source.action == "managed-by-app"
+            || FileManager.default.fileExists(
+                atPath: store.configuration.sourceURL.appendingPathComponent(".agent-os-runtime.json").path
+            )
     }
 }
