@@ -9,6 +9,8 @@ Agent OS does not replace your project repositories, GitHub, Slack, or Codex.
 It gives those systems a small, deterministic continuity layer without copying
 transcripts or introducing another hosted task database.
 
+![Agent OS demo showing Focus, Board, task details, pull request status, and sources](docs/assets/agent-os-demo.gif)
+
 ## Installation
 
 Requirements: macOS or Linux, Ruby, and Node.js. Swift is needed only for the
