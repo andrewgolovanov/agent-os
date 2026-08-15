@@ -1,0 +1,57 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "open3"
+require_relative "../lib/agent_os/paths"
+
+source = AgentOS::Paths.source_root
+patterns = {
+  "developer home path" => %r{/Users/andrewgolovanov(?:/|\b)},
+  "Slack identity or permalink" => %r{(?:slack\.com/archives|\b[CUW](?=[A-Z0-9]{9,}\b)(?=[A-Z0-9]*\d)[A-Z0-9]{9,}\b)},
+  "Codex task identifier" => /\b(?:019|01a)[0-9a-f]{5,}-[0-9a-f-]{20,}\b/i,
+  "client-specific product context" => /\b(?:Phrasso|SiteOS|Vantage)\b/i,
+  "private key material" => /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
+  "credential assignment" => /\b(?:api[_-]?key|access[_-]?token|client[_-]?secret|password)\s*[:=]\s*["'][^"']{8,}["']/i
+}.freeze
+
+stdout, stderr, status = Open3.capture3(
+  "git", "ls-files", "-z", "--cached", "--others", "--exclude-standard",
+  chdir: source
+)
+abort("Unable to enumerate publication candidates: #{stderr.strip}") unless status.success?
+
+findings = []
+stdout.split("\0").reject(&:empty?).sort.each do |relative|
+  next if relative == "tools/audit-publication"
+
+  path = File.join(source, relative)
+  next unless File.file?(path)
+
+  content = File.binread(path)
+  next if content.include?("\0")
+
+  content.force_encoding(Encoding::UTF_8).scrub.lines.each_with_index do |line, index|
+    patterns.each do |label, pattern|
+      next if relative.start_with?("test/") && [
+        "Slack identity or permalink",
+        "Codex task identifier",
+        "client-specific product context"
+      ].include?(label)
+      findings << [label, relative, index + 1] if line.match?(pattern)
+    end
+  end
+end
+
+if findings.empty?
+  puts "OK: publication candidate has no known private-state boundary violations"
+  exit 0
+end
+
+warn "Publication audit blocked: #{findings.length} findings across #{findings.map { |item| item[1] }.uniq.length} files"
+findings.group_by(&:first).sort.each do |label, matches|
+  warn "- #{label}: #{matches.length}"
+end
+warn "First findings:"
+findings.first(100).each { |label, relative, line| warn "- #{relative}:#{line}: #{label}" }
+warn "- ... #{findings.length - 100} more" if findings.length > 100
+exit 1

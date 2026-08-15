@@ -1,0 +1,400 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "pathname"
+require "yaml"
+require_relative "../lib/agent_os/paths"
+require_relative "../lib/agent_os/project_time"
+require_relative "../lib/agent_os/task_board"
+
+ROOT = AgentOS::Paths.source_root
+HOME_ROOT = AgentOS::Paths.home_root
+ERRORS = []
+
+REQUIRED_SOURCE_PATHS = %w[
+  README.md
+  AGENTS.md
+  LICENSE
+  SECURITY.md
+  .github/workflows/release.yml
+  .agents/plugins/marketplace.json
+  apps/agent-os/Package.swift
+  apps/agent-os/Package.resolved
+  apps/agent-os/Sources/AgentOS/Models/AgentOSUpdateStatus.swift
+  apps/agent-os/Sources/AgentOS/Services/AgentOSUpdaterController.swift
+  apps/agent-os/Sources/AgentOS/Views/UpdateSettingsView.swift
+  apps/agent-os/script/build_and_run.sh
+  apps/agent-os/script/package_release.sh
+  apps/agent-os/script/update_config.sh
+  apps/agent-os/script/verify_update_signature.swift
+  bin/agent-os
+  config/examples/projects.yaml
+  config/examples/monitors.yaml
+  config/examples/task-bridge.yaml
+  docs/README.md
+  docs/architecture.md
+  docs/workflows.md
+  docs/task-board.md
+  docs/task-bridge.md
+  docs/project-time.md
+  docs/slack-monitor.md
+  docs/review-intake.md
+  docs/chat-model.md
+  docs/harness-comparison.md
+  docs/extending.md
+  docs/state.md
+  docs/roadmap.md
+  docs/changelog.md
+  docs/decisions/0009-portable-agent-os-boundary.md
+  docs/decisions/0010-one-agent-os-product-name.md
+  docs/decisions/0011-release-based-auto-update.md
+  lib/agent_os/updater.rb
+  lib/agent_os/paths.rb
+  plugins/context-loop/.codex-plugin/plugin.json
+  plugins/agent-os/.codex-plugin/plugin.json
+  projects/README.md
+  templates/project/AGENTS.md
+  templates/project/project.yaml
+  work/README.md
+  tools/task-board
+  tools/audit-publication
+  tools/task-bridge
+  tools/project-time
+  tools/slack-state
+  test/task_board_test.rb
+  test/task_bridge_test.rb
+  test/project_time_test.rb
+  test/slack_state_test.rb
+  test/agent_os_cli_test.rb
+  test/agent_os_mcp_test.rb
+  test/plugin_packages_test.mjs
+  test/context_loop_smoke.mjs
+  test/run.rb
+].freeze
+
+REQUIRED_HOME_PATHS = %w[
+  config/projects.yaml
+  config/monitors.yaml
+  config/task-bridge.yaml
+  work/BOARD.md
+  work/board.json
+  work/items
+].freeze
+
+def error(message)
+  ERRORS << message
+end
+
+def load_yaml(path)
+  YAML.safe_load(File.read(path), permitted_classes: [], permitted_symbols: [], aliases: false)
+rescue Psych::SyntaxError => e
+  error("invalid YAML #{path.sub("#{ROOT}/", "")}: #{e.message.lines.first.strip}")
+  nil
+end
+
+REQUIRED_SOURCE_PATHS.each do |relative|
+  error("missing required path: #{relative}") unless File.exist?(File.join(ROOT, relative))
+end
+REQUIRED_HOME_PATHS.each do |relative|
+  error("missing Agent OS home path: #{relative}") unless File.exist?(File.join(HOME_ROOT, relative))
+end
+
+registry_path = File.join(HOME_ROOT, "config/projects.yaml")
+registry = load_yaml(registry_path) if File.file?(registry_path)
+direct_project_roots = []
+project_keys = []
+
+if registry
+  error("config/projects.yaml must contain a mapping") unless registry.is_a?(Hash)
+
+  if registry.is_a?(Hash)
+    error("schema_version must be 1") unless registry["schema_version"] == 1
+
+    agent_os = registry["agent_os"] || registry["workspace"]
+    if agent_os.is_a?(Hash)
+      configured_root = agent_os["root"]
+      if configured_root.nil? || !Pathname.new(configured_root.to_s).absolute?
+        error("agent_os.root must be an absolute path")
+      elsif !File.directory?(configured_root)
+        error("agent_os.root does not exist: #{configured_root}")
+      elsif File.realpath(configured_root) != File.realpath(HOME_ROOT)
+        error("agent_os.root must resolve to AGENT_OS_HOME: #{configured_root}")
+      end
+    else
+      error("agent_os must be a mapping")
+    end
+
+    projects = registry["projects"]
+    if projects.is_a?(Hash)
+      project_keys = projects.keys.map(&:to_s)
+      aliases = {}
+
+      projects.each do |key, project|
+        key = key.to_s
+        error("invalid project key: #{key}") unless key.match?(/\A[a-z0-9]+(?:-[a-z0-9]+)*\z/)
+        unless project.is_a?(Hash)
+          error("project #{key} must be a mapping")
+          next
+        end
+
+        Array(project["aliases"]).each do |project_alias|
+          normalized = project_alias.to_s.downcase
+          if aliases.key?(normalized)
+            error("duplicate project alias #{project_alias.inspect}: #{aliases[normalized]} and #{key}")
+          else
+            aliases[normalized] = key
+          end
+        end
+
+        activity = project["activity"]
+        if activity
+          unless activity.is_a?(Hash)
+            error("project #{key} activity must be a mapping")
+          else
+            allowed_activity_keys = %w[historical_paths include_thread_ids exclude_threads]
+            unknown_activity_keys = activity.keys.map(&:to_s) - allowed_activity_keys
+            unless unknown_activity_keys.empty?
+              error("project #{key} activity contains unknown keys: #{unknown_activity_keys.join(", ")}")
+            end
+            historical_paths = Array(activity["historical_paths"])
+            historical_paths.each do |path|
+              error("project #{key} historical activity path must be absolute: #{path}") unless Pathname.new(path.to_s).absolute?
+            end
+            include_ids = Array(activity["include_thread_ids"]).map(&:to_s)
+            error("project #{key} activity include_thread_ids contains empty IDs") if include_ids.any?(&:empty?)
+            error("project #{key} activity include_thread_ids contains duplicates") unless include_ids.uniq.length == include_ids.length
+            exclusions = Array(activity["exclude_threads"])
+            exclusion_ids = exclusions.map do |entry|
+              unless entry.is_a?(Hash) && !entry["id"].to_s.empty? && !entry["reason"].to_s.empty?
+                error("project #{key} activity exclusion needs id and reason")
+                next
+              end
+              entry["id"].to_s
+            end.compact
+            error("project #{key} activity exclude_threads contains duplicates") unless exclusion_ids.uniq.length == exclusion_ids.length
+          end
+        end
+
+        wrapper = project["wrapper"]
+        if wrapper.nil? || !Pathname.new(wrapper.to_s).absolute?
+          error("project #{key} wrapper must be an absolute path")
+          next
+        end
+
+        expected_parent = File.join(HOME_ROOT, "projects") + File::SEPARATOR
+        resolved_wrapper = File.expand_path(wrapper)
+        error("project #{key} wrapper must be inside projects/") unless resolved_wrapper.start_with?(expected_parent)
+        error("project #{key} wrapper does not exist: #{wrapper}") unless File.directory?(resolved_wrapper)
+
+        layout = project.fetch("layout", "wrapper").to_s
+        error("project #{key} has invalid layout: #{layout}") unless %w[wrapper direct-repository].include?(layout)
+
+        repositories = Array(project["repositories"])
+
+        if layout == "direct-repository"
+          direct_project_roots << resolved_wrapper
+          error("project #{key} direct repository must contain .git") unless File.exist?(File.join(resolved_wrapper, ".git"))
+          error("project #{key} direct layout must contain exactly one repository") unless repositories.length == 1
+
+          direct_path = repositories.first["path"] if repositories.first.is_a?(Hash)
+          if direct_path && File.expand_path(direct_path) != resolved_wrapper
+            error("project #{key} direct repository path must equal wrapper")
+          end
+        else
+          error("project #{key} is missing AGENTS.md") unless File.file?(File.join(resolved_wrapper, "AGENTS.md"))
+          error("project #{key} is missing project.yaml") unless File.file?(File.join(resolved_wrapper, "project.yaml"))
+        end
+
+        project_yaml_path = File.join(resolved_wrapper, "project.yaml")
+        project_yaml = load_yaml(project_yaml_path) if layout == "wrapper" && File.file?(project_yaml_path)
+        if project_yaml.is_a?(Hash)
+          error("project #{key} project.yaml key mismatch") unless project_yaml["key"].to_s == key
+          registry_paths = Array(project["repositories"]).map { |repo| repo["path"] if repo.is_a?(Hash) }.compact.sort
+          project_paths = Array(project_yaml["repositories"]).map { |repo| repo["path"] if repo.is_a?(Hash) }.compact.sort
+          error("project #{key} repository paths differ between registry and project.yaml") unless registry_paths == project_paths
+        end
+
+        repositories.each do |repository|
+          unless repository.is_a?(Hash)
+            error("project #{key} repository entry must be a mapping")
+            next
+          end
+
+          path = repository["path"]
+          if path.nil? || !Pathname.new(path.to_s).absolute?
+            error("project #{key} repository path must be absolute")
+          elsif !File.directory?(path)
+            error("project #{key} repository path does not exist: #{path}")
+          end
+        end
+      end
+    else
+      error("projects must be a mapping")
+    end
+  end
+end
+
+task_bridge_path = File.join(HOME_ROOT, "config/task-bridge.yaml")
+task_bridge_config = load_yaml(task_bridge_path) if File.file?(task_bridge_path)
+if task_bridge_config.is_a?(Hash)
+  error("config/task-bridge.yaml schema_version must be 1") unless task_bridge_config["schema_version"] == 1
+  allowed_policy_keys = %w[enabled auto_claim require_checkpoint max_candidates idle_timeout_minutes]
+  validate_policy = lambda do |label, policy|
+    unless policy.is_a?(Hash)
+      error("#{label} must be a mapping")
+      next
+    end
+    unknown_keys = policy.keys.map(&:to_s) - allowed_policy_keys
+    error("#{label} contains unknown keys: #{unknown_keys.join(", ")}") unless unknown_keys.empty?
+    if policy.key?("enabled") && ![true, false].include?(policy["enabled"])
+      error("#{label}.enabled must be boolean")
+    end
+    if policy.key?("require_checkpoint") && ![true, false].include?(policy["require_checkpoint"])
+      error("#{label}.require_checkpoint must be boolean")
+    end
+    if policy.key?("auto_claim") && !%w[exact_sources disabled].include?(policy["auto_claim"].to_s)
+      error("#{label}.auto_claim must be exact_sources or disabled")
+    end
+    if policy.key?("max_candidates") && (!policy["max_candidates"].is_a?(Integer) || policy["max_candidates"] <= 0)
+      error("#{label}.max_candidates must be a positive integer")
+    end
+    if policy.key?("idle_timeout_minutes") && (!policy["idle_timeout_minutes"].is_a?(Integer) || policy["idle_timeout_minutes"] <= 0)
+      error("#{label}.idle_timeout_minutes must be a positive integer")
+    end
+  end
+
+  validate_policy.call("task bridge defaults", task_bridge_config["defaults"])
+  overrides = task_bridge_config["projects"]
+  if overrides.is_a?(Hash)
+    overrides.each do |project, policy|
+      error("task bridge references unknown project #{project}") unless project_keys.include?(project.to_s)
+      validate_policy.call("task bridge project #{project}", policy)
+    end
+  else
+    error("task bridge projects must be a mapping")
+  end
+elsif File.file?(task_bridge_path)
+  error("config/task-bridge.yaml must contain a mapping")
+end
+
+monitors_path = File.join(HOME_ROOT, "config/monitors.yaml")
+monitors_config = load_yaml(monitors_path) if File.file?(monitors_path)
+if monitors_config.is_a?(Hash)
+  error("config/monitors.yaml schema_version must be 1") unless monitors_config["schema_version"] == 1
+  monitors = monitors_config["monitors"]
+  if monitors.is_a?(Hash)
+    monitors.each do |id, monitor|
+      unless monitor.is_a?(Hash)
+        error("monitor #{id} must be a mapping")
+        next
+      end
+      scope = monitor["scope"].to_s
+      error("monitor #{id} has invalid scope: #{scope}") unless %w[agent_os project workspace].include?(scope)
+      if scope == "project"
+        error("monitor #{id} references unknown project #{monitor["project"]}") unless project_keys.include?(monitor["project"].to_s)
+      end
+      schedule = monitor["schedule"]
+      if schedule.is_a?(Hash)
+        error("monitor #{id} schedule.timezone is required") if schedule["timezone"].to_s.strip.empty?
+        days = Array(schedule["days"])
+        error("monitor #{id} schedule.days must not be empty") if days.empty?
+        error("monitor #{id} schedule.days contains invalid values") unless days.all? { |day| %w[MO TU WE TH FR SA SU].include?(day.to_s) }
+        error("monitor #{id} schedule.days contains duplicates") unless days.uniq.length == days.length
+        local_times = Array(schedule["local_times"])
+        error("monitor #{id} schedule.local_times must not be empty") if local_times.empty?
+        local_times.each do |local_time|
+          error("monitor #{id} has invalid local time: #{local_time}") unless local_time.to_s.match?(/\A(?:[01]\d|2[0-3]):[0-5]\d\z/)
+        end
+        error("monitor #{id} schedule.local_times contains duplicates") unless local_times.uniq.length == local_times.length
+      else
+        error("monitor #{id} schedule must be a mapping")
+      end
+      %w[runbook source_registry task_board_root runtime_state_root].each do |field|
+        value = monitor[field]
+        if value.nil? || !Pathname.new(value.to_s).absolute?
+          error("monitor #{id} #{field} must be an absolute path")
+        elsif field != "runtime_state_root" && !File.exist?(value)
+          error("monitor #{id} #{field} does not exist: #{value}")
+        end
+      end
+      notifications = monitor["notifications"]
+      if notifications.is_a?(Hash)
+        unless [true, false].include?(notifications["include_unfinished_total"])
+          error("monitor #{id} notifications.include_unfinished_total must be boolean")
+        end
+        exclusions = Array(notifications["unfinished_excludes"])
+        error("monitor #{id} unfinished_excludes must be exactly done,cancelled") unless exclusions.sort == %w[cancelled done]
+      else
+        error("monitor #{id} notifications must be a mapping")
+      end
+    end
+  else
+    error("config/monitors.yaml monitors must be a mapping")
+  end
+elsif File.file?(monitors_path)
+  error("config/monitors.yaml must contain a mapping")
+end
+
+task_board = AgentOS::TaskBoard.new(File.join(HOME_ROOT, "work"))
+task_board.validate!.each { |message| error("Task Board: #{message}") }
+task_board.tasks.each do |task|
+  Array(task["projects"]).each do |project|
+    error("Task Board #{task["id"]} references unknown project #{project}") unless project_keys.include?(project.to_s)
+  end
+end
+
+project_time = AgentOS::ProjectTime.new(agent_os_home: HOME_ROOT, registry_path: registry_path)
+project_time.validate.each { |message| error("Project time: #{message}") }
+
+Dir.glob(File.join(ROOT, ".agents/skills/*/SKILL.md")).sort.each do |skill_path|
+  folder_name = File.basename(File.dirname(skill_path))
+  content = File.read(skill_path)
+  frontmatter = content.match(/\A---\s*\n(.*?)\n---\s*\n/m)
+  if frontmatter.nil?
+    error("skill #{folder_name} has no YAML frontmatter")
+    next
+  end
+
+  metadata = YAML.safe_load(frontmatter[1], permitted_classes: [], permitted_symbols: [], aliases: false)
+  error("skill #{folder_name} name must match its folder") unless metadata.is_a?(Hash) && metadata["name"] == folder_name
+  error("skill #{folder_name} needs a description") unless metadata.is_a?(Hash) && !metadata["description"].to_s.strip.empty?
+  error("skill #{folder_name} still contains TODO markers") if content.include?("TODO")
+rescue Psych::SyntaxError => e
+  error("skill #{folder_name} has invalid frontmatter: #{e.message.lines.first.strip}")
+end
+
+markdown_paths = [
+  Dir.glob(File.join(ROOT, "*.md")),
+  Dir.glob(File.join(ROOT, ".agents", "skills", "**", "*.md")),
+  Dir.glob(File.join(ROOT, "apps", "**", "*.md")),
+  Dir.glob(File.join(ROOT, "docs", "**", "*.md")),
+  Dir.glob(File.join(ROOT, "plugins", "**", "*.md")),
+  Dir.glob(File.join(ROOT, "templates", "**", "*.md")),
+  File.join(ROOT, "projects", "README.md"),
+  File.join(ROOT, "work", "README.md")
+].flatten.select { |path| File.file?(path) }.uniq.sort
+
+markdown_paths.each do |markdown_path|
+
+  File.readlines(markdown_path, chomp: true).each_with_index do |line, index|
+    line.scan(/\]\(([^)]+)\)/).flatten.each do |raw_target|
+      target = raw_target.split("#", 2).first
+      next if target.empty? || target.match?(%r{\A(?:https?://|mailto:|codex://)})
+      next if target.start_with?("/")
+
+      resolved = File.expand_path(target, File.dirname(markdown_path))
+      error("broken Markdown link #{target.inspect} in #{markdown_path.sub("#{ROOT}/", "")}:#{index + 1}") unless File.exist?(resolved)
+    end
+  end
+end
+
+if ERRORS.empty?
+  project_count = registry.is_a?(Hash) && registry["projects"].is_a?(Hash) ? registry["projects"].length : 0
+  skill_count = Dir.glob(File.join(ROOT, ".agents/skills/*/SKILL.md")).length
+  puts "OK: Agent OS structure is valid (#{project_count} projects, #{skill_count} skills)"
+  exit 0
+end
+
+warn "Agent OS validation failed:"
+ERRORS.each { |message| warn "- #{message}" }
+exit 1

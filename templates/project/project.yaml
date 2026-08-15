@@ -1,0 +1,15 @@
+schema_version: 1
+key: project-key
+display_name: Project Name
+status: active
+
+aliases: []
+
+repositories: []
+
+sources:
+  slack: unknown
+  task_tracker: unknown
+  design: unknown
+
+deployments: []

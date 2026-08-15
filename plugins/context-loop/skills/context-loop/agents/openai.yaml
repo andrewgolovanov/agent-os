@@ -1,0 +1,6 @@
+interface:
+  display_name: "Context Loop"
+  short_description: "Keep long Codex tasks coherent and resumable"
+  default_prompt: "Use $context-loop to start a durable task and keep working until it is complete."
+policy:
+  allow_implicit_invocation: true

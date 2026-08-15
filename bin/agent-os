@@ -1,0 +1,414 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "fileutils"
+require "json"
+require "open3"
+require "optparse"
+require "rbconfig"
+require_relative "../lib/agent_os/paths"
+require_relative "../lib/agent_os/task_board"
+require_relative "../lib/agent_os/updater"
+
+module AgentOS
+  class CLI
+    DEFAULT_HOME = File.join(Dir.home, ".agent-os")
+    CONFIG_FILES = %w[projects.yaml monitors.yaml task-bridge.yaml].freeze
+
+    def initialize(arguments, out: $stdout, err: $stderr, environment: ENV)
+      @arguments = arguments.dup
+      @out = out
+      @err = err
+      @environment = environment
+    end
+
+    def run
+      command = @arguments.shift
+      case command
+      when "init" then initialize_home
+      when "doctor" then doctor
+      when "validate" then validate
+      when "audit-publication" then audit_publication
+      when "activate" then activate_home
+      when "install-plugin" then install_plugin
+      when "update" then update
+      else
+        @out.puts usage
+        command.nil? ? 0 : 2
+      end
+    rescue ArgumentError, OptionParser::ParseError => error
+      @err.puts "Error: #{error.message}"
+      2
+    end
+
+    private
+
+    def initialize_home
+      options = common_options(apply: false)
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os init [--home PATH] [--source PATH] [--apply]"
+        add_common_options(parser, options)
+        parser.on("--apply", "Create missing files after showing the plan") { options[:apply] = true }
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+
+      source = validated_root(options.fetch(:source), "source")
+      home = validated_root(options.fetch(:home), "home", allow_missing: true)
+      templates = CONFIG_FILES.to_h do |name|
+        path = File.join(source, "config", "examples", name)
+        raise ArgumentError, "missing config template: #{path}" unless File.file?(path)
+        [name, path]
+      end
+
+      planned = init_plan(home, templates)
+      @out.puts "Agent OS init plan"
+      @out.puts "  source: #{source}"
+      @out.puts "  home:   #{home}"
+      planned.each { |item| @out.puts "  #{item.fetch(:action).to_s.upcase.ljust(8)} #{item.fetch(:path)}" }
+
+      unless options.fetch(:apply)
+        @out.puts "Preview only. Re-run with --apply to create the missing paths."
+        return 0
+      end
+
+      apply_init(home, templates, source)
+      @out.puts "Initialized Agent OS home at #{home}"
+      0
+    end
+
+    def doctor
+      options = common_options(json: false)
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os doctor [--home PATH] [--source PATH] [--json]"
+        add_common_options(parser, options)
+        parser.on("--json") { options[:json] = true }
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+
+      source = validated_root(options.fetch(:source), "source", allow_missing: true)
+      home = validated_root(options.fetch(:home), "home", allow_missing: true)
+      checks = doctor_checks(source, home)
+      ready = checks.none? { |check| check.fetch(:required) && !check.fetch(:ok) }
+      result = {
+        schema_version: 1,
+        ready: ready,
+        source: source,
+        home: home,
+        checks: checks
+      }
+
+      if options.fetch(:json)
+        @out.puts JSON.pretty_generate(result)
+      else
+        @out.puts ready ? "Agent OS is ready" : "Agent OS needs attention"
+        checks.each do |check|
+          label = check.fetch(:ok) ? "OK" : check.fetch(:required) ? "MISSING" : "OPTIONAL"
+          @out.puts "  #{label.ljust(8)} #{check.fetch(:name)} — #{check.fetch(:detail)}"
+        end
+      end
+      ready ? 0 : 1
+    end
+
+    def activate_home
+      options = { home: @environment["AGENT_OS_HOME"] || active_home_value || DEFAULT_HOME, apply: false }
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os activate [--home PATH] [--apply]"
+        parser.on("--home PATH", "Private Agent OS home") { |value| options[:home] = value }
+        parser.on("--apply", "Write the active-home pointer") { options[:apply] = true }
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+
+      home = validated_root(options.fetch(:home), "home")
+      pointer = active_home_pointer
+      existing = File.file?(pointer) ? File.read(pointer).strip : nil
+      if existing && existing != home
+        raise ArgumentError, "active home already points to #{existing}; it was not overwritten"
+      end
+
+      @out.puts "Agent OS activation plan"
+      @out.puts "  #{existing == home ? "PRESERVE" : "CREATE"} #{pointer} -> #{home}"
+      unless options.fetch(:apply)
+        @out.puts "Preview only. Re-run with --apply to activate this home."
+        return 0
+      end
+
+      FileUtils.mkdir_p(File.dirname(pointer))
+      File.write(pointer, "#{home}\n", mode: "wx", perm: 0o600) unless File.exist?(pointer)
+      @out.puts "Activated Agent OS home at #{home}"
+      0
+    end
+
+    def validate
+      options = common_options
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os validate [--home PATH] [--source PATH]"
+        add_common_options(parser, options)
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+
+      source = validated_root(options.fetch(:source), "source")
+      home = validated_root(options.fetch(:home), "home")
+      environment = {
+        "AGENT_OS_SOURCE_ROOT" => source,
+        "AGENT_OS_HOME" => home,
+        "AGENT_OS_TASK_ROOT" => File.join(home, "work")
+      }
+      commands = [
+        [RbConfig.ruby, File.join(source, "tools", "validate-agent-os")],
+        [File.join(source, "tools", "task-board"), "validate", "--root", File.join(home, "work")],
+        [RbConfig.ruby, File.join(source, "test", "run.rb")],
+        ["node", File.join(source, "test", "plugin_packages_test.mjs")],
+        ["node", File.join(source, "test", "context_loop_smoke.mjs")]
+      ]
+
+      commands.each do |command|
+        @out.puts "+ #{command.join(" ")}"
+        return 1 unless system(environment, *command, chdir: source)
+      end
+      0
+    end
+
+    def audit_publication
+      options = common_options
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os audit-publication [--source PATH]"
+        parser.on("--source PATH", "Agent OS source checkout") { |value| options[:source] = value }
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+      source = validated_root(options.fetch(:source), "source")
+      system({ "AGENT_OS_SOURCE_ROOT" => source }, File.join(source, "tools", "audit-publication"), chdir: source) ? 0 : 1
+    end
+
+    def install_plugin
+      options = { source: Paths.source_root, apply: false }
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os install-plugin [--source PATH] [--apply]"
+        parser.on("--source PATH", "Agent OS source checkout") { |value| options[:source] = value }
+        parser.on("--apply", "Register the marketplace and install the plugin") { options[:apply] = true }
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+
+      source = validated_root(options.fetch(:source), "source")
+      manifest = File.join(source, ".agents", "plugins", "marketplace.json")
+      plugin_manifest = File.join(source, "plugins", "agent-os", ".codex-plugin", "plugin.json")
+      raise ArgumentError, "missing Agent OS marketplace: #{manifest}" unless File.file?(manifest)
+      raise ArgumentError, "missing Agent OS plugin: #{plugin_manifest}" unless File.file?(plugin_manifest)
+
+      codex = find_executable("codex")
+      raise ArgumentError, "Codex CLI is not available on PATH" unless codex
+
+      marketplaces = codex_json(codex, "plugin", "marketplace", "list", "--json").fetch("marketplaces")
+      existing_marketplace = marketplaces.find { |item| item.fetch("name") == "agent-os" }
+      if existing_marketplace && File.expand_path(existing_marketplace.fetch("root")) != source
+        existing_root = existing_marketplace.fetch("root")
+        raise ArgumentError, "agent-os marketplace already points to #{existing_root}"
+      end
+
+      plugins = if existing_marketplace
+                  codex_json(codex, "plugin", "list", "--marketplace", "agent-os", "--available", "--json")
+                else
+                  { "installed" => [] }
+                end
+      installed = plugins.fetch("installed").any? { |item| item.fetch("pluginId") == "agent-os@agent-os" }
+
+      @out.puts "Agent OS plugin install plan"
+      @out.puts "  #{existing_marketplace ? "PRESERVE" : "REGISTER"} marketplace agent-os -> #{source}"
+      @out.puts "  #{installed ? "PRESERVE" : "INSTALL"}  agent-os@agent-os"
+      unless options.fetch(:apply)
+        @out.puts "Preview only. Re-run with --apply to install the plugin."
+        return 0
+      end
+
+      return 1 unless existing_marketplace || system(codex, "plugin", "marketplace", "add", source, "--json")
+      return 1 unless installed || system(codex, "plugin", "add", "agent-os@agent-os", "--json")
+
+      @out.puts "Agent OS plugin is installed. Start a fresh Codex task to load it."
+      0
+    end
+
+    def update
+      options = { source: Paths.source_root, remote: "origin", apply: false, plugin: true, json: false }
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os update [--source PATH] [--remote NAME] [--no-plugin] [--json] [--apply]"
+        parser.on("--source PATH", "Agent OS source checkout") { |value| options[:source] = value }
+        parser.on("--remote NAME", "Git remote containing release tags") { |value| options[:remote] = value }
+        parser.on("--no-plugin", "Do not inspect or refresh the Codex plugin") { options[:plugin] = false }
+        parser.on("--json", "Print machine-readable update status") { options[:json] = true }
+        parser.on("--apply", "Fast-forward to the latest release and refresh the plugin") { options[:apply] = true }
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+
+      source = validated_root(options.fetch(:source), "source")
+      updater = AgentOS::Updater.new(source: source, remote: options.fetch(:remote), environment: @environment)
+      result = options.fetch(:apply) ? updater.apply(include_plugin: options.fetch(:plugin)) : updater.status(include_plugin: options.fetch(:plugin))
+
+      if options.fetch(:json)
+        @out.puts JSON.pretty_generate(result)
+      else
+        print_update_result(result, applied: options.fetch(:apply))
+      end
+      0
+    end
+
+    def print_update_result(result, applied:)
+      source = result.fetch(:source)
+      @out.puts applied ? "Agent OS update result" : "Agent OS update plan"
+      if source.fetch(:configured)
+        @out.puts "  core:   #{source.fetch(:current_version) || "development"} -> #{source.fetch(:latest_version)} (#{source.fetch(:action)})"
+      else
+        @out.puts "  core:   unavailable (#{source.fetch(:reason)})"
+      end
+
+      plugin = result.fetch(:plugin)
+      @out.puts "  plugin: #{plugin.fetch(:action)}"
+      @out.puts "  app:    Sparkle update feed; automatic install is user opt-in"
+      @out.puts "Preview only. Re-run with --apply to update core and plugin." unless applied
+      @out.puts "Start a fresh Codex task after a plugin refresh." if plugin.fetch(:updated, false)
+    end
+
+    def common_options(extra = {})
+      { source: Paths.source_root, home: @environment["AGENT_OS_HOME"] || active_home_value || DEFAULT_HOME }.merge(extra)
+    end
+
+    def add_common_options(parser, options)
+      parser.on("--source PATH", "Agent OS source checkout") { |value| options[:source] = value }
+      parser.on("--home PATH", "Private Agent OS home") { |value| options[:home] = value }
+    end
+
+    def validated_root(path, label, allow_missing: false)
+      value = path.to_s
+      raise ArgumentError, "#{label} path must be absolute" unless value.start_with?(File::SEPARATOR)
+      expanded = File.expand_path(value)
+      raise ArgumentError, "#{label} path cannot be the filesystem root" if expanded == File::SEPARATOR
+      raise ArgumentError, "#{label} path does not exist: #{expanded}" unless allow_missing || File.directory?(expanded)
+      expanded
+    end
+
+    def init_plan(home, templates)
+      paths = [home, File.join(home, "config"), File.join(home, "projects"), File.join(home, ".runtime")]
+      planned = paths.map { |path| { action: File.exist?(path) ? :preserve : :create, path: path } }
+      templates.each_key do |name|
+        path = File.join(home, "config", name)
+        planned << { action: File.exist?(path) ? :preserve : :create, path: path }
+      end
+      source_path = File.join(home, "source-path")
+      planned << { action: File.exist?(source_path) ? :preserve : :create, path: source_path }
+      work = File.join(home, "work")
+      planned << { action: File.exist?(work) ? :preserve : :create, path: work }
+      planned
+    end
+
+    def apply_init(home, templates, source)
+      home_existed = File.exist?(home)
+      FileUtils.mkdir_p([home, File.join(home, "config"), File.join(home, "projects"), File.join(home, ".runtime")])
+      File.chmod(0o700, home) unless home_existed
+
+      templates.each do |name, template|
+        destination = File.join(home, "config", name)
+        next if File.exist?(destination)
+        content = File.read(template)
+          .gsub("__AGENT_OS_HOME__", home)
+          .gsub("__TIMEZONE__", local_timezone)
+        File.write(destination, content, mode: "wx", perm: 0o600)
+      end
+      source_path = File.join(home, "source-path")
+      File.write(source_path, "#{source}\n", mode: "wx", perm: 0o600) unless File.exist?(source_path)
+      AgentOS::TaskBoard.new(File.join(home, "work")).initialize_store
+    end
+
+    def local_timezone
+      @environment.fetch("TZ", "UTC").then { |value| value.empty? ? "UTC" : value }
+    end
+
+    def doctor_checks(source, home)
+      required_paths = {
+        "source checkout" => source,
+        "source pointer" => File.join(home, "source-path"),
+        "Task Board executable" => File.join(source, "tools", "task-board"),
+        "project registry" => File.join(home, "config", "projects.yaml"),
+        "Task Bridge config" => File.join(home, "config", "task-bridge.yaml"),
+        "Task Board state" => File.join(home, "work", "board.json")
+      }
+      checks = required_paths.map do |name, path|
+        { name: name, required: true, ok: File.exist?(path), detail: path }
+      end
+      checks << executable_check("Ruby", RbConfig.ruby, required: true)
+      checks << executable_check("Node.js", "node", required: false)
+      checks << executable_check("Codex CLI", "codex", required: false)
+      checks << executable_check("Swift", "swift", required: false)
+      active = active_home_pointer
+      checks << {
+        name: "active-home pointer",
+        required: false,
+        ok: File.file?(active) && File.read(active).strip == home,
+        detail: active
+      }
+      checks
+    end
+
+    def active_home_pointer
+      File.join(@environment.fetch("HOME", Dir.home), ".config", "agent-os", "home")
+    end
+
+    def active_home_value
+      pointer = active_home_pointer
+      return nil unless File.file?(pointer)
+
+      value = File.read(pointer).strip
+      value.start_with?(File::SEPARATOR) && value != File::SEPARATOR ? value : nil
+    end
+
+    def executable_check(name, executable, required:)
+      path = if executable.include?(File::SEPARATOR)
+               File.executable?(executable) ? executable : nil
+             else
+               find_executable(executable)
+             end
+      { name: name, required: required, ok: !path.nil?, detail: path || "not found on PATH" }
+    end
+
+    def find_executable(name)
+      @environment.fetch("PATH", "").split(File::PATH_SEPARATOR).each do |directory|
+        candidate = File.join(directory, name)
+        return candidate if File.file?(candidate) && File.executable?(candidate)
+      end
+      nil
+    end
+
+    def codex_json(codex, *arguments)
+      stdout, stderr, status = Open3.capture3(codex, *arguments)
+      raise ArgumentError, stderr.strip.empty? ? "Codex CLI command failed" : stderr.strip unless status.success?
+      JSON.parse(stdout)
+    rescue JSON::ParserError => error
+      raise ArgumentError, "Codex CLI returned invalid JSON: #{error.message}"
+    end
+
+    def reject_extra_arguments!
+      raise OptionParser::InvalidArgument, @arguments.join(" ") unless @arguments.empty?
+    end
+
+    def usage
+      <<~USAGE
+        Usage: agent-os <command> [options]
+
+        Commands:
+          init       Preview or create a private Agent OS home
+          doctor     Read-only dependency and path checks
+          validate   Validate source structure and private state
+          audit-publication  Block known private data from a release candidate
+          activate   Preview or select the home used by app and plugin processes
+          install-plugin  Preview or install the Agent OS Codex plugin
+          update     Check release tags; optionally fast-forward core and refresh plugin
+      USAGE
+    end
+  end
+end
+
+exit AgentOS::CLI.new(ARGV).run if $PROGRAM_NAME == __FILE__

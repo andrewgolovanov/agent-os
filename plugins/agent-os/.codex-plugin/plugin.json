@@ -1,0 +1,27 @@
+{
+  "name": "agent-os",
+  "version": "0.2.0+codex.20260815131606",
+  "description": "Use the canonical local Agent OS project registry and Task Board from Codex.",
+  "author": {
+    "name": "Andrew Golovanov"
+  },
+  "license": "MIT",
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Agent OS",
+    "shortDescription": "Manage canonical Agent OS outcomes from Codex.",
+    "longDescription": "Lists projects and outcomes and applies validated Task Board mutations without a second database or direct JSON writes.",
+    "developerName": "Andrew Golovanov",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Show my unfinished Agent OS outcomes.",
+      "Create an Agent OS outcome for this project.",
+      "Update an outcome by exact task ID."
+    ]
+  }
+}

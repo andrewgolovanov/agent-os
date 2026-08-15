@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "agent_os": {
+      "command": "node",
+      "args": ["./mcp/server.mjs"],
+      "cwd": "."
+    }
+  }
+}

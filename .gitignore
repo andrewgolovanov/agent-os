@@ -1,0 +1,24 @@
+.DS_Store
+*.log
+*.tmp
+.env
+.env.*
+!.env.example
+
+# Agent OS source is shareable; each user's instance is private local state.
+/.agent-os/
+/.runtime/
+/source-path
+/local/
+/config/projects.yaml
+/config/monitors.yaml
+/config/task-bridge.yaml
+/work/*
+!/work/README.md
+/projects/*
+!/projects/README.md
+
+# Build and runtime artifacts.
+tmp/
+/apps/**/.build/
+/apps/**/dist/
