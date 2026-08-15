@@ -2,6 +2,13 @@
 
 ## 2026-08-15
 
+- Published `v0.2.0` from
+  `ecab617fa23abdaefdea42a4c9d157e2b737ed9f`: the tag workflow completed
+  clean-home validation, publication audit, Swift tests, signed packaging, and
+  GitHub publication in run `31909930801`. The public zip, checksum, stable
+  appcast, Apple Silicon/macOS metadata, strict bundle signature, embedded
+  25-file runtime manifest, and Sparkle Ed25519 signature passed independent
+  post-publication verification.
 - Removed the manual repository checkout from the packaged installation path:
   the Codex plugin now contains an allowlisted minimal Agent OS runtime, the
   macOS app embeds the same generated payload, and either component can

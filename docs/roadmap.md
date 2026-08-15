@@ -4,13 +4,13 @@ This roadmap contains only the next verifiable product outcomes.
 
 ## Now
 
-### Publish and verify the no-checkout packaged setup
+### Verify the no-checkout packaged setup with a second installation
 
-The next tagged release packages the minimal runtime in both the Codex plugin
-and macOS app. Complete the clean-install proof using only those two public
-artifacts: launch either component first, onboard a repository located outside
-any Agent OS directory, create and resume one durable outcome, then launch the
-other component and confirm it sees the same private state.
+`v0.2.0` packages the minimal runtime in both the Codex plugin and macOS app.
+Complete the remaining real-user proof using only those two public artifacts:
+launch either component first, onboard a repository located outside any Agent
+OS directory, create and resume one durable outcome, then launch the other
+component and confirm it sees the same private state.
 
 Done when:
 
@@ -55,12 +55,18 @@ Completed publication checks:
   `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f` — verified;
 - the public assets, stable appcast, bundle metadata, Apple Silicon binary,
   checksum, strict bundle signature, and Sparkle Ed25519 signature pass an
-  independent post-publication verification — verified.
+  independent post-publication verification — verified;
+- `v0.2.0` published the no-checkout plugin/app runtime from commit
+  `ecab617fa23abdaefdea42a4c9d157e2b737ed9f` in successful workflow run
+  `31909930801` — verified;
+- an anonymous HTTPS clone of `v0.2.0` initializes a separate private home and
+  passes the complete Ruby suite, runtime synchronization, plugin package
+  checks, and publication audit — verified.
 
 Remaining release checks:
 
-- a second Mac completes an approved first install and a later genuine
-  old-version to new-version update.
+- a second Mac completes an approved first install and a genuine `v0.1.0` to
+  `v0.2.0` update.
 
 ### Complete the local Agent OS app pilot
 

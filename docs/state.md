@@ -22,17 +22,20 @@ Verified: 2026-08-15
 - The first public release, `v0.1.0`, is published from commit
   `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f` at
   `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.1.0`.
+- The current public release, `v0.2.0`, is published from commit
+  `ecab617fa23abdaefdea42a4c9d157e2b737ed9f` at
+  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.2.0`.
 - Documentation maintenance is now part of the repository completion contract:
   affected agent instructions, human README guidance, and owning product docs
   are updated in the same change and stale renamed identifiers are searched
   before handoff.
-- The current release candidate adds a complete opt-in integration path without
+- The `v0.2.0` release adds a complete opt-in integration path without
   changing provider state: preview-first Slack monitor configuration,
   plugin-bundled Task Bridge hooks, a Codex setup skill, Scheduled task prompt,
   recovery instructions, and optional doctor checks.
 - Agent OS and Context Loop plugin details link their Website field and source
   metadata to the public `andrewgolovanov/agent-os` repository.
-- The current release candidate removes the manual source-checkout requirement
+- The `v0.2.0` release removes the manual source-checkout requirement
   for packaged users: the Agent OS plugin contains an allowlisted minimal
   runtime, and the app packager embeds that exact payload.
 - Either packaged component bootstraps the shared private home idempotently; a
@@ -174,11 +177,22 @@ Verified: 2026-08-15
   after publication. The checksum, strict bundle signature, version `0.1.0`,
   macOS 14 minimum, Apple Silicon executable, appcast archive length and URL,
   stable `latest` feed, and Ed25519 archive signature all passed verification.
+- The tag-triggered GitHub Release workflow completed successfully for
+  `v0.2.0`: clean-home validation, publication audit, Swift tests, signed
+  packaging, and GitHub publication all passed in run `31909930801`.
+- The public `v0.2.0` zip, checksum, and appcast were downloaded independently
+  after publication. The checksum, strict bundle signature, version `0.2.0`,
+  macOS 14 minimum, Apple Silicon executable, appcast archive length and URL,
+  stable `latest` feed, embedded 25-file runtime manifest, and Ed25519 archive
+  signature all passed verification.
+- A fresh anonymous HTTPS clone of `v0.2.0` initialized a separate private home
+  and passed 46 Ruby tests/328 assertions, structural validation, exact runtime
+  synchronization, both plugin package checks, and the publication audit.
 
 ## Not configured
 
-- A real second-Mac install and cross-version Sparkle update from `v0.1.0` to a
-  later release.
+- A real second-Mac install and cross-version Sparkle update from `v0.1.0` to
+  `v0.2.0`.
 - End-user hook trust remains a per-install Codex choice; the release source
   cannot pre-approve it for another user.
 - A connected Slack integration and Codex Scheduled task for a clean user; the

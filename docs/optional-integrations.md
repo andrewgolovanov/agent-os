@@ -17,7 +17,7 @@ Install the public plugin snapshot, review its hooks, and start a fresh Agent OS
 task:
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref CURRENT_RELEASE_TAG
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.2.0
 codex plugin add agent-os@agent-os
 ```
 
