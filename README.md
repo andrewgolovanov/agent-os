@@ -1,4 +1,4 @@
-# <img src="apps/agent-os/Resources/AppIcon.svg" alt="Agent OS icon" height="42"> Agent OS
+# <img src="apps/agent-os/Resources/AppIcon.svg" alt="Agent OS icon" height="42" align="absbottom"> Agent OS
 
 Agent OS is a local-first control plane for Codex work across multiple project
 repositories. It keeps project routing, durable outcomes, exact Codex task
