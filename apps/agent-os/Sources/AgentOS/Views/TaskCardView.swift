@@ -3,22 +3,28 @@ import SwiftUI
 struct TaskCardView: View {
     let task: AgentOSTask
     let isSelected: Bool
+    @State private var isHovering = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .firstTextBaseline) {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(task.title)
-                    .font(.headline)
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(AgentOSTheme.textPrimary)
                     .lineLimit(2)
+
                 Spacer(minLength: 8)
-                Image(systemName: task.status.systemImage)
-                    .foregroundStyle(task.status.tint)
+
+                Label(AgentOSTimeFormatter.compact(seconds: task.activity.totalSeconds), systemImage: "clock")
+                    .font(.caption2.weight(.medium).monospacedDigit())
+                    .foregroundStyle(AgentOSTheme.textSecondary)
+                    .fixedSize()
             }
 
             if !task.summary.isEmpty {
                 Text(task.summary)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(.callout)
+                    .foregroundStyle(AgentOSTheme.textSecondary)
                     .lineLimit(3)
             }
 
@@ -26,23 +32,29 @@ struct TaskCardView: View {
                 ForEach(task.projects.prefix(2), id: \.self) { project in
                     Text(project)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AgentOSTheme.textSecondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(AgentOSTheme.muted, in: Capsule())
                 }
                 Spacer()
                 if !task.codexThreads.isEmpty {
                     Label("\(task.codexThreads.count)", systemImage: "terminal")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(AgentOSTheme.textSecondary)
                 }
             }
         }
-        .padding(12)
+        .padding(AgentOSMetrics.itemSpacing)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.background.secondary, in: RoundedRectangle(cornerRadius: 10))
-        .overlay {
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-        }
+        .agentOSPanel(
+            cornerRadius: AgentOSMetrics.radiusExtraLarge,
+            background: isHovering && !isSelected ? AgentOSTheme.surfaceHover : AgentOSTheme.card,
+            border: isSelected ? task.status.tint.opacity(0.9) : AgentOSTheme.border
+        )
         .contentShape(Rectangle())
+        .onHover { isHovering = $0 }
+        .animation(.easeOut(duration: 0.12), value: isHovering)
+        .animation(.easeOut(duration: 0.12), value: isSelected)
     }
 }

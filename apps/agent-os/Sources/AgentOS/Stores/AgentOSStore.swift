@@ -11,6 +11,8 @@ final class AgentOSStore {
     private(set) var lastRefreshedAt: Date?
     private(set) var componentUpdateStatus: AgentOSUpdateStatus?
     private(set) var isCheckingForComponentUpdates = false
+    private(set) var sourceMetadata: [String: AgentOSSourceMetadata] = [:]
+    private(set) var loadingSourceIDs: Set<String> = []
     var errorMessage: String?
     var noticeMessage: String?
 
@@ -18,6 +20,7 @@ final class AgentOSStore {
 
     private let agentOSService = AgentOSCLIService()
     private let codexService = CodexAppServerService()
+    private let sourceMetadataService = SourceMetadataService()
     private var watcher: AgentOSFileWatcher?
 
     init(configuration: AgentOSConfiguration = .current()) {
@@ -155,6 +158,18 @@ final class AgentOSStore {
         } catch {
             errorMessage = "Codex handoff failed: \(error.localizedDescription)"
         }
+    }
+
+    func loadSourceMetadata(for task: AgentOSTask) async {
+        let items = task.sources.items.filter { $0.kind == .pullRequest }
+        let itemIDs = Set(items.map(\.id))
+        guard !itemIDs.isEmpty else { return }
+
+        loadingSourceIDs.formUnion(itemIDs)
+        defer { loadingSourceIDs.subtract(itemIDs) }
+
+        let loaded = await sourceMetadataService.load(for: items)
+        sourceMetadata.merge(loaded) { _, refreshed in refreshed }
     }
 
     func checkForComponentUpdates(apply: Bool = false, announceCurrent: Bool = true) async {

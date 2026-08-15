@@ -23,7 +23,7 @@ the canonical Agent OS registry and Task Board remain usable without this app.
 | Outcome lifecycle | private Task Board via `tools/task-board` | invoke validated actions |
 | Task index | generated private `work/board.json` | refresh/read model |
 | Codex tasks | Codex App Server | create/name exact idle task and hand off |
-| Provider context | exact source URLs | open only; no ambient write |
+| Provider context | exact source URLs | contextual display and open only; optional read-only `gh` PR lookup |
 
 The app never edits Task Board JSON or Markdown directly and owns no database.
 All task mutations use the source checkout's executable with an argument array.
@@ -48,8 +48,40 @@ competing background turn from a second App Server client.
 
 - regular SwiftUI window with Focus and Board views;
 - project/outcome filtering and search;
-- selected outcome inspector with goal, summary, next action, blocker, sources,
-  Codex memberships, and tracked outcome time;
+- the official shadcn default Neutral dark tokens mapped into SwiftUI semantic
+  roles: `#0a0a0a` background, `#171717` card/sidebar, `#262626`
+  muted/accent, 10% borders, 15% input borders, and `#a3a3a3` muted text;
+- dashboard-01 geometry for the native equivalents: a 48-point toolbar rhythm,
+  36-point default controls, 32-point compact controls, 16-point icons, a
+  4-point spacing grid, and the documented shadcn radius scale;
+- a native resizable task-detail split that stays closed by default, opens only
+  from task selection without a sheet transition, and closes through its button
+  or Escape without retaining stale selection; while it is open, a translucent
+  backdrop dims and disables the Focus or Board pane and closes the detail when
+  clicked without covering the inspector, toolbar, or project sidebar;
+- selected outcome details with goal, summary, next action, blocker, sources,
+  Codex memberships, and tracked outcome time in the header;
+- registered project display names directly in Focus rows for mixed-project
+  scanning without opening task details;
+- tracked outcome time at the top of every Board card for immediate scanning;
+- a full-height sidebar surface and divider through the titlebar, compact icons
+  aligned to the first label line, and a document-style detail view with one
+  clear hierarchy instead of nested detail cards; the sidebar is capped at the
+  compact 240-point width, and the titlebar keeps the
+  sidebar surface behind traffic lights and the native hide/show control while
+  the main toolbar retains the canvas surface in both expanded and collapsed
+  sidebar states;
+- one shared 36-point project/lifecycle select and input geometry, with a single
+  chevron, flat semantic popover, automatic edge placement, and correctly
+  aligned single-line and multiline placeholders;
+- interactive source rows with provider-specific labels, hover feedback,
+  external-link affordances, privacy-safe Slack permalink context, and optional
+  live GitHub pull-request title/state/review metadata; PR rows are promoted
+  below the task header and excluded from the lower supporting-source list;
+- a reproducible black-and-white Agent OS `A` app icon, with an editable SVG
+  source and generated multi-resolution `.icns` copied into development and
+  release bundles, plus a dedicated 18-point template version of the same mark
+  for the menu-bar extra;
 - create outcome and validated lifecycle changes;
 - bounded menu-bar counts and quick actions.
 - unified update settings: tagged core/plugin updates plus Sparkle app updates,
@@ -72,3 +104,7 @@ AGENT_OS_HOME="$HOME/.agent-os" \
 The companion MCP clean-home test lives in `test/agent_os_mcp_test.rb`.
 Release packaging additionally verifies nested code signatures, SHA-256, and
 the Sparkle Ed25519 archive signature.
+
+Authenticated `gh` is optional and is discovered from the process `PATH` plus
+the standard Apple Silicon and Intel Homebrew locations. Without it, PR rows
+remain usable links with repository and PR-number context.

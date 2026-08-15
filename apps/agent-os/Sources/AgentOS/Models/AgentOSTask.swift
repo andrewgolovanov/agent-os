@@ -7,6 +7,21 @@ struct AgentOSSourceLink: Codable, Hashable, Identifiable, Sendable {
     var id: String { identity }
 }
 
+enum AgentOSSourceKind: String, Hashable, Sendable {
+    case slackThread
+    case pullRequest
+    case figma
+    case deployment
+    case other
+}
+
+struct AgentOSSourceItem: Hashable, Identifiable, Sendable {
+    let link: AgentOSSourceLink
+    let kind: AgentOSSourceKind
+
+    var id: String { "\(kind.rawValue):\(link.identity)" }
+}
+
 struct AgentOSSources: Codable, Hashable, Sendable {
     let slackThreads: [AgentOSSourceLink]
     let pullRequests: [AgentOSSourceLink]
@@ -16,6 +31,22 @@ struct AgentOSSources: Codable, Hashable, Sendable {
 
     var all: [AgentOSSourceLink] {
         slackThreads + pullRequests + figma + deployments + other
+    }
+
+    var items: [AgentOSSourceItem] {
+        slackThreads.map { AgentOSSourceItem(link: $0, kind: .slackThread) }
+            + pullRequests.map { AgentOSSourceItem(link: $0, kind: .pullRequest) }
+            + figma.map { AgentOSSourceItem(link: $0, kind: .figma) }
+            + deployments.map { AgentOSSourceItem(link: $0, kind: .deployment) }
+            + other.map { AgentOSSourceItem(link: $0, kind: .other) }
+    }
+
+    var pullRequestItems: [AgentOSSourceItem] {
+        pullRequests.map { AgentOSSourceItem(link: $0, kind: .pullRequest) }
+    }
+
+    var supportingItems: [AgentOSSourceItem] {
+        items.filter { $0.kind != .pullRequest }
     }
 
     private enum CodingKeys: String, CodingKey {

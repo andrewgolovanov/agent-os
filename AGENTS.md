@@ -33,6 +33,12 @@ This repository is the portable Agent OS source. Keep user project code and muta
 4. Validate the affected layer and report exactly what was and was not verified.
 5. For material Agent OS changes, update the owning doc, `docs/state.md`, and `docs/changelog.md`; add a decision record when rationale must survive.
 
+## Documentation maintenance
+
+- Treat documentation as part of the implementation, not as later cleanup. In the same change, update every relevant document whose claim became inaccurate because user-visible behavior, setup, commands, paths, naming, architecture, security boundaries, validation, or release behavior changed.
+- Keep agent-facing commands, required checks, routing, and ownership rules in the nearest applicable `AGENTS.md`. Keep human installation, usage, and contribution guidance in the nearest relevant README. Keep deeper product facts in the owning document under `docs/`.
+- Update only affected documents; do not mechanically touch every `AGENTS.md` or README. Before handoff, search for removed or renamed commands, paths, and product names, and run every validation command that was added or changed.
+
 ## Validation
 
 Run `ruby tools/validate-agent-os` after structural or registry changes. Run `tools/task-board validate` after task-state tooling changes and `tools/slack-state validate` after dispatcher-state changes. Run repository-specific checks from the registered repository and its closest `AGENTS.md`.

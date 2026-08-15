@@ -15,30 +15,32 @@ struct AgentOSApp: App {
     @State private var store = AgentOSStore()
     private let updater = AgentOSUpdaterController()
 
-    private var forcedColorScheme: ColorScheme? {
+    private var appColorScheme: ColorScheme {
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("--force-light-appearance") { return .light }
-        if arguments.contains("--force-dark-appearance") { return .dark }
-        return nil
+        return .dark
     }
 
     var body: some Scene {
         WindowGroup("Agent OS", id: "main") {
             ContentView(store: store)
                 .frame(minWidth: 1_080, minHeight: 680)
-                .preferredColorScheme(forcedColorScheme)
+                .preferredColorScheme(appColorScheme)
         }
         .defaultSize(width: 1_360, height: 820)
 
-        MenuBarExtra("Agent OS", systemImage: "rectangle.3.group") {
+        MenuBarExtra {
             MenuBarView(store: store, updater: updater)
-                .preferredColorScheme(forcedColorScheme)
+                .preferredColorScheme(appColorScheme)
+        } label: {
+            Image(nsImage: AgentOSBrandIcon.menuBarImage)
+                .accessibilityLabel("Agent OS")
         }
         .menuBarExtraStyle(.menu)
 
         Settings {
             UpdateSettingsView(store: store, updater: updater)
-                .preferredColorScheme(forcedColorScheme)
+                .preferredColorScheme(appColorScheme)
         }
         .commands {
             CommandGroup(after: .appInfo) {

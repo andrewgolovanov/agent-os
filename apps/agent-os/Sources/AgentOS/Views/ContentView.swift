@@ -3,7 +3,9 @@ import SwiftUI
 struct ContentView: View {
     let store: AgentOSStore
     @SceneStorage("agent-os.scope") private var scope = "focus"
-    @SceneStorage("agent-os.selected-task") private var selectedTaskID: String?
+    @State private var selectedTaskID: String?
+    @State private var showsTaskInspector = false
+    @State private var sidebarWidth: CGFloat = AgentOSMetrics.sidebarWidth
     @State private var searchText = ""
     @State private var showsNewTask = false
 
@@ -36,38 +38,77 @@ struct ContentView: View {
         return store.tasks.first { $0.id == selectedTaskID }
     }
 
+    private var taskSelection: Binding<String?> {
+        Binding(
+            get: { selectedTaskID },
+            set: { taskID in
+                withoutAnimation {
+                    selectedTaskID = taskID
+                    showsTaskInspector = taskID != nil
+                }
+            }
+        )
+    }
+
     var body: some View {
         NavigationSplitView {
             SidebarView(projects: store.projects, tasks: store.tasks, selection: $scope)
-                .navigationSplitViewColumnWidth(min: 210, ideal: 240)
-        } content: {
-            Group {
-                if scope == "focus" {
-                    FocusView(tasks: visibleTasks, selectedTaskID: $selectedTaskID)
-                } else {
-                    BoardView(tasks: visibleTasks, selectedTaskID: $selectedTaskID)
+                .navigationSplitViewColumnWidth(
+                    min: 210,
+                    ideal: AgentOSMetrics.sidebarWidth,
+                    max: AgentOSMetrics.sidebarWidth
+                )
+        } detail: {
+            HSplitView {
+                ZStack {
+                    scopedContent
+                        .allowsHitTesting(!showsTaskInspector)
+                        .accessibilityHidden(showsTaskInspector)
+
+                    if showsTaskInspector {
+                        AgentOSTheme.inspectorBackdrop
+                            .contentShape(Rectangle())
+                            .onTapGesture(perform: closeInspector)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .frame(minWidth: 560, maxWidth: .infinity, maxHeight: .infinity)
+
+                if showsTaskInspector, let selectedTask {
+                    TaskInspectorView(
+                        task: selectedTask,
+                        isBusy: store.busyTaskID == selectedTask.id,
+                        sourceMetadata: store.sourceMetadata,
+                        loadingSourceIDs: store.loadingSourceIDs,
+                        onClose: closeInspector,
+                        onStatusChange: { status in
+                            Task { await store.updateStatus(taskID: selectedTask.id, status: status) }
+                        },
+                        onOpenNewCodex: {
+                            Task { await store.openNewCodexTask(taskID: selectedTask.id) }
+                        },
+                        onOpenCodex: { threadID in
+                            Task { await store.openCodexTask(threadID: threadID) }
+                        }
+                    )
+                    .frame(minWidth: 360, idealWidth: 420, maxWidth: 520, maxHeight: .infinity)
+                    .task(id: "\(selectedTask.id):\(selectedTask.updatedAt)") {
+                        await store.loadSourceMetadata(for: selectedTask)
+                    }
                 }
             }
-            .navigationSplitViewColumnWidth(min: 520, ideal: 760)
-        } detail: {
-            TaskInspectorView(
-                task: selectedTask,
-                isBusy: store.busyTaskID == selectedTaskID,
-                onStatusChange: { status in
-                    guard let selectedTaskID else { return }
-                    Task { await store.updateStatus(taskID: selectedTaskID, status: status) }
-                },
-                onOpenNewCodex: {
-                    guard let selectedTaskID else { return }
-                    Task { await store.openNewCodexTask(taskID: selectedTaskID) }
-                },
-                onOpenCodex: { threadID in
-                    Task { await store.openCodexTask(threadID: threadID) }
-                }
-            )
-            .navigationSplitViewColumnWidth(min: 300, ideal: 360)
+            .background(AgentOSTheme.canvas)
+            .animation(nil, value: showsTaskInspector)
+        }
+        .onPreferenceChange(SidebarWidthPreferenceKey.self) { sidebarWidth = $0 }
+        .background {
+            WindowSidebarDivider(sidebarWidth: sidebarWidth)
+                .frame(width: 0, height: 0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
         .searchable(text: $searchText, placement: .toolbar, prompt: "Search outcomes")
+        .tint(AgentOSTheme.accent)
         .toolbar {
             ToolbarItemGroup {
                 if store.isRefreshing {
@@ -77,10 +118,14 @@ struct ContentView: View {
                 Button("Refresh", systemImage: "arrow.clockwise") {
                     Task { await store.refresh() }
                 }
+                .foregroundStyle(AgentOSTheme.textPrimary)
+                .help("Sync Task Board")
                 .keyboardShortcut("r", modifiers: [.command])
                 Button("New outcome", systemImage: "plus") {
                     showsNewTask = true
                 }
+                .foregroundStyle(AgentOSTheme.textPrimary)
+                .help("Create a new outcome")
                 .keyboardShortcut("n", modifiers: [.command])
             }
         }
@@ -88,9 +133,10 @@ struct ContentView: View {
             if let message = store.errorMessage ?? store.noticeMessage {
                 HStack {
                     Image(systemName: store.errorMessage == nil ? "info.circle.fill" : "exclamationmark.triangle.fill")
-                        .foregroundStyle(store.errorMessage == nil ? .blue : .orange)
+                        .foregroundStyle(store.errorMessage == nil ? AgentOSTheme.information : AgentOSTheme.warning)
                     Text(message)
                         .font(.callout)
+                        .foregroundStyle(AgentOSTheme.textPrimary)
                         .lineLimit(2)
                     Spacer()
                     Button("Dismiss") {
@@ -99,7 +145,12 @@ struct ContentView: View {
                     }
                 }
                 .padding(10)
-                .background(.bar)
+                .background(AgentOSTheme.surface)
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(AgentOSTheme.border)
+                        .frame(height: 1)
+                }
             }
         }
         .sheet(isPresented: $showsNewTask) {
@@ -108,5 +159,38 @@ struct ContentView: View {
         .task {
             await store.bootstrap()
         }
+        .onChange(of: scope) { _, _ in
+            closeInspector()
+        }
+        .onChange(of: store.tasks.map(\.id)) { _, taskIDs in
+            guard let selectedTaskID, !taskIDs.contains(selectedTaskID) else { return }
+            closeInspector()
+        }
+    }
+
+    private func closeInspector() {
+        withoutAnimation {
+            showsTaskInspector = false
+            selectedTaskID = nil
+        }
+    }
+
+    @ViewBuilder
+    private var scopedContent: some View {
+        if scope == "focus" {
+            FocusView(
+                projects: store.projects,
+                tasks: visibleTasks,
+                selectedTaskID: taskSelection
+            )
+        } else {
+            BoardView(tasks: visibleTasks, selectedTaskID: taskSelection)
+        }
+    }
+
+    private func withoutAnimation(_ updates: () -> Void) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction, updates)
     }
 }

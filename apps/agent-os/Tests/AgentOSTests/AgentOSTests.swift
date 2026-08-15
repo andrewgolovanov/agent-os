@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import XCTest
 @testable import AgentOS
 
@@ -99,6 +100,15 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(String(decoding: output.stdout, as: UTF8.self), "hello agent-os")
     }
 
+    func testProcessRunnerInheritsEnvironmentByDefault() async throws {
+        let output = try await ProcessRunner.run(
+            executable: URL(fileURLWithPath: "/usr/bin/printenv"),
+            arguments: ["HOME"]
+        )
+
+        XCTAssertFalse(String(decoding: output.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
     func testUpdateStatusDecodesCoreAndPluginContract() throws {
         let data = Data(#"""
         {
@@ -129,4 +139,119 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(status.source.latestVersion, "0.2.0")
         XCTAssertEqual(status.plugin.refreshRequired, true)
     }
+
+    func testBoardStatusOrderKeepsSemanticWorkflow() {
+        XCTAssertEqual(TaskStatus.boardColumns, [.inbox, .planned, .active, .waiting, .review])
+        XCTAssertEqual(Set(TaskStatus.allCases.map(\.systemImage)).count, TaskStatus.allCases.count)
+    }
+
+    func testTaskTimeFormatterKeepsBoardLabelsCompactAndVisible() {
+        XCTAssertEqual(AgentOSTimeFormatter.compact(seconds: 0), "0 min")
+        XCTAssertEqual(AgentOSTimeFormatter.compact(seconds: 14), "<1 min")
+        XCTAssertEqual(AgentOSTimeFormatter.compact(seconds: 1_740), "29 min")
+        XCTAssertEqual(AgentOSTimeFormatter.compact(seconds: 3_900), "1 hr 5 min")
+    }
+
+    func testStatusTintsCommunicateActiveWaitingAndReviewRoles() {
+        let environment = EnvironmentValues()
+        let active = TaskStatus.active.tint.resolve(in: environment)
+        let waiting = TaskStatus.waiting.tint.resolve(in: environment)
+        let review = TaskStatus.review.tint.resolve(in: environment)
+
+        XCTAssertGreaterThan(active.green, active.red)
+        XCTAssertGreaterThan(active.green, active.blue)
+        XCTAssertGreaterThan(waiting.red, waiting.blue)
+        XCTAssertGreaterThan(waiting.green, waiting.blue)
+        XCTAssertGreaterThan(review.blue, review.red)
+        XCTAssertGreaterThan(review.blue, review.green)
+    }
+
+    func testInspectorBackdropIsDarkAndTranslucent() {
+        let backdrop = AgentOSTheme.inspectorBackdrop.resolve(in: EnvironmentValues())
+
+        XCTAssertEqual(backdrop.red, 0, accuracy: 0.001)
+        XCTAssertEqual(backdrop.green, 0, accuracy: 0.001)
+        XCTAssertEqual(backdrop.blue, 0, accuracy: 0.001)
+        XCTAssertEqual(backdrop.opacity, 0.48, accuracy: 0.001)
+    }
+
+    func testSourceItemsPreserveCanonicalKinds() throws {
+        let data = Data(#"""
+        {
+          "slack_threads": [{"identity":"provider-thread:C123:1723723200.000000","url":"https://workspace.example.invalid/archives/C123/p1723723200000000"}],
+          "pull_requests": [{"identity":"github:owner/repo#42","url":"https://github.com/owner/repo/pull/42"}],
+          "figma": [],
+          "deployments": [],
+          "other": []
+        }
+        """#.utf8)
+
+        let sources = try JSONDecoder().decode(AgentOSSources.self, from: data)
+
+        XCTAssertEqual(sources.items.map(\.kind), [.slackThread, .pullRequest])
+        XCTAssertEqual(sources.items.map(\.id), [
+            "slackThread:provider-thread:C123:1723723200.000000",
+            "pullRequest:github:owner/repo#42",
+        ])
+        XCTAssertEqual(sources.pullRequestItems.map(\.id), [
+            "pullRequest:github:owner/repo#42",
+        ])
+        XCTAssertEqual(sources.supportingItems.map(\.id), [
+            "slackThread:provider-thread:C123:1723723200.000000",
+        ])
+    }
+
+    func testSlackSourcePresentationAddsWorkspaceChannelAndDateContext() {
+        let item = AgentOSSourceItem(
+            link: AgentOSSourceLink(
+                identity: "provider-thread:C123:1723723200.000000",
+                url: "https://workspace.example.invalid/archives/C123/p1723723200000000"
+            ),
+            kind: .slackThread
+        )
+
+        let metadata = AgentOSSourcePresentation.localMetadata(for: item)
+
+        XCTAssertEqual(metadata.title, "Slack thread")
+        XCTAssertTrue(metadata.context.contains("workspace.example.invalid"))
+        XCTAssertTrue(metadata.context.contains("channel C123"))
+    }
+
+    func testGitHubPullRequestMetadataDistinguishesMergedAndReviewState() throws {
+        let data = Data(#"""
+        {
+          "number": 42,
+          "title": "Ship contextual sources",
+          "state": "MERGED",
+          "isDraft": false,
+          "mergedAt": "2026-08-15T10:00:00Z",
+          "reviewDecision": "APPROVED",
+          "headRefName": "codex/contextual-sources",
+          "baseRefName": "main"
+        }
+        """#.utf8)
+        let payload = try JSONDecoder().decode(GitHubPullRequestPayload.self, from: data)
+        let metadata = AgentOSSourcePresentation.pullRequestMetadata(
+            payload: payload,
+            url: URL(string: "https://github.com/owner/repo/pull/42")!
+        )
+
+        XCTAssertEqual(metadata.title, "Ship contextual sources")
+        XCTAssertEqual(metadata.context, "owner/repo · PR #42 · main ← codex/contextual-sources")
+        XCTAssertEqual(metadata.status, "Merged")
+        XCTAssertEqual(metadata.statusTone, .merged)
+        XCTAssertEqual(metadata.secondaryStatus, "Approved")
+        XCTAssertEqual(metadata.secondaryStatusTone, .positive)
+    }
+
+    func testGitHubCLIResolutionIncludesHomebrewOutsideGUIPath() {
+        let candidates = SourceMetadataService.githubCLICandidates(
+            environment: ["PATH": "/usr/bin:/bin"]
+        )
+
+        XCTAssertEqual(candidates.prefix(2), ["/usr/bin/gh", "/bin/gh"])
+        XCTAssertTrue(candidates.contains("/opt/homebrew/bin/gh"))
+        XCTAssertTrue(candidates.contains("/usr/local/bin/gh"))
+    }
+
 }

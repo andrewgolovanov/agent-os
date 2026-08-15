@@ -1,4 +1,4 @@
-# Agent OS
+# <img src="apps/agent-os/Resources/AppIcon.svg" alt="Agent OS icon" width="42" height="42"> Agent OS
 
 Agent OS is a local-first control plane for Codex work across multiple project
 repositories. It keeps project routing, durable outcomes, exact Codex task
@@ -112,6 +112,17 @@ complements, but does not replace, a dedicated secret scanner and manual review.
 
 See [installation](docs/installation.md), [the documentation map](docs/README.md), [Agent OS distribution](docs/agent-os.md),
 and [the security policy](SECURITY.md).
+
+## Contributing
+
+Documentation is part of a complete change. Update the nearest `AGENTS.md` when
+agent workflows, commands, paths, validation, or ownership rules change; update
+the relevant README when installation, usage, or other user-facing behavior
+changes. Material product changes must also update their owning document,
+`docs/state.md`, and `docs/changelog.md`. Before handoff, search for stale
+renamed or removed identifiers and run every documented validation command that
+was changed. Only affected documents should be edited—there is no requirement
+to touch every README or instruction file mechanically.
 
 ## License
 

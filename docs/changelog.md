@@ -55,6 +55,61 @@
   audit, and clean Swift build/tests.
 - Configured `AGENT_OS_SPARKLE_PRIVATE_KEY` in GitHub Actions without exposing
   the private value in the repository or command output.
+- Reworked the native app around the official shadcn default Neutral dark
+  tokens rather than an elevated Zinc interpretation: `#0a0a0a` canvas,
+  `#171717` cards/sidebar, `#262626` interactive accents, documented translucent
+  border/input roles, and readable `#a3a3a3` muted text.
+- Matched dashboard-01 geometry with 48-point toolbar rhythm, 36-point default
+  controls, 32-point compact controls, 16-point icons, a 4-point spacing grid,
+  and shadcn's radius scale. Replaced the system sidebar selection surface with
+  token-owned 48-point rows and removed gray fills from Board columns.
+- Reassigned workflow colors to semantic roles: Active green, Waiting amber,
+  Review blue, Planned violet, Inbox neutral, Done emerald, and Cancelled red,
+  while retaining status text and unique SF Symbols.
+- Added compact registered project badges to Focus rows so mixed-project work
+  remains attributable without opening the task inspector.
+- Made documentation maintenance an explicit completion contract: affected
+  agent commands stay current in the nearest `AGENTS.md`, human-facing behavior
+  stays current in the relevant README, material changes update their owning
+  docs/state/changelog, and stale renamed identifiers are searched before
+  handoff without mechanically touching unrelated documentation.
+- Replaced the permanent empty task-detail column and animated inspector with a
+  stable resizable native split that starts closed, opens from task selection,
+  clears selection on close, and also closes with Escape. The open inspector now
+  places a translucent dismissible backdrop over Focus or Board so its boundary
+  stays visually clear and an outside click closes it. Added color-role,
+  board-order, tracked-time, and backdrop-token regression tests.
+- Matched the toolbar to the dark content canvas and extended the sidebar color
+  and divider continuously through the titlebar with a narrow AppKit bridge.
+  Removed the conflicting full-width toolbar fill, made the titlebar transparent
+  over explicit sidebar/canvas segments, and verified the native hide/show
+  control preserves the split after collapsing and restoring the sidebar.
+  Restored and capped the accepted compact sidebar width at 240 points so macOS
+  cannot revive the unintended saved 288-point expansion.
+  Aligned compact sidebar icons to the first line of their labels, flattened
+  detail content into document sections, and moved tracked time into the header
+  and every Board card.
+- Replaced the mismatched system project and lifecycle menus with one shared
+  36-point select: balanced padding, a single chevron, flat token-owned popover,
+  automatic edge placement, and the same input border as the task form. Fixed
+  the single-line title placeholder alignment while retaining top-aligned
+  multiline fields.
+- Replaced raw source hostnames with interactive provider-aware rows, Slack
+  permalink context, Figma/deployment labels, hover/pointer feedback, and
+  optional read-only GitHub CLI enrichment for PR title, branches, review
+  decision, and open/draft/merged/closed state. Promoted PR rows directly below
+  the task header and removed their duplicate appearance from supporting
+  Sources.
+- Added the selected minimal black-and-white Agent OS `A` app icon as an
+  editable SVG, a reproducible multi-resolution ICNS asset, and bundle metadata
+  for both development and release packaging.
+- Refined the `A` into a smooth optically centered silhouette and replaced the
+  menu-bar extra's generic system layout glyph with a dedicated monochrome
+  template version of the Agent OS mark.
+- Corrected child-process environment inheritance so GUI-launched CLI tools can
+  resolve normal user configuration and Keychain-backed authentication.
+- Added the public version keys to the development app bundle so Sparkle can
+  initialize during real-window QA instead of rejecting an unversioned host.
 
 Earlier private installation history is intentionally not part of the shareable
 product changelog.

@@ -27,14 +27,46 @@ creates. A non-default home selected by `agent-os activate` is discovered from
 the user config pointer. `WORKSPACE_CONSOLE_ROOT` remains a deprecated
 compatibility alias for older one-directory installations.
 
-For reproducible appearance QA without changing the system setting:
+The app uses its minimal dark appearance by default. For contrast regression QA,
+the light override remains available without changing the system setting:
 
 ```bash
 open -n "dist/Agent OS.app" --args --force-light-appearance
-open -n "dist/Agent OS.app" --args --force-dark-appearance
 ```
 
 The companion plugin is maintained once at `../../plugins/agent-os`.
+
+Source rows use the canonical Task Board source kind instead of presenting raw
+hostnames. Slack permalinks show their workspace, channel, and message date;
+Figma and deployment links show their provider context. If the GitHub CLI is
+installed and authenticated, pull-request rows also resolve the current title,
+repository, branches, merge/open/draft/closed state, and review decision. The
+app keeps a local fallback label when `gh` is unavailable and never mutates the
+pull request. Pull requests are promoted directly below the task header for
+quick access and are not repeated in the supporting Sources section.
+
+Task details open in the resizable right-hand inspector. While it is visible,
+the Focus or Board content is dimmed and does not accept task interactions;
+clicking that backdrop, pressing Escape, or using the close button dismisses the
+inspector and clears its selection.
+
+The project sidebar continues through the titlebar behind the native hide/show
+button and traffic lights, while the main toolbar keeps the darker content
+canvas. Its default and maximum width is the compact 240-point layout; hiding
+and restoring the sidebar preserves that split and its divider.
+
+The application icon uses the selected minimal Agent OS `A` mark: a white
+vector symbol on the same `#0a0a0a` background as the app canvas. The editable
+source is `Resources/AppIcon.svg`; rebuild the committed macOS icon asset with:
+
+```bash
+./script/generate_app_icon.sh
+```
+
+The menu-bar extra uses a separate 18-point template rendering of the same
+mark from `Sources/AgentOS/Support/AgentOSBrandIcon.swift`. It intentionally
+omits the rounded-square background so macOS can tint it correctly for either
+menu-bar appearance.
 
 ## Updates
 

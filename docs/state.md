@@ -14,6 +14,10 @@ Verified: 2026-08-15
   Context Loop plugin.
 - MIT licensing is present.
 - No GitHub Release or version tag has been published.
+- Documentation maintenance is now part of the repository completion contract:
+  affected agent instructions, human README guidance, and owning product docs
+  are updated in the same change and stale renamed identifiers are searched
+  before handoff.
 
 ## Private instance boundary
 
@@ -31,8 +35,50 @@ Verified: 2026-08-15
   home.
 - The full Agent OS validator passes against both homes.
 - The current and clean-home Ruby suites pass 37 tests and 222 assertions.
-- Agent OS app builds and its six Swift tests pass; bundle launch verification
+- Agent OS app builds and its 15 Swift tests pass; bundle launch verification
   succeeds with both the active home and a fresh empty private home.
+- The app now maps the official shadcn default Neutral dark tokens directly into
+  SwiftUI: `#0a0a0a` canvas, `#171717` sidebar/cards, `#262626` interactive
+  accents, 10% borders, 15% input borders, and `#a3a3a3` secondary text. Large
+  gray column fills and AppKit's default sidebar selection were removed. The
+  native controls follow the dashboard-01 48/36/32-point toolbar/default/compact
+  sizing and the shadcn radius scale. Status badges retain text and distinct
+  icons while Active is green, Waiting amber, Review blue, Planned violet,
+  Inbox neutral, Done emerald, and Cancelled red. Focus rows also expose the
+  registered project display name in a compact folder badge.
+- The task detail is no longer a permanent empty third column or animated
+  inspector sheet. Real-window accessibility and screenshot QA verified a
+  closed-at-launch, open-on-selection, resizable native split with explicit
+  close and restored full-width Board behavior. Its open state now dims and
+  disables the Focus or Board pane with a translucent backdrop that closes the
+  detail on click while leaving the inspector, toolbar, and project sidebar
+  unobscured.
+- The sidebar color and AppKit-backed divider now continue through the titlebar
+  and content while SwiftUI remains the state owner. The native sidebar toggle
+  sits on that same surface; live-window QA verified hide and restore retain the
+  sidebar/canvas titlebar split and divider. The split is capped at the accepted
+  compact 240-point width instead of restoring the prior 288-point expansion.
+  Compact icons align with the first line of two-line rows. Detail sections use
+  a continuous document rhythm, tracked time is visible in the detail header and
+  every Board card, and source rows expose link/hover affordances.
+- The Agent OS application icon now uses one smooth, optically centered `A`
+  silhouette without the earlier triangular cutout. The menu-bar extra no
+  longer uses the unrelated system layout glyph: it renders an 18-point
+  monochrome template adaptation of the same Agent OS mark.
+- Lifecycle and project selection now share one 36-point SwiftUI control with
+  the form inputs: balanced padding, one chevron, a flat token-owned popover,
+  and automatic edge placement that remains visible near window boundaries.
+  The title placeholder is vertically centered while multiline placeholders
+  remain top aligned.
+- Real-window QA verified Slack workspace/channel/date context, Figma file
+  context, and authenticated read-only GitHub enrichment of PR title, branches,
+  and a visible merged/open/draft/closed status. Pull requests now appear
+  directly below the inspector header for quick access and are not duplicated
+  in the lower Sources section. The local fallback remains available when `gh`
+  is missing or unauthenticated.
+- The selected minimal Agent OS `A` mark is now a deterministic SVG and
+  multi-resolution ICNS asset. Both development and release packagers copy it
+  into `Contents/Resources` and declare it through `CFBundleIconFile`.
 - The Agent OS MCP clean-home test proves that tools execute from the
   source root while task and registry data remain under the private home.
 - Both monorepo plugin packages are installed and enabled from the `agent-os`
@@ -66,7 +112,8 @@ Verified: 2026-08-15
   and the built-in publication audit before commit.
 - A fresh anonymous HTTPS clone of the pushed SHA passed initialization into a
   separate private home, `doctor`, the complete validator, publication audit,
-  and a clean Swift dependency resolution/build with all six tests passing.
+  and a clean Swift dependency resolution/build with the then-current six tests
+  passing.
 - The tag-triggered GitHub Release workflow is present but has not run.
 
 ## Not configured

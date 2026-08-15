@@ -6,6 +6,7 @@ PRODUCT_NAME="AgentOS"
 APP_DISPLAY_NAME="Agent OS"
 BUNDLE_ID="com.andrewgolovanov.AgentOS"
 MIN_SYSTEM_VERSION="14.0"
+VERSION="0.1.0"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/script/update_config.sh"
@@ -14,8 +15,10 @@ APP_BUNDLE="$DIST_DIR/$APP_DISPLAY_NAME.app"
 APP_CONTENTS="$APP_BUNDLE/Contents"
 APP_MACOS="$APP_CONTENTS/MacOS"
 APP_FRAMEWORKS="$APP_CONTENTS/Frameworks"
+APP_RESOURCES="$APP_CONTENTS/Resources"
 APP_BINARY="$APP_MACOS/$PRODUCT_NAME"
 INFO_PLIST="$APP_CONTENTS/Info.plist"
+APP_ICON="$ROOT_DIR/Resources/AppIcon.icns"
 
 case "$APP_BUNDLE" in
   "$ROOT_DIR/dist/Agent OS.app") ;;
@@ -35,10 +38,12 @@ BUILD_BINARY="$BUILD_DIR/$PRODUCT_NAME"
 BUILD_FRAMEWORK="$BUILD_DIR/Sparkle.framework"
 [[ -x "$BUILD_BINARY" ]] || { echo "missing app binary: $BUILD_BINARY" >&2; exit 1; }
 [[ -d "$BUILD_FRAMEWORK" ]] || { echo "missing Sparkle framework: $BUILD_FRAMEWORK" >&2; exit 1; }
+[[ -f "$APP_ICON" && ! -L "$APP_ICON" ]] || { echo "missing app icon: $APP_ICON" >&2; exit 1; }
 
 /bin/rm -rf -- "$APP_BUNDLE"
-mkdir -p "$APP_MACOS" "$APP_FRAMEWORKS"
+mkdir -p "$APP_MACOS" "$APP_FRAMEWORKS" "$APP_RESOURCES"
 cp "$BUILD_BINARY" "$APP_BINARY"
+cp "$APP_ICON" "$APP_RESOURCES/AppIcon.icns"
 chmod +x "$APP_BINARY"
 /usr/bin/ditto "$BUILD_FRAMEWORK" "$APP_FRAMEWORKS/Sparkle.framework"
 /usr/bin/install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP_BINARY"
@@ -48,7 +53,10 @@ chmod +x "$APP_BINARY"
 /usr/bin/plutil -insert CFBundleIdentifier -string "$BUNDLE_ID" "$INFO_PLIST"
 /usr/bin/plutil -insert CFBundleName -string "$APP_DISPLAY_NAME" "$INFO_PLIST"
 /usr/bin/plutil -insert CFBundleDisplayName -string "$APP_DISPLAY_NAME" "$INFO_PLIST"
+/usr/bin/plutil -insert CFBundleIconFile -string AppIcon "$INFO_PLIST"
 /usr/bin/plutil -insert CFBundlePackageType -string APPL "$INFO_PLIST"
+/usr/bin/plutil -insert CFBundleShortVersionString -string "$VERSION" "$INFO_PLIST"
+/usr/bin/plutil -insert CFBundleVersion -string "$VERSION" "$INFO_PLIST"
 /usr/bin/plutil -insert LSMinimumSystemVersion -string "$MIN_SYSTEM_VERSION" "$INFO_PLIST"
 /usr/bin/plutil -insert NSPrincipalClass -string NSApplication "$INFO_PLIST"
 /usr/bin/plutil -insert SUFeedURL -string "$SPARKLE_FEED_URL" "$INFO_PLIST"

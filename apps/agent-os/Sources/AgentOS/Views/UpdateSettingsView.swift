@@ -66,5 +66,7 @@ struct UpdateSettingsView: View {
         .formStyle(.grouped)
         .padding()
         .frame(width: 560)
+        .background(AgentOSTheme.canvas)
+        .tint(AgentOSTheme.accent)
     }
 }

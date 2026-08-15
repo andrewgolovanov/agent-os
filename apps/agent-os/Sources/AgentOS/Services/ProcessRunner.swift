@@ -35,7 +35,9 @@ enum ProcessRunner {
             process.executableURL = executable
             process.arguments = arguments
             process.currentDirectoryURL = currentDirectory
-            process.environment = environment
+            if let environment {
+                process.environment = environment
+            }
             process.standardInput = FileHandle.nullDevice
             process.standardOutput = stdoutPipe
             process.standardError = stderrPipe

@@ -41,6 +41,12 @@ Done when:
 
 - Focus, Board, inspector, refresh, one lifecycle mutation, and exact Codex
   handoff remain reliable during the pilot;
+- the official shadcn Neutral dark semantic system and dashboard-01 control
+  geometry, prominent tracked time, and
+  on-demand resizable detail split remain legible and predictable across Focus,
+  Board, and narrow window layouts;
+- contextual source rows remain useful without provider authentication and
+  enhance GitHub PR state read-only when an authenticated `gh` is available;
 - a fresh task loads the new monorepo plugin rather than an older cached build;
 - the ad-hoc signed download, checksum, and user-approved Gatekeeper flow remain
   reliable during a second-user installation;
