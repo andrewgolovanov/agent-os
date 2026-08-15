@@ -2,6 +2,10 @@
 
 ## 2026-08-15
 
+- Clarified the public positioning as Agent OS for Codex: the repository
+  description and topics now cover the Codex task board, MCP plugin, native
+  macOS app, local-first workflow, and AI-agent use cases, while the README
+  opens with a concise audience-facing tagline and problem statement.
 - Linked both Codex plugin cards directly to the public Agent OS repository
   through their homepage and source metadata, with package coverage preventing
   the links from disappearing in later builds.

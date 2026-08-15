@@ -6,6 +6,10 @@ Verified: 2026-08-15
 
 - The reusable source is public at
   `https://github.com/andrewgolovanov/agent-os` on `main`.
+- The public repository describes Agent OS explicitly as an open-source,
+  local-first task board and macOS control plane for OpenAI Codex, and classifies
+  it with discoverability topics covering Codex, MCP, AI agents, macOS,
+  developer tools, and local-first workflows.
 - The initial public commit is
   `7947b27249fd757b44f946b3fa9d6d66f08cfd26`.
 - The accepted native-app redesign and release-candidate assets are committed as

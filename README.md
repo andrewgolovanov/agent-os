@@ -1,9 +1,19 @@
 # <img src="apps/agent-os/Resources/AppIcon.svg" alt="Agent OS icon" height="42" align="absbottom"> Agent OS
 
-Agent OS is a local-first control plane for Codex work across multiple project
-repositories. It keeps project routing, durable outcomes, exact Codex task
-correlation, optional read-only intake, a native macOS cockpit, and installable
+**A local-first Codex task board, MCP plugin, and native macOS app for managing
+AI-agent work across multiple projects.**
+
+Agent OS gives OpenAI Codex work a durable, cross-project control plane. It
+combines a visual task board, project routing, exact Codex task correlation,
+pull-request and source context, optional read-only intake, and installable
 plugins in one portable setup.
+
+## Why Agent OS?
+
+Long-running Codex work becomes difficult to track when outcomes, project
+routing, pull requests, source links, time, and follow-up tasks are spread
+across separate chats. Agent OS keeps that operational context local and makes
+it visible through a native macOS task board and MCP tools.
 
 Agent OS does not replace your project repositories, GitHub, Slack, or Codex.
 It gives those systems a small, deterministic continuity layer without copying
