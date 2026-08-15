@@ -45,11 +45,11 @@ Repo-local skills хранятся в `.agents/skills/<skill-name>/`. Кажды
 ## Брендинг plugin
 
 `apps/agent-os/Resources/AppIcon.svg` — канонический источник знака Agent OS.
-Каждый plugin хранит собственную копию в `assets/agent-os-icon.svg`, потому что
+Единый plugin хранит архивную копию в `assets/agent-os-icon.svg`, потому что
 установленный plugin archive не должен ссылаться на файлы за своими пределами.
 Поля `interface.composerIcon`, `interface.logo` и `interface.logoDark` указывают
-на эту bundled-копию. `node test/plugin_packages_test.mjs` проверяет, что обе
-копии побайтово совпадают с канонической иконкой приложения.
+на эту bundled-копию, а `interface.websiteURL` — на публичный репозиторий.
+`node test/plugin_packages_test.mjs` проверяет и иконку, и ссылку.
 
 ## Bundled runtime
 

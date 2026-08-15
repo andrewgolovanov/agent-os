@@ -60,7 +60,7 @@ agent-os/
 ├── config/examples/            sanitized configuration templates
 ├── docs/                       architecture and runbooks
 ├── lib/ and tools/             deterministic control plane
-├── plugins/                    Agent OS and optional Context Loop plugins
+├── plugins/                    Agent OS Codex plugin, including Context Loop
 ├── templates/                  project wrapper template
 └── test/                       isolated and clean-home verification
 ```
@@ -77,10 +77,12 @@ The installed plugin contains its own minimal Agent OS runtime. On first use it
 creates or repairs the private home, then exposes Task Board and project
 onboarding through MCP. No manually managed Agent OS checkout is required.
 
-The plugin also contains the Task Bridge hooks and the `setup-agent-os` skill.
-Review the hook commands with `/hooks`, start a fresh task, and ask `Set up
-optional Agent OS integrations safely.` Slack and recurring monitoring remain
-separate opt-ins; see [Optional integrations](docs/optional-integrations.md).
+The source plugin also contains the Context Loop skill, Task Bridge hooks, and
+the `setup-agent-os` skill. Use `$context-loop` when one long-running task needs
+repository-backed checkpoints that survive compaction or a new session. Review
+hook commands with `/hooks`, start a fresh task, and ask `Set up optional Agent
+OS integrations safely.` Slack and recurring monitoring remain separate
+opt-ins; see [Optional integrations](docs/optional-integrations.md).
 
 The local Slack monitor configuration remains preview-first. Ask the plugin to
 set up optional integrations; it resolves the packaged runtime and shows every

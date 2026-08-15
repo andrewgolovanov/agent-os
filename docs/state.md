@@ -16,8 +16,8 @@ Verified: 2026-08-15
   `e98dc8118585e22d6f6ba2c070a6c146347d1103`; that commit was fast-forwarded to
   public `main` and verified against `origin/main` after push.
 - Agent OS stage 1 is implemented as one monorepo containing the Ruby control
-  plane, native Agent OS app source, Agent OS plugin, and optional
-  Context Loop plugin.
+  plane, native Agent OS app source, and one Agent OS plugin with the optional
+  Context Loop workflow bundled as a skill.
 - MIT licensing is present.
 - The first public release, `v0.1.0`, is published from commit
   `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f` at
@@ -33,8 +33,9 @@ Verified: 2026-08-15
   changing provider state: preview-first Slack monitor configuration,
   plugin-bundled Task Bridge hooks, a Codex setup skill, Scheduled task prompt,
   recovery instructions, and optional doctor checks.
-- Agent OS and Context Loop plugin details link their Website field and source
-  metadata to the public `andrewgolovanov/agent-os` repository.
+- The Agent OS plugin details link their Website field and source metadata to
+  the public `andrewgolovanov/agent-os` repository through the Codex-specific
+  `interface.websiteURL` contract.
 - The `v0.2.0` release removes the manual source-checkout requirement
   for packaged users: the Agent OS plugin contains an allowlisted minimal
   runtime, and the app packager embeds that exact payload.
@@ -110,14 +111,15 @@ Verified: 2026-08-15
 - The Agent OS MCP clean-home test proves that tools execute from the bundled
   runtime while task and registry data remain under the private home; separate
   CLI tests cover packaged-runtime upgrade and development-source preservation.
-- Both monorepo plugin packages are installed and enabled from the `agent-os`
-  marketplace; Context Loop passes its isolated lifecycle/hook smoke test. The
-  old installed plugin snapshot has been removed.
+- The unified monorepo Agent OS plugin is installed and enabled from the
+  `agent-os` marketplace; its bundled Context Loop skill passes the isolated
+  lifecycle/hook smoke test. The obsolete standalone Context Loop snapshot has
+  been removed.
 - The installed Agent OS MCP snapshot is byte-identical to source and
   discovers the active private home without injected environment variables.
-- Agent OS and Context Loop expose the canonical native-app mark for plugin
-  cards, dark-mode cards, and the composer; package validation keeps each
-  archive-local SVG byte-identical to the app icon source.
+- Agent OS exposes the canonical native-app mark for its plugin card,
+  dark-mode card, and composer; package validation keeps the archive-local SVG
+  byte-identical to the app icon source.
 - Two fresh non-interactive Codex tasks loaded the installed Agent OS skill and
   successfully invoked the real `agent_os_list_tasks` and
   `agent_os_list_projects` MCP tools. A separately vetted automation smoke also

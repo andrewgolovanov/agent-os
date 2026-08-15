@@ -8,7 +8,7 @@ const sourceRoot = path.resolve(import.meta.dirname, "..");
 const scriptsDirectory = path.join(
   sourceRoot,
   "plugins",
-  "context-loop",
+  "agent-os",
   "skills",
   "context-loop",
   "scripts",

@@ -2,6 +2,13 @@
 
 ## 2026-08-15
 
+- Consolidated Context Loop into the Agent OS plugin as a bundled skill, removed
+  the redundant marketplace package, preserved existing `.context-loop/` state
+  and project-local hook behavior, and documented the one-time removal of an
+  older standalone installation.
+- Added the Codex-specific `interface.websiteURL` manifest field so the plugin
+  details page links to the public repository instead of showing Website as
+  unavailable; package tests now cover this UI metadata contract.
 - Published `v0.2.0` from
   `ecab617fa23abdaefdea42a4c9d157e2b737ed9f`: the tag workflow completed
   clean-home validation, publication audit, Swift tests, signed packaging, and

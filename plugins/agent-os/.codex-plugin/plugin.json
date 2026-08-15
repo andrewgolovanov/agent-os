@@ -1,7 +1,7 @@
 {
   "name": "agent-os",
-  "version": "0.2.0+codex.20260815233351",
-  "description": "Bootstrap Agent OS locally, onboard repositories from any folder, and use its canonical Task Board from Codex.",
+  "version": "0.2.0+codex.20260815235400",
+  "description": "Bootstrap Agent OS locally, onboard repositories from any folder, manage its canonical Task Board, and preserve durable Context Loop work from Codex.",
   "author": {
     "name": "Andrew Golovanov"
   },
@@ -13,9 +13,10 @@
   "interface": {
     "displayName": "Agent OS",
     "shortDescription": "Bootstrap, onboard, and manage Agent OS from Codex.",
-    "longDescription": "Creates the private Agent OS home automatically, registers existing repositories without moving them, and applies validated Task Board mutations without a second database or direct JSON writes.",
+    "longDescription": "Creates the private Agent OS home automatically, registers existing repositories without moving them, applies validated Task Board mutations, and keeps long-running work resumable through the bundled Context Loop skill.",
     "developerName": "Andrew Golovanov",
     "category": "Productivity",
+    "websiteURL": "https://github.com/andrewgolovanov/agent-os",
     "capabilities": [
       "Read",
       "Write"
@@ -26,7 +27,7 @@
     "defaultPrompt": [
       "Show my unfinished Agent OS outcomes.",
       "Onboard this repository into Agent OS safely.",
-      "Set up optional Agent OS integrations safely."
+      "$context-loop start a durable task: [describe the goal]"
     ]
   }
 }

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "version": "0.2.0",
-  "plugin_version": "0.2.0+codex.20260815233351",
+  "plugin_version": "0.2.0+codex.20260815235400",
   "files": {
     "LICENSE": {
       "sha256": "56fdec8396b0f0564c3f9795b48fd025ce8bb85535ee9c1abfc0ce9ac4a27f6c",

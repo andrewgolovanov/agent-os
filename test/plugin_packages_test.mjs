@@ -13,6 +13,8 @@ const pluginDirectories = fs.readdirSync(path.join(sourceRoot, "plugins"), { wit
   .map((entry) => path.join(sourceRoot, "plugins", entry.name));
 
 assert.equal(marketplace.name, "agent-os");
+assert.deepEqual(pluginDirectories.map((pluginRoot) => path.basename(pluginRoot)), ["agent-os"]);
+assert.deepEqual(marketplace.plugins.map((plugin) => plugin.name), ["agent-os"]);
 execFileSync("ruby", [path.join(sourceRoot, "tools", "sync-plugin-runtime"), "--check"], { stdio: "pipe" });
 
 for (const pluginRoot of pluginDirectories) {
@@ -22,6 +24,7 @@ for (const pluginRoot of pluginDirectories) {
   assert.equal(manifest.license, "MIT");
   assert.equal(manifest.homepage, repositoryUrl);
   assert.equal(manifest.repository, repositoryUrl);
+  assert.equal(manifest.interface?.websiteURL, repositoryUrl);
   assert.equal(manifest.skills, "./skills/");
   assert(Array.isArray(manifest.interface?.defaultPrompt));
   assert(manifest.interface.defaultPrompt.length <= 3);
@@ -66,8 +69,9 @@ for (const pluginRoot of pluginDirectories) {
     }
     assert((fs.statSync(hookRunner).mode & 0o111) !== 0, "Agent OS hook runner must be executable");
     assert(fs.existsSync(path.join(pluginRoot, "skills", "onboard-project", "SKILL.md")));
+    assert(fs.existsSync(path.join(pluginRoot, "skills", "context-loop", "SKILL.md")));
     assert(fs.existsSync(path.join(pluginRoot, "runtime", ".agent-os-runtime.json")));
   }
 }
 
-process.stdout.write(`${pluginDirectories.length} Agent OS plugin packages validated.\n`);
+process.stdout.write(`${pluginDirectories.length} Agent OS plugin package validated.\n`);

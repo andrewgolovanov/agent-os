@@ -58,13 +58,14 @@ REQUIRED_SOURCE_PATHS = %w[
   lib/agent_os/slack_monitor_setup.rb
   lib/agent_os/updater.rb
   lib/agent_os/paths.rb
-  plugins/context-loop/.codex-plugin/plugin.json
   plugins/agent-os/.codex-plugin/plugin.json
   plugins/agent-os/hooks/hooks.json
   plugins/agent-os/hooks/agent-os-task-bridge
   plugins/agent-os/mcp/bootstrap.mjs
   plugins/agent-os/mcp/server.mjs
   plugins/agent-os/runtime/.agent-os-runtime.json
+  plugins/agent-os/skills/context-loop/SKILL.md
+  plugins/agent-os/skills/context-loop/scripts/status.mjs
   plugins/agent-os/skills/onboard-project/SKILL.md
   plugins/agent-os/skills/setup-agent-os/SKILL.md
   plugins/agent-os/skills/setup-agent-os/agents/openai.yaml

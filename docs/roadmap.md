@@ -40,8 +40,9 @@ Completed publication checks:
 - an anonymous HTTPS clone of that exact commit passes clean private-home
   initialization, doctor, validation, Ruby/plugin checks, Swift build/tests,
   and the publication audit — verified;
-- both monorepo marketplace plugins are installed; Agent OS MCP reads
-  the active home in a standalone installed-snapshot smoke — verified;
+- the monorepo Agent OS plugin is installed; its MCP reads the active home in a
+  standalone installed-snapshot smoke and Context Loop passes its isolated
+  lifecycle/hook smoke — verified;
 - fresh Codex tasks load the installed Agent OS skill and invoke its MCP tools;
   the vetted Task Bridge hook bundle also executes against an isolated private
   home — verified;

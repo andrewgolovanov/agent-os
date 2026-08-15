@@ -38,8 +38,8 @@ bootstrap.
   component can initialize a clean private home without a manual clone.
 - A source checkout is a development and contribution surface, not a runtime
   prerequisite for packaged users.
-- Core, the Agent OS macOS app, the Agent OS plugin, and optional Context
-  Loop live in one monorepo.
+- Core, the Agent OS macOS app, and one Agent OS plugin live in one monorepo;
+  Context Loop is a focused skill inside that plugin.
 - Existing standalone app/plugin directories remain untouched as recoverable
   local backups until the monorepo is published and adopted.
 - Real configs, outcomes, reports, runtime pointers, and project paths are
@@ -61,18 +61,18 @@ bootstrap.
 - `activate` records the selected home in the standard user config directory so
   app/plugin processes do not need a hard-coded path or shell environment.
 - `doctor` is read-only; `validate` checks source structure, the selected home,
-  Ruby tests, MCP source/home isolation, both plugin manifests, and Context Loop.
+  Ruby tests, MCP source/home isolation, the plugin package, and Context Loop.
 - Sanitized config templates create an empty registry and no enabled monitors.
 - `configure-slack-monitor` previews and merges one sanitized read-only monitor
   into the private home without connecting Slack or creating a schedule.
-- The Agent OS plugin ships Task Bridge hooks and a setup skill; Codex remains
-  the authority for hook trust, the connected Slack integration, and Scheduled
-  task state.
+- The Agent OS plugin ships Context Loop, Task Bridge hooks, and setup skills;
+  Codex remains the authority for hook trust, the connected Slack integration,
+  and Scheduled task state.
 - The Agent OS app no longer assumes a developer path and packages the same
   synchronized runtime used by the plugin.
 - The Agent OS MCP server confines reads/writes independently to the
   configured source and home roots.
-- The app and both plugin packages are consolidated under `apps/` and `plugins/`.
+- The app and unified plugin package are consolidated under `apps/` and `plugins/`.
 - Local configs, task history, runtime, registered project paths, and source
   pointers are excluded from Git candidates.
 - `audit-publication` blocks known private-state patterns before release work.

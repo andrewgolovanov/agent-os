@@ -35,10 +35,23 @@ that plugin version. An existing valid development checkout selected through
 `AGENT_OS_SOURCE_ROOT` or the private source pointer remains authoritative and
 is never replaced by packaged bootstrap.
 
-The plugin ships Task Board MCP tools, project onboarding, skills, and the Task
-Bridge hook bundle. Review the exact hook commands with `/hooks`; approve them
-only if they resolve to the installed `agent-os@agent-os` plugin. A running task
-cannot hot-reload a newly installed or updated plugin.
+The plugin ships Task Board MCP tools, project onboarding, the Context Loop
+skill, setup skills, and the Task Bridge hook bundle. Review the exact hook
+commands with `/hooks`; approve them only if they resolve to the installed
+`agent-os@agent-os` plugin. A running task cannot hot-reload a newly installed
+or updated plugin.
+
+If an older installation still lists `context-loop@agent-os` separately,
+install the newer Agent OS snapshot first, start a fresh task, and verify that
+`$context-loop` is available from `agent-os@agent-os`. Then remove only the
+obsolete plugin registration:
+
+```bash
+codex plugin remove context-loop@agent-os
+```
+
+This removes the redundant installed plugin snapshot; it does not delete any
+project `.context-loop/` state.
 
 ## 2. Onboard a project from any folder
 
