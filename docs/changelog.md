@@ -2,6 +2,11 @@
 
 ## 2026-08-15
 
+- Created and verified an independent encrypted recovery copy of the Sparkle
+  Ed25519 private key, then overwrote and removed the validated temporary export.
+- Applied the canonical Agent OS app icon to the Agent OS and Context Loop
+  plugin cards and composer metadata, with archive-local SVG copies and a
+  byte-for-byte package test that prevents brand drift.
 - Hardened the tag release workflow to initialize a clean temporary private
   home, run the complete Agent OS validator and publication audit, and reject a
   first-release executable that is not Apple Silicon (`arm64`).

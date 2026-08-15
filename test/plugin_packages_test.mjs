@@ -5,6 +5,7 @@ import path from "node:path";
 const sourceRoot = path.resolve(import.meta.dirname, "..");
 const marketplacePath = path.join(sourceRoot, ".agents", "plugins", "marketplace.json");
 const marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
+const canonicalIcon = fs.readFileSync(path.join(sourceRoot, "apps", "agent-os", "Resources", "AppIcon.svg"));
 const pluginDirectories = fs.readdirSync(path.join(sourceRoot, "plugins"), { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => path.join(sourceRoot, "plugins", entry.name));
@@ -19,6 +20,15 @@ for (const pluginRoot of pluginDirectories) {
   assert.equal(manifest.skills, "./skills/");
   assert(Array.isArray(manifest.interface?.defaultPrompt));
   assert(manifest.interface.defaultPrompt.length <= 3);
+  const iconPath = "./assets/agent-os-icon.svg";
+  assert.equal(manifest.interface?.composerIcon, iconPath);
+  assert.equal(manifest.interface?.logo, iconPath);
+  assert.equal(manifest.interface?.logoDark, iconPath);
+  assert.deepEqual(
+    fs.readFileSync(path.join(pluginRoot, iconPath)),
+    canonicalIcon,
+    `${manifest.name} must bundle the canonical Agent OS app icon`,
+  );
 
   const entry = marketplace.plugins.find((plugin) => plugin.name === manifest.name);
   assert(entry, `Missing marketplace entry for ${manifest.name}`);

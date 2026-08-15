@@ -72,10 +72,11 @@ to `~/.agent-os` for private state.
 
 ## Remaining gates
 
-1. Back up the Sparkle private key independently; the GitHub Actions secret is
-   configured.
-2. Publish `v0.1.0` and verify its zip, checksum, and public appcast from GitHub.
-3. Complete a user-approved install on a second Mac, then prove a genuine
+The Sparkle private key now has an independently verified encrypted recovery
+copy, and the matching GitHub Actions secret is configured.
+
+1. Publish `v0.1.0` and verify its zip, checksum, and public appcast from GitHub.
+2. Complete a user-approved install on a second Mac, then prove a genuine
    `v0.1.0` to later-version update.
 
 Public source does not authorize copying private local state, changing unrelated

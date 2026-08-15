@@ -42,6 +42,15 @@ Repo-local skills хранятся в `.agents/skills/<skill-name>/`. Кажды
 
 Если workflow нужен вне этой установки Agent OS или должен поставляться вместе с connector/MCP, его можно упаковать в plugin. До этого repo-local skill проще и прозрачнее.
 
+## Брендинг plugin
+
+`apps/agent-os/Resources/AppIcon.svg` — канонический источник знака Agent OS.
+Каждый plugin хранит собственную копию в `assets/agent-os-icon.svg`, потому что
+установленный plugin archive не должен ссылаться на файлы за своими пределами.
+Поля `interface.composerIcon`, `interface.logo` и `interface.logoDark` указывают
+на эту bundled-копию. `node test/plugin_packages_test.mjs` проверяет, что обе
+копии побайтово совпадают с канонической иконкой приложения.
+
 ## Новый tool
 
 Tool должен иметь:

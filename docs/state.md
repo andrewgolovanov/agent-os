@@ -94,6 +94,9 @@ Verified: 2026-08-15
   old installed plugin snapshot has been removed.
 - The installed Agent OS MCP snapshot is byte-identical to source and
   discovers the active private home without injected environment variables.
+- Agent OS and Context Loop expose the canonical native-app mark for plugin
+  cards, dark-mode cards, and the composer; package validation keeps each
+  archive-local SVG byte-identical to the app icon source.
 - Two fresh non-interactive Codex tasks loaded the installed Agent OS skill and
   successfully invoked the real `agent_os_list_tasks` and
   `agent_os_list_projects` MCP tools. A separately vetted automation smoke also
@@ -124,6 +127,9 @@ Verified: 2026-08-15
 - The matching GitHub Actions secret `AGENT_OS_SPARKLE_PRIVATE_KEY` is configured
   for the public repository. Its value was transferred from Keychain through a
   validated temporary file that was overwritten and removed after upload.
+- The Ed25519 private key has an independently verified encrypted
+  password-manager recovery copy. The temporary export used for that backup was
+  validated, overwritten, and removed.
 - All 126 initial publication candidates passed a dedicated Gitleaks 8.30.1
   scan with full redaction, manual filename/content review, `git diff --check`,
   and the built-in publication audit before commit.
@@ -140,7 +146,6 @@ Verified: 2026-08-15
 ## Not configured
 
 - A published GitHub Release and real cross-version Sparkle update.
-- An offline backup of the Agent OS Ed25519 private key.
 - End-user hook trust remains a per-install Codex choice; the release source
   cannot pre-approve it for another user.
 - A connected Slack integration and Codex Scheduled task for a clean user; the

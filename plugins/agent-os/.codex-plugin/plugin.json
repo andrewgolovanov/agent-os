@@ -1,6 +1,6 @@
 {
   "name": "agent-os",
-  "version": "0.2.0+codex.20260815173213",
+  "version": "0.2.0+codex.20260815182405",
   "description": "Use the canonical local Agent OS project registry and Task Board from Codex.",
   "author": {
     "name": "Andrew Golovanov"
@@ -18,6 +18,9 @@
       "Read",
       "Write"
     ],
+    "composerIcon": "./assets/agent-os-icon.svg",
+    "logo": "./assets/agent-os-icon.svg",
+    "logoDark": "./assets/agent-os-icon.svg",
     "defaultPrompt": [
       "Show my unfinished Agent OS outcomes.",
       "Create an Agent OS outcome for this project.",

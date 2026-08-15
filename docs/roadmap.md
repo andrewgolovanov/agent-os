@@ -30,11 +30,12 @@ Completed publication checks:
 - the tag workflow validates a clean temporary private home, runs the full
   publication audit, and asserts an Apple Silicon (`arm64`) app binary before
   publishing — verified locally against the release workflow contract;
+- the Ed25519 key has an independently verified encrypted recovery copy —
+  verified;
 
 Remaining release checks:
 
 - GitHub Actions has the matching Ed25519 repository secret — verified;
-- the Ed25519 key has an independent offline backup;
 - `v0.1.0` publishes the zip, checksum, and appcast;
 - a second Mac completes an approved first install and a later genuine
   old-version to new-version update.
