@@ -61,10 +61,16 @@ Use these canonical values:
 - prompt: the block below.
 
 ```text
-Run the Agent OS Slack monitor once. Use the installed Agent OS plugin and its active private home. Read the private config/monitors.yaml entry named agent-os-slack-monitor and the installed setup guidance before acting. Require that monitor to be enabled. Use only the connected Slack integration and only read-only Slack operations. Resolve the current Slack user each run; scan the configured bounded mentions, direct messages, group direct messages, and active watched roots; attribute only through the registered project configuration. Store only stable identifiers, cursors, dispositions, and local Task Board changes through the installed Agent OS runtime; never store raw message text. Do not send Slack messages or reactions, write external tasks, edit repositories, run Git mutations, or deploy. Do not advance any cursor after a partial read. Return DONT_NOTIFY when nothing actionable changed; otherwise return the compact notification required by the runbook.
+Run the Agent OS Slack monitor once. Use the installed Agent OS plugin and its active private home. Read the private config/monitors.yaml entry named agent-os-slack-monitor and the installed Slack monitor runbook before acting. Require that monitor to be enabled. Use only the connected Slack integration and only read-only Slack operations. Resolve the current Slack user each run; scan the configured bounded mentions, direct messages, group direct messages, and active watched roots; attribute only through the registered project configuration. Store only stable identifiers, cursors, dispositions, and local Task Board changes through the installed Agent OS runtime; never store raw message text. Do not send Slack messages or reactions, write external tasks, edit repositories, run Git mutations, or deploy. Do not advance any cursor after a partial read. Return DONT_NOTIFY when nothing actionable changed; otherwise return the compact notification required by the runbook, including its Agent OS app link.
 ```
 
 Codex Scheduled is the authority for whether this automation exists and is enabled. Inspect an existing task with the exact name before creating another one. If the current Codex surface cannot manage Scheduled tasks, create it from Codex desktop or web rather than inventing a CLI fallback. A local-project schedule runs only while its required desktop environment and machine are available, so verify the first two executions in the Scheduled task history.
+
+The monitor does not push data into a second app database. It writes outcomes
+through the installed Task Board runtime under the active private home, and the
+Agent OS app reads that same canonical state. A successful monitor change is
+therefore visible after the app refreshes; the notification deep link
+`agent-os://board` opens that shared Board directly.
 
 ## Verify and recover
 

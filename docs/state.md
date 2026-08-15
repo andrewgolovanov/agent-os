@@ -72,7 +72,7 @@ Verified: 2026-08-16
 - The current Ruby suite passes 54 tests and 420 assertions, including active
   private-home resolution, safe home migration, monitor-path rewriting, and
   identity-checked repository relinking.
-- Agent OS app builds and its 17 Swift tests pass; bundle launch verification
+- Agent OS app builds and its 18 Swift tests pass; bundle launch verification
   succeeds with both the active home and a fresh empty private home.
 - The app now maps the official shadcn default Neutral dark tokens directly into
   SwiftUI: `#0a0a0a` canvas, `#171717` sidebar/cards, `#262626` interactive
@@ -90,6 +90,10 @@ Verified: 2026-08-16
   disables the Focus or Board pane with a translucent backdrop that closes the
   detail on click while leaving the inspector, toolbar, and project sidebar
   unobscured.
+- Development and release bundles register `agent-os://`; the tested
+  `agent-os://board` and `agent-os://focus` destinations select, refresh, and
+  foreground the corresponding native view without carrying task data outside
+  the canonical private home.
 - The sidebar color and AppKit-backed divider now continue through the titlebar
   and content while SwiftUI remains the state owner. The native sidebar toggle
   sits on that same surface; live-window QA verified hide and restore retain the

@@ -124,6 +124,10 @@ bootstrap; второй использует тот же private home.
 
 Agent OS for macOS реализуется как replaceable presentation/action layer над этими владельцами данных. Native app не получает собственную task database и выполняет mutations только через deterministic Agent OS tools. Agent-facing integration оформлена как installed skills + root-confined MCP. Native app создаёт и именует idle Codex task через stable App Server `stdio`, записывает exact membership, копирует подготовленный prompt и открывает публичный `codex://threads/<id>` handoff; старт turn остаётся в desktop-клиенте, чтобы два App Server client не конкурировали за один task. App/plugin source живёт в monorepo, а mutable routing и durable context — только в private home.
 
+Slack monitor notifications open the native Board through the public
+`agent-os://board` application deep link. The link selects and refreshes the
+view; it does not carry task content or create a second storage path.
+
 Update plane также не получает отдельной базы. Core и plugin принимают только
 version-tag fast-forward через preview-first CLI; app получает подписанный
 Ed25519 архив из appcast одного GitHub Release. Автоматическая установка обоих

@@ -20,7 +20,7 @@
       "executable": false
     },
     "config/examples/slack-monitor.yaml": {
-      "sha256": "cdf465cff55852a961463f7d1ac2144e6139ad922913c81c6c276020a1dc4b0c",
+      "sha256": "a35c68d58fd67d77a796fe394cb6d0e4f285fbc6f3a3b27bb1b3a82cd074855c",
       "executable": false
     },
     "config/examples/task-bridge.yaml": {
@@ -28,15 +28,15 @@
       "executable": false
     },
     "docs/optional-integrations.md": {
-      "sha256": "56279ef174ba3bf3ef3e95d0e1fb9cf4fd409a76dacab7d03a017b8f08948c0a",
+      "sha256": "35e07e369b6366c78d37550113e24e88c2770211a46d3360e5495bfc17dd5593",
       "executable": false
     },
     "docs/slack-monitor.md": {
-      "sha256": "e80e66e01d786ade004cc75f77db993bc4d9c91673dcd8b9f6aef55991d10045",
+      "sha256": "a7ba3020f3b3343b9ad6fdcf7dadb768835985f1c958350342515b698f7d15de",
       "executable": false
     },
     "lib/agent_os/home_migrator.rb": {
-      "sha256": "a412d4667bd7fad9821bb48db8be2e986a80098fb612eab1b9d60e868a26dfeb",
+      "sha256": "34880447da0ab768481bcb8512fedf2c1a106ff02dcf569a429d0e3ffc0db375",
       "executable": false
     },
     "lib/agent_os/paths.rb": {

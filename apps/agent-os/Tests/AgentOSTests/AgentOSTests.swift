@@ -4,6 +4,19 @@ import XCTest
 @testable import AgentOS
 
 final class AgentOSTests: XCTestCase {
+    func testAgentOSDeepLinksResolveSupportedDestinations() throws {
+        XCTAssertEqual(
+            AgentOSDeepLink.destination(for: try XCTUnwrap(URL(string: "agent-os://board"))),
+            .board
+        )
+        XCTAssertEqual(
+            AgentOSDeepLink.destination(for: try XCTUnwrap(URL(string: "agent-os://focus"))),
+            .focus
+        )
+        XCTAssertNil(AgentOSDeepLink.destination(for: try XCTUnwrap(URL(string: "https://example.com/board"))))
+        XCTAssertNil(AgentOSDeepLink.destination(for: try XCTUnwrap(URL(string: "agent-os://unknown"))))
+    }
+
     func testTaskDecodesCanonicalSnakeCaseFields() throws {
         let data = Data(#"""
         {

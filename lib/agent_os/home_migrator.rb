@@ -177,8 +177,14 @@ module AgentOS
       monitor["source_registry"] = File.join(@home, "config", "projects.yaml")
       monitor["task_board_root"] = File.join(@home, "work")
       monitor["runtime_state_root"] = File.join(@home, ".runtime", "dispatcher")
-      dashboard = monitor.dig("notifications", "task_board_dashboard")
-      dashboard["path"] = File.join(@home, "work", "BOARD.md") if dashboard.is_a?(Hash)
+      notifications = monitor["notifications"]
+      if notifications.is_a?(Hash)
+        notifications.delete("task_board_dashboard")
+        notifications["agent_os_app"] = {
+          "label" => "Open Agent OS",
+          "url" => "agent-os://board"
+        }
+      end
       raise ArgumentError, "packaged runtime is missing Slack monitor runbook: #{runbook}" unless File.file?(runbook)
 
       File.write(path, YAML.dump(config), mode: "w", perm: 0o600)

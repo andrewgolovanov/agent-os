@@ -165,6 +165,8 @@ class AgentOSCLITest < Minitest::Test
     assert_equal %w[10:00 14:00 18:00], monitor.dig("schedule", "local_times")
     assert_equal false, monitor.dig("authority", "slack_write")
     assert_equal File.join(@home, "work"), monitor.fetch("task_board_root")
+    assert_equal "Open Agent OS", monitor.dig("notifications", "agent_os_app", "label")
+    assert_equal "agent-os://board", monitor.dig("notifications", "agent_os_app", "url")
     assert_equal 0o600, File.stat(config_path).mode & 0o777
 
     stdout, stderr, status = Open3.capture3(
@@ -403,7 +405,9 @@ class AgentOSCLITest < Minitest::Test
     assert_equal File.join(migrated, "config", "projects.yaml"), migrated_monitor.fetch("source_registry")
     assert_equal File.join(migrated, "work"), migrated_monitor.fetch("task_board_root")
     assert_equal File.join(migrated, ".runtime", "dispatcher"), migrated_monitor.fetch("runtime_state_root")
-    assert_equal File.join(migrated, "work", "BOARD.md"), migrated_monitor.dig("notifications", "task_board_dashboard", "path")
+    assert_nil migrated_monitor.dig("notifications", "task_board_dashboard")
+    assert_equal "Open Agent OS", migrated_monitor.dig("notifications", "agent_os_app", "label")
+    assert_equal "agent-os://board", migrated_monitor.dig("notifications", "agent_os_app", "url")
     assert_equal(
       {
         "runbook" => "/opt/example/custom-monitor.md",

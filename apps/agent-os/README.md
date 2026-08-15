@@ -11,6 +11,10 @@ The app intentionally owns no task database. Durable state remains in:
 - `work/items/*/task.json` through `tools/task-board` for outcomes;
 - Codex App Server and `codex://threads/<id>` for execution state and handoff.
 
+Slack monitor notifications use `agent-os://board` to launch the app directly
+on the shared Board. `agent-os://focus` opens the Focus view. Both links refresh
+the canonical private Task Board; they do not import or duplicate task data.
+
 `Open new Codex task` creates a named task in the registered project, records its exact membership, copies a prepared continuation prompt, and opens that task in Codex. The app deliberately does not start a background turn: paste and send the prepared prompt when you are ready to begin work.
 
 ## Install

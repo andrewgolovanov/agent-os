@@ -166,6 +166,20 @@ struct ContentView: View {
             guard let selectedTaskID, !taskIDs.contains(selectedTaskID) else { return }
             closeInspector()
         }
+        .onOpenURL { url in
+            switch AgentOSDeepLink.destination(for: url) {
+            case .board:
+                scope = "board"
+                closeInspector()
+                Task { await store.refresh() }
+            case .focus:
+                scope = "focus"
+                closeInspector()
+                Task { await store.refresh() }
+            case nil:
+                break
+            }
+        }
     }
 
     private func closeInspector() {

@@ -1,11 +1,15 @@
 # Slack Monitor runbook
 
-Этот runbook принадлежит одному Agent OS-wide heartbeat monitor. Он читает Slack через connected Slack integration, связывает новые сигналы с Task Board и готовит локальный handoff. Новый проект не получает отдельную automation: registry нужен только для attribution и routing.
+This runbook belongs to one Agent OS-wide heartbeat monitor. It reads Slack
+through the connected Slack integration, correlates new signals with the
+canonical Task Board, and prepares a local handoff. A newly registered project
+does not receive another automation: the project registry is used only for
+attribution and routing.
 
 ## Configuration
 
-Новая установка сначала preview-ит sanitized template и только после review
-добавляет его в private home:
+A new installation previews the sanitized template before adding it to the
+private home:
 
 ```bash
 ./bin/agent-os configure-slack-monitor \
@@ -19,65 +23,70 @@
   --apply
 ```
 
-Команда меняет только private `config/monitors.yaml`: она не подключает Slack
-и не создаёт Codex Scheduled task. Полная последовательность, canonical prompt
-и recovery описаны в [optional integrations](optional-integrations.md).
+The command changes only private `config/monitors.yaml`; it neither connects
+Slack nor creates a Codex Scheduled task. The complete sequence, canonical
+prompt, and recovery procedure are in [optional integrations](optional-integrations.md).
 
-1. Найти `agent-os-slack-monitor` в private `config/monitors.yaml`.
-2. Каждый run заново разрешить current Slack user profile и использовать точный user ID для mention search.
-3. Разрешить project attribution через `config/projects.yaml`; channel IDs не угадывать и не дублировать в prompt.
-4. Использовать `tools/task-board` для task state и `tools/slack-state` для runtime cursor, seen ledger и watched roots.
+1. Find `agent-os-slack-monitor` in private `config/monitors.yaml`.
+2. Resolve the current Slack user profile again on every run and use its exact user ID for mention search.
+3. Resolve project attribution through `config/projects.yaml`; never guess channel IDs or duplicate them in the Scheduled prompt.
+4. Use `tools/task-board` for outcome state and `tools/slack-state` for the runtime cursor, seen ledger, and watched roots.
 
-Если config, registry или Slack integration недоступны, записать monitor failure. После partial read не продвигать ни один cursor.
+If the config, registry, or connected Slack integration is unavailable, record
+a monitor failure. Never advance any cursor after a partial read.
 
 ## Authority
 
-Разрешены:
+Allowed:
 
 - read-only Slack observation;
-- correlation с local Task Board;
-- создание или обновление local task snapshot;
-- подготовка `routing_pending` handoff;
-- компактная рекомендация пользователю.
+- correlation with the local Task Board;
+- creation or update of a local outcome snapshot;
+- preparation of a `routing_pending` handoff;
+- a compact recommendation to the user.
 
-Без отдельного запроса запрещены Slack messages/reactions, external tracker writes, code edits, commits, pushes, PR actions, deployments и управление user-owned Codex task.
+Without a separate user request, the monitor must not send Slack messages or
+reactions, write an external tracker, edit code, commit, push, act on a pull
+request, deploy, or manage a user-owned Codex task.
 
 ## Run sequence
 
-1. Прочитать current Slack user profile; это availability check и источник exact user ID/timezone.
-2. Проверить bounded набор open tasks и `routing_pending`.
-3. Прочитать active exact-root watches до общего поиска; Slack search не гарантирует все replies.
-4. Взять последний successful cursor из `.runtime/dispatcher/slack-monitor.json` и применить overlap из monitor config. Если cursor ещё `null`, читать только один configured interval плюс overlap; старую историю не backfill-ить.
-5. Искать exact `<@USER_ID>` mentions во всех доступных public/private channels за bounded window.
-6. Отдельно искать входящие DMs и group DMs. Dedupe conversations, раскрывать только кандидаты с новым unresolved ask; acknowledgement/FYI без действия не считать задачей.
-7. Для найденных roots/replies читать thread/channel context только в объёме, необходимом для resolution. Зарегистрированные project channels используются для attribution, но ambient traffic без mention не сканируется.
-8. Для каждого нового сообщения использовать identity `channel_id + thread_ts + message_ts` и проверить exact-event ledger до обработки.
-9. Correlate сначала по exact Task Board source, затем по channel mapping, repository/PR links и verified continuity. Если проект неизвестен, создать unassigned inbox task; не merge по похожему тексту.
-10. Сохранить только disposition и identifiers через `tools/slack-state seen`. Raw message text, author names и summaries в runtime state не сохранять.
-11. После полного успешного scan сначала записать все seen events, затем продвинуть watched-root cursors и global cursor с обязательным `--complete`.
-12. Перед финальным решением получить `tools/task-board summary --json`. Каждое пользовательское `NOTIFY` завершать ссылкой на dashboard из `notifications.task_board_dashboard` и строкой `Невыполнено: N` с общей Agent OS-суммой. Путь и label принадлежат private monitor config; при полезности перед ними можно добавить компактную разбивку по status.
+1. Read the current Slack user profile. This is both the availability check and the source of the exact user ID and timezone.
+2. Check the bounded set of open outcomes and `routing_pending` entries.
+3. Read active exact-root watches before general search because Slack search does not guarantee that every reply is returned.
+4. Load the last successful cursor from `.runtime/dispatcher/slack-monitor.json` and apply the configured overlap. If the cursor is `null`, read only one configured interval plus overlap; do not backfill old history.
+5. Search for exact `<@USER_ID>` mentions in all accessible public and private channels within the bounded window.
+6. Search incoming direct messages and group direct messages separately. Deduplicate conversations and expand only candidates with a new unresolved ask; acknowledgements and FYI messages do not become outcomes.
+7. For candidate roots and replies, read only enough thread or channel context to determine whether action remains. Registered project channels are attribution evidence, not permission to scan ambient traffic.
+8. Identify each new message by `channel_id + thread_ts + message_ts` and check the exact-event ledger before processing it.
+9. Correlate first by an exact Task Board source, then by registered channel mapping, explicit repository or pull-request links, and verified continuity. If the project is unknown, create one unassigned inbox outcome; never merge on similar wording alone.
+10. Persist only disposition and stable identifiers through `tools/slack-state seen`. Do not save raw Slack message text, author names, or message summaries in runtime state.
+11. After a complete successful scan, record all seen events first, then advance watched-root cursors and the global cursor with the required `--complete` flag.
+12. Before deciding whether to notify, run `tools/task-board summary --json`. Every user-facing `NOTIFY` must include the configured `notifications.agent_os_app` link and the current Agent OS-wide unfinished total. The app reads the same private Task Board state, so this link is the user-facing destination; do not link to internal generated files.
 
 ## Source-specific rules
 
 ### Mentions
 
-- Search public/private channels for exact current-user mention.
-- A mention inside a thread требует чтения thread до конца, чтобы не создать уже resolved task.
-- `@channel`, `@here` и user-group mentions не являются direct mention пользователя.
+- Search public and private channels for the exact current-user mention.
+- A mention inside a thread requires reading that thread to the end so an already resolved ask does not create an outcome.
+- `@channel`, `@here`, and user-group mentions are not direct mentions of the current user.
 
-### Direct and group DMs
+### Direct and group direct messages
 
-- Scan `im` и `mpim` отдельно, потому что DM обычно не содержит explicit mention.
-- Оставлять только conversation, где последний unresolved ask пришёл от другого человека или после последнего substantive ответа пользователя появились новые сообщения.
-- Emoji-only, acknowledgements и собственные сообщения пользователя не создают task.
+- Scan `im` and `mpim` separately because direct messages normally have no explicit mention.
+- Keep only a conversation where the latest unresolved ask came from another person, or where new messages appeared after the user's last substantive response.
+- Emoji-only messages, acknowledgements, and the user's own messages do not create outcomes.
 
-### Attribution
+### Attribution and task mutation
 
-- Exact source identity имеет приоритет.
-- Затем использовать registered Slack channel mapping и explicit repository/PR/project links.
-- Если project ещё не зарегистрирован или неоднозначен, task остаётся unassigned и получает один конкретный clarification next action.
+- Exact source identity has priority.
+- Then use registered Slack channel mapping and explicit repository, pull-request, or project links.
+- If a project is unregistered or ambiguous, keep the outcome unassigned and give it one concrete clarification next action.
+- If an exact source already belongs to an outcome, update that outcome's current state, next action, blocker, sources, or lifecycle only when the new Slack context materially changes it.
+- If no exact outcome exists and the ask is actionable, create one inbox outcome, attach its stable Slack source, and add a `routing_pending` handoff only when registered project routing is available.
 
-Пример:
+Example:
 
 ```bash
 tools/slack-state seen \
@@ -94,21 +103,25 @@ tools/slack-state monitor-success --cursor CURSOR_TIMESTAMP --complete
 
 ## Watches
 
-Каждый active root watch хранит exact channel/thread identity, last seen reply, reason, optional task ID и expiry. Watch cursor меняется только после полного чтения root и записи всех новых events.
+Each active root watch stores the exact channel and thread identity, the last
+seen reply, reason, optional task ID, and expiry. Advance its cursor only after
+the root has been read completely and all new events have been recorded.
 
-Закрытые/done tasks должны постепенно удаляться из активного bounded scan; полный бесконечный реестр threads не нужен.
+Closed or done outcomes should gradually leave the bounded active scan; the
+monitor does not need an infinite thread registry.
 
 ```bash
 tools/slack-state close-watch --channel CHANNEL_ID --thread-ts ROOT_TIMESTAMP
 ```
 
-## Circuit breaker и notifications
+## Circuit breaker and notifications
 
-- Первая outage может вернуть `NOTIFY`.
-- Повторная одинаковая outage возвращает `DONT_NOTIFY` и не меняет cursor.
-- Recovery уведомляется один раз.
-- Empty run, duplicate или unchanged state возвращает `DONT_NOTIFY`.
-- Новая actionable task, blocker, ambiguity или material lifecycle change возвращает `NOTIFY`.
-- Каждое `NOTIFY` содержит кликабельную ссылку на generated Task Board dashboard и актуальную общую сумму незавершённых outcomes. Quiet `DONT_NOTIFY` не создаёт отдельное пользовательское уведомление только ради неизменившейся суммы.
+- The first outage may return `NOTIFY`.
+- A repeated identical outage returns `DONT_NOTIFY` and leaves the cursor unchanged.
+- Notify once when the integration recovers.
+- An empty run, duplicate event, or unchanged state returns `DONT_NOTIFY`.
+- A new actionable outcome, blocker, ambiguity, or material lifecycle change returns `NOTIFY`.
+- Every `NOTIFY` includes the clickable Agent OS app link and the current total of unfinished outcomes. A quiet `DONT_NOTIFY` does not create a notification only because the unchanged total exists.
 
-Monitor не использует Chrome, Slack Desktop или Computer Use как fallback и не читает полный ambient traffic всех project channels.
+The monitor does not use Chrome, Slack Desktop, or Computer Use as a fallback,
+and it does not read the full ambient traffic of registered project channels.

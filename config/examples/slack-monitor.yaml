@@ -47,9 +47,9 @@ monitors:
       mode: prepare-only
       saved_project_resolution: runtime-by-registered-path
     notifications:
-      task_board_dashboard:
-        label: Open all tasks
-        path: __AGENT_OS_HOME__/work/BOARD.md
+      agent_os_app:
+        label: Open Agent OS
+        url: agent-os://board
       include_unfinished_total: true
       unfinished_excludes:
         - done

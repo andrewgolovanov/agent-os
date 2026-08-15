@@ -2,6 +2,15 @@
 
 ## 2026-08-16
 
+- Replaced Slack monitor links to the generated private `BOARD.md` file with a
+  native `agent-os://board` destination, added tested Board/Focus deep-link
+  handling to both development and release app bundles, and rewrote the
+  canonical Slack runbook and Scheduled prompt in portable plugin-first terms.
+- Clarified exact Slack-to-outcome correlation: stable event identities update
+  an existing task when verified, otherwise an actionable ask creates an inbox
+  outcome and optional `routing_pending` handoff in the shared private state
+  read by the Agent OS app.
+
 - Added preview-first migration from a legacy source-plus-home installation to
   a separate private `~/.agent-os`: config, Task Board, runtime evidence, and
   wrapper metadata are staged and validated without copying project
