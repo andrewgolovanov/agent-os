@@ -2,6 +2,9 @@
 
 ## 2026-08-15
 
+- Made Task Bridge turn-state updates explicit about their positional hash so
+  the release suite behaves identically on the bundled Ruby 2.6 and runner Ruby
+  3 or newer.
 - Created and verified an independent encrypted recovery copy of the Sparkle
   Ed25519 private key, then overwrote and removed the validated temporary export.
 - Applied the canonical Agent OS app icon to the Agent OS and Context Loop

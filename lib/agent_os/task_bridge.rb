@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-require "cgi"
 require "digest"
 require "fileutils"
 require "json"
@@ -56,14 +55,20 @@ module AgentOS
           update_turn_state(
             session_id,
             turn_id,
-            "task_id" => task.fetch("id"),
-            "claim_reason" => "archived_membership"
+            {
+              "task_id" => task.fetch("id"),
+              "claim_reason" => "archived_membership"
+            }
           )
           return hook_context(archived_context(task, session_id))
         end
         ensure_task_active(task)
         board.activity_start(task.fetch("id"), session_id: session_id, turn_id: turn_id, at: state.fetch("started_at"))
-        update_turn_state(session_id, turn_id, "task_id" => task.fetch("id"), "claim_reason" => "existing_membership")
+        update_turn_state(
+          session_id,
+          turn_id,
+          { "task_id" => task.fetch("id"), "claim_reason" => "existing_membership" }
+        )
         return hook_context(bound_context(board.read_task(task.fetch("id")), session_id, turn_id))
       end
 
@@ -73,14 +78,16 @@ module AgentOS
       update_turn_state(
         session_id,
         turn_id,
-        "candidates" => candidates.map do |candidate|
-          {
-            "task_id" => candidate.fetch("task_id"),
-            "exact" => candidate.fetch("exact"),
-            "reasons" => candidate.fetch("reasons"),
-            "score" => candidate.fetch("score")
-          }
-        end
+        {
+          "candidates" => candidates.map do |candidate|
+            {
+              "task_id" => candidate.fetch("task_id"),
+              "exact" => candidate.fetch("exact"),
+              "reasons" => candidate.fetch("reasons"),
+              "score" => candidate.fetch("score")
+            }
+          end
+        }
       )
       exact = candidates.select { |candidate| candidate.fetch("exact") }
       if exact.one? && policy_for(project_key).fetch("auto_claim", "exact_sources") == "exact_sources"
@@ -104,7 +111,7 @@ module AgentOS
       raise ArgumentError, "Codex task belongs to multiple Task Board items: #{session_id}" if existing.length > 1
 
       board.activity_stop(existing.first.fetch("id"), session_id: session_id, turn_id: turn_id, at: now) if existing.one?
-      state = update_turn_state(session_id, turn_id, "stopped_at" => now, create: false)
+      state = update_turn_state(session_id, turn_id, { "stopped_at" => now }, create: false)
       return { "continue" => true } unless state && state["material_change"] && state["checkpointed_at"].nil?
 
       task = existing.one? ? existing.first : nil
@@ -379,15 +386,15 @@ module AgentOS
           signatures << "figma-node:#{match[1].downcase}:#{node}" if node
         end
         signatures
-      rescue URI::InvalidURIError
+      rescue URI::InvalidURIError, ArgumentError
         []
       end.uniq
     end
 
     def figma_node(url)
       uri = URI.parse(url)
-      values = CGI.parse(uri.query.to_s)
-      raw = Array(values["node-id"]).first || Array(values["node_id"]).first
+      pair = URI.decode_www_form(uri.query.to_s).find { |key, _value| %w[node-id node_id].include?(key) }
+      raw = pair&.last
       raw&.tr("-", ":")
     end
 

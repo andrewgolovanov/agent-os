@@ -142,6 +142,9 @@ Verified: 2026-08-15
   complete Agent OS validator and publication audit before Swift packaging, and
   refuses the first release unless the packaged executable is Apple Silicon
   (`arm64`).
+- Task Bridge turn-state calls use explicit positional hashes and pass the same
+  suite on the bundled Ruby 2.6 and Homebrew Ruby 4.0, covering the Ruby 3+
+  keyword-argument boundary exercised by the release runner.
 
 ## Not configured
 
