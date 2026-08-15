@@ -63,9 +63,11 @@ Verified: 2026-08-15
   Compact icons align with the first line of two-line rows. Detail sections use
   a continuous document rhythm, tracked time is visible in the detail header and
   every Board card, and source rows expose link/hover affordances.
-- The Agent OS application icon uses the user-supplied canonical SVG without
-  redrawing or aspect-ratio distortion. The menu-bar extra renders the same path
-  geometry as an enlarged 18-point monochrome template without its background.
+- The Agent OS application icon preserves the user-supplied canonical glyph
+  paths without redrawing or aspect-ratio distortion. Its macOS composition
+  adds a transparent outer margin, a rounded near-black tile, and deliberate
+  inner spacing; the menu-bar extra renders the same paths as an enlarged
+  18-point monochrome template without the tile.
 - Lifecycle and project selection now share one 36-point SwiftUI control with
   the form inputs: balanced padding, one chevron, a flat token-owned popover,
   and automatic edge placement that remains visible near window boundaries.
@@ -77,10 +79,10 @@ Verified: 2026-08-15
   directly below the inspector header for quick access and are not duplicated
   in the lower Sources section. The local fallback remains available when `gh`
   is missing or unauthenticated.
-- The canonical Agent OS `A` mark is stored as the supplied SVG and a
-  reproducibly generated multi-resolution ICNS asset. Both development and
-  release packagers copy it into `Contents/Resources` and declare it through
-  `CFBundleIconFile`.
+- The canonical Agent OS `A` mark is stored as the supplied path geometry in a
+  rounded, padded SVG app-icon composition and as a reproducibly generated
+  multi-resolution ICNS asset. Both development and release packagers copy it
+  into `Contents/Resources` and declare it through `CFBundleIconFile`.
 - The Agent OS MCP clean-home test proves that tools execute from the
   source root while task and registry data remain under the private home.
 - Both monorepo plugin packages are installed and enabled from the `agent-os`

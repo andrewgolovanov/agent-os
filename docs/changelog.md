@@ -118,6 +118,10 @@
 - Replaced the earlier hand-drawn icon geometry with the user-supplied canonical
   SVG, preserved its aspect ratio in deterministic ICNS generation, and rebuilt
   the 18-point menu-bar template from the same exact paths.
+- Corrected the supplied glyph's macOS app-icon composition after Dock QA: kept
+  its exact path geometry, restored a transparent outer margin and rounded
+  near-black tile, and added balanced inner spacing without changing the
+  background-free menu-bar mark.
 
 Earlier private installation history is intentionally not part of the shareable
 product changelog.
