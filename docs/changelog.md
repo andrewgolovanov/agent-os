@@ -2,6 +2,9 @@
 
 ## 2026-08-15
 
+- Linked both Codex plugin cards directly to the public Agent OS repository
+  through their homepage and source metadata, with package coverage preventing
+  the links from disappearing in later builds.
 - Published the first public `v0.1.0` GitHub Release from
   `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f`; independently downloaded and
   verified its zip, checksum, stable appcast, Apple Silicon/macOS metadata,

@@ -1,11 +1,13 @@
 {
   "name": "agent-os",
-  "version": "0.2.0+codex.20260815182405",
+  "version": "0.2.0+codex.20260815221136",
   "description": "Use the canonical local Agent OS project registry and Task Board from Codex.",
   "author": {
     "name": "Andrew Golovanov"
   },
   "license": "MIT",
+  "homepage": "https://github.com/andrewgolovanov/agent-os",
+  "repository": "https://github.com/andrewgolovanov/agent-os",
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {

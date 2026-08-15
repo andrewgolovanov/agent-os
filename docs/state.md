@@ -26,6 +26,8 @@ Verified: 2026-08-15
   changing provider state: preview-first Slack monitor configuration,
   plugin-bundled Task Bridge hooks, a Codex setup skill, Scheduled task prompt,
   recovery instructions, and optional doctor checks.
+- Agent OS and Context Loop plugin details link their Website field and source
+  metadata to the public `andrewgolovanov/agent-os` repository.
 
 ## Private instance boundary
 

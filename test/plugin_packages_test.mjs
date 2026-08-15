@@ -6,6 +6,7 @@ const sourceRoot = path.resolve(import.meta.dirname, "..");
 const marketplacePath = path.join(sourceRoot, ".agents", "plugins", "marketplace.json");
 const marketplace = JSON.parse(fs.readFileSync(marketplacePath, "utf8"));
 const canonicalIcon = fs.readFileSync(path.join(sourceRoot, "apps", "agent-os", "Resources", "AppIcon.svg"));
+const repositoryUrl = "https://github.com/andrewgolovanov/agent-os";
 const pluginDirectories = fs.readdirSync(path.join(sourceRoot, "plugins"), { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
   .map((entry) => path.join(sourceRoot, "plugins", entry.name));
@@ -17,6 +18,8 @@ for (const pluginRoot of pluginDirectories) {
   assert.equal(manifest.name, path.basename(pluginRoot));
   assert.match(manifest.version, /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/u);
   assert.equal(manifest.license, "MIT");
+  assert.equal(manifest.homepage, repositoryUrl);
+  assert.equal(manifest.repository, repositoryUrl);
   assert.equal(manifest.skills, "./skills/");
   assert(Array.isArray(manifest.interface?.defaultPrompt));
   assert(manifest.interface.defaultPrompt.length <= 3);
