@@ -4,7 +4,7 @@ This roadmap contains only the next verifiable product outcomes.
 
 ## Now
 
-### Close the first public release gate
+### Validate the first public release with a second Mac
 
 Stage 1 source/home separation, monorepo consolidation, clean initialization,
 doctor, validation, app build, MCP isolation, and plugin smoke tests are complete.
@@ -32,11 +32,15 @@ Completed publication checks:
   publishing — verified locally against the release workflow contract;
 - the Ed25519 key has an independently verified encrypted recovery copy —
   verified;
+- GitHub Actions has the matching Ed25519 repository secret — verified;
+- `v0.1.0` published its zip, checksum, and appcast from commit
+  `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f` — verified;
+- the public assets, stable appcast, bundle metadata, Apple Silicon binary,
+  checksum, strict bundle signature, and Sparkle Ed25519 signature pass an
+  independent post-publication verification — verified.
 
 Remaining release checks:
 
-- GitHub Actions has the matching Ed25519 repository secret — verified;
-- `v0.1.0` publishes the zip, checksum, and appcast;
 - a second Mac completes an approved first install and a later genuine
   old-version to new-version update.
 

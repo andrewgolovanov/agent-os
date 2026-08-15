@@ -2,6 +2,10 @@
 
 ## 2026-08-15
 
+- Published the first public `v0.1.0` GitHub Release from
+  `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f`; independently downloaded and
+  verified its zip, checksum, stable appcast, Apple Silicon/macOS metadata,
+  strict bundle signature, and Sparkle Ed25519 archive signature.
 - Isolated the AppKit-backed menu-bar image provider to `MainActor`, satisfying
   Swift 6 strict concurrency without weakening checks for the rest of the app.
 - Lowered the Agent OS package manifest requirement from Swift tools 6.2 to

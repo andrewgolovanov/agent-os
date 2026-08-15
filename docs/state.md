@@ -15,7 +15,9 @@ Verified: 2026-08-15
   plane, native Agent OS app source, Agent OS plugin, and optional
   Context Loop plugin.
 - MIT licensing is present.
-- No GitHub Release or version tag has been published.
+- The first public release, `v0.1.0`, is published from commit
+  `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f` at
+  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.1.0`.
 - Documentation maintenance is now part of the repository completion contract:
   affected agent instructions, human README guidance, and owning product docs
   are updated in the same change and stale renamed identifiers are searched
@@ -137,7 +139,9 @@ Verified: 2026-08-15
   into a separate private home, `doctor`, the complete validator, 37 Ruby
   tests/222 assertions, both plugin package checks, 15 Swift tests, and the
   publication audit.
-- The tag-triggered GitHub Release workflow is present but has not run.
+- The tag-triggered GitHub Release workflow completed successfully for
+  `v0.1.0`: clean-home validation, publication audit, Swift tests, signed
+  packaging, and GitHub publication all passed in run `31905346346`.
 - The release workflow now initializes a clean temporary private home, runs the
   complete Agent OS validator and publication audit before Swift packaging, and
   refuses the first release unless the packaged executable is Apple Silicon
@@ -149,10 +153,15 @@ Verified: 2026-08-15
 - Task Bridge turn-state calls use explicit positional hashes and pass the same
   suite on the bundled Ruby 2.6 and Homebrew Ruby 4.0, covering the Ruby 3+
   keyword-argument boundary exercised by the release runner.
+- The public `v0.1.0` zip, checksum, and appcast were downloaded independently
+  after publication. The checksum, strict bundle signature, version `0.1.0`,
+  macOS 14 minimum, Apple Silicon executable, appcast archive length and URL,
+  stable `latest` feed, and Ed25519 archive signature all passed verification.
 
 ## Not configured
 
-- A published GitHub Release and real cross-version Sparkle update.
+- A real second-Mac install and cross-version Sparkle update from `v0.1.0` to a
+  later release.
 - End-user hook trust remains a per-install Codex choice; the release source
   cannot pre-approve it for another user.
 - A connected Slack integration and Codex Scheduled task for a clean user; the

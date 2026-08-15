@@ -102,7 +102,8 @@ the archive signature before returning. It creates:
 
 This is not a Developer ID signature and the app is not notarized. Only install
 an archive downloaded from the expected Agent OS GitHub release and compare its
-checksum before opening it:
+checksum before opening it. The current public package and checksum are attached
+to [Agent OS v0.1.0](https://github.com/andrewgolovanov/agent-os/releases/tag/v0.1.0):
 
 ```bash
 shasum -a 256 -c AgentOS-0.1.0-macOS.zip.sha256
