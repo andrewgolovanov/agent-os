@@ -4,22 +4,33 @@ This roadmap contains only the next verifiable product outcomes.
 
 ## Now
 
-### Close the first private release gate
+### Close the first public release gate
 
 Stage 1 source/home separation, monorepo consolidation, clean initialization,
 doctor, validation, app build, MCP isolation, and plugin smoke tests are complete.
 
-Done when:
+Completed publication checks:
 
 - `agent-os audit-publication` reports zero findings — verified;
-- a dedicated secret scanner and manual candidate review report no private data;
-- no nested Git repository or generated build artifact is a commit candidate;
-- Agent OS app and its MCP work from a default clean private home;
+- Gitleaks 8.30.1 and manual review report no private data — verified for all
+  126 initial candidates;
+- no nested Git repository or generated build artifact is a commit candidate —
+  verified;
+- the public source is committed and pushed to `main` — verified at
+  `7947b27249fd757b44f946b3fa9d6d66f08cfd26`;
+- anonymous HTTPS clone, clean private-home initialization, validation, and
+  Swift build/tests pass — verified;
 - both monorepo marketplace plugins are installed; Agent OS MCP reads
   the active home in a standalone installed-snapshot smoke — verified;
+
+Remaining release checks:
+
 - a fresh Codex task picks up the same installed Agent OS build;
-- the private remote is configured only after those gates pass;
-- the first commit is reviewed before push.
+- the Ed25519 key has an offline backup and GitHub Actions has the matching
+  repository secret;
+- `v0.1.0` publishes the zip, checksum, and appcast;
+- a second Mac completes an approved first install and a later genuine
+  old-version to new-version update.
 
 ### Complete the local Agent OS app pilot
 
@@ -33,10 +44,8 @@ Done when:
 - a fresh task loads the new monorepo plugin rather than an older cached build;
 - the ad-hoc signed download, checksum, and user-approved Gatekeeper flow remain
   reliable during a second-user installation;
-- the Ed25519 key has an offline backup and the release repository has the
-  `AGENT_OS_SPARKLE_PRIVATE_KEY` secret;
-- a tagged release publishes zip, checksum, and appcast, then a second Mac
-  completes a genuine old-version → new-version update.
+- release packaging and update behavior continue to satisfy the public release
+  checks above.
 
 ## Next
 
@@ -57,4 +66,4 @@ implicitly.
 
 - read-only provider enrichment;
 - richer board fields or scheduling;
-- public visibility and a support policy.
+- a formal support policy.

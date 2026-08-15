@@ -4,14 +4,16 @@ Verified: 2026-08-15
 
 ## Product source
 
-- The repository is an uncommitted local Git root on `main` with no configured
-  remote.
+- The reusable source is public at
+  `https://github.com/andrewgolovanov/agent-os` on `main`.
+- The initial public commit is
+  `7947b27249fd757b44f946b3fa9d6d66f08cfd26`; local `main` and `origin/main`
+  were verified at the same SHA after push.
 - Agent OS stage 1 is implemented as one monorepo containing the Ruby control
   plane, native Agent OS app source, Agent OS plugin, and optional
   Context Loop plugin.
 - MIT licensing is present.
-- No commit, push, release, deployment, or repository visibility change has
-  been performed.
+- No GitHub Release or version tag has been published.
 
 ## Private instance boundary
 
@@ -56,19 +58,24 @@ Verified: 2026-08-15
 - The dedicated Agent OS Ed25519 key exists in the local Keychain account
   `agent-os`; only its public key is in source. The generated 0.1.0 archive
   signature was independently verified with CryptoKit.
+- All 126 initial publication candidates passed a dedicated Gitleaks 8.30.1
+  scan with full redaction, manual filename/content review, `git diff --check`,
+  and the built-in publication audit before commit.
+- A fresh anonymous HTTPS clone of the pushed SHA passed initialization into a
+  separate private home, `doctor`, the complete validator, publication audit,
+  and a clean Swift dependency resolution/build with all six tests passing.
 - The tag-triggered GitHub Release workflow is present but has not run.
 
 ## Not configured
 
-- Agent OS remote, first commit, and first push.
-- A published GitHub Release and real cross-version Sparkle update. The feed URL
-  cannot anonymously read private GitHub releases.
+- A published GitHub Release and real cross-version Sparkle update.
 - An offline backup of the Agent OS Ed25519 private key and the repository secret
   `AGENT_OS_SPARKLE_PRIVATE_KEY`.
 - Fresh Codex task pickup of the newly installed monorepo plugin (the current
   already-open task cannot reload plugin capabilities in place).
-- Automated dedicated secret scanning.
-- Public repository visibility or release support policy.
+- Automated secret scanning on future pull requests and tags; the initial
+  candidate received a one-off dedicated scan.
+- A release support policy.
 
 Unknown values must remain unknown until verified. Private instance facts belong
 in ignored local state, not in this product document.

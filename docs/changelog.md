@@ -44,6 +44,15 @@
 - Added a dedicated Agent OS Ed25519 update key, pre-extraction archive
   verification, generated appcast, nested framework signing, and a tag-triggered
   GitHub Release workflow without Developer ID or notarization.
+- Passed all 126 initial candidates through Gitleaks 8.30.1, manual review, the
+  built-in publication audit, and whitespace checks with no secret or private
+  state findings.
+- Published the initial MIT-licensed source to the public
+  `andrewgolovanov/agent-os` repository at commit
+  `7947b27249fd757b44f946b3fa9d6d66f08cfd26`.
+- Verified the pushed source from a fresh anonymous HTTPS clone through private
+  home initialization, doctor, complete Ruby/plugin validation, publication
+  audit, and clean Swift build/tests.
 
 Earlier private installation history is intentionally not part of the shareable
 product changelog.

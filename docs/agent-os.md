@@ -1,8 +1,9 @@
 # Agent OS distribution
 
-Status: approved; local stage 1 implemented
+Status: public source published; first tagged release pending
 
-Remote policy: private first; no commit or push before all publication gates
+Remote policy: public source on `main`; automatic updates only from signed
+semantic-version GitHub Releases
 
 License: MIT
 
@@ -37,7 +38,8 @@ to `~/.agent-os` for private state.
   local backups until the monorepo is published and adopted.
 - Real configs, outcomes, reports, runtime, and project checkouts are private
   local state and are ignored by the product repository.
-- The first remote stage remains private.
+- The source repository is public after the initial secret scan, manual review,
+  and clean-clone validation gates passed.
 - The initial license is MIT.
 
 ## Implemented stage 1
@@ -65,14 +67,11 @@ to `~/.agent-os` for private state.
 
 ## Remaining gates
 
-1. Run a dedicated secret scan and manually review every candidate file.
-2. Validate plugin pickup in a fresh Codex task from the monorepo marketplace.
-3. Configure the private remote only after those checks; then create and review
-   the first commit before any push.
-4. Consider public visibility only after a second person completes setup without
-   developer-specific intervention.
-5. Back up the Sparkle private key, configure the GitHub Actions secret, and
-   prove a real `v0.1.0` → later-version update on a second Mac.
+1. Validate plugin pickup in a fresh Codex task from the monorepo marketplace.
+2. Back up the Sparkle private key and configure the GitHub Actions secret.
+3. Publish `v0.1.0` and verify its zip, checksum, and public appcast from GitHub.
+4. Complete a user-approved install on a second Mac, then prove a genuine
+   `v0.1.0` to later-version update.
 
-Approval does not authorize making the repository public, copying private local
-state, changing unrelated remotes, or publishing a release.
+Public source does not authorize copying private local state, changing unrelated
+remotes, or publishing an unsigned release.
