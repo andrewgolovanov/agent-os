@@ -8,7 +8,9 @@ Codex plugin and native macOS app are optional views over the same private data.
 - macOS or Linux with Ruby 3.x for the core;
 - Node.js for the Codex MCP server;
 - Codex CLI for plugin installation and Codex handoff;
-- macOS 14 or newer plus Swift 6.2 for building the native app from source.
+- Apple Silicon (`arm64`) with macOS 14 or newer for the first downloadable
+  native app release; an Intel or universal binary is not included yet;
+- Swift 6.2 for building the native app from source.
 
 ## 1. Core
 
@@ -142,9 +144,11 @@ or an authenticated feed is intentionally designed.
 ## Publishing a release
 
 Pushing a `vN.N.N` tag runs `.github/workflows/release.yml`. The workflow runs
-the Ruby, plugin, and Swift checks, builds the ad-hoc app, signs its Sparkle
-archive, verifies the signature, and publishes the zip, checksum, and appcast.
-It requires one non-Apple repository secret:
+the full Agent OS validation against a clean temporary private home, the
+publication audit, and the Swift tests. It then builds the ad-hoc app, asserts
+that the first-release binary is `arm64`, signs its Sparkle archive, verifies
+the signature, and publishes the zip, checksum, and appcast. It requires one
+non-Apple repository secret:
 
 ```text
 AGENT_OS_SPARKLE_PRIVATE_KEY

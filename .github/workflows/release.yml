@@ -19,8 +19,11 @@ jobs:
 
       - name: Validate release candidate
         run: |
-          ruby test/run.rb
-          node test/plugin_packages_test.mjs
+          set -euo pipefail
+          release_home="${RUNNER_TEMP}/agent-os-home"
+          ./bin/agent-os init --source "$GITHUB_WORKSPACE" --home "$release_home" --apply
+          ./bin/agent-os validate --source "$GITHUB_WORKSPACE" --home "$release_home"
+          ./bin/agent-os audit-publication --source "$GITHUB_WORKSPACE"
           swift test --package-path apps/agent-os
 
       - name: Package signed update
@@ -42,6 +45,9 @@ jobs:
           chmod 600 "$key_file"
           printf '%s' "$AGENT_OS_SPARKLE_PRIVATE_KEY" > "$key_file"
           apps/agent-os/script/package_release.sh --version "$version" --ed-key-file "$key_file"
+          app_binary="apps/agent-os/dist/release/Agent OS.app/Contents/MacOS/AgentOS"
+          [[ "$(uname -m)" == "arm64" ]]
+          [[ "$(lipo -archs "$app_binary")" == "arm64" ]]
 
       - name: Publish GitHub Release
         env:

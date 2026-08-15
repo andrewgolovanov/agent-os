@@ -88,6 +88,9 @@ Gatekeeper boundary still applies.
 ./script/package_release.sh
 ```
 
+The first downloadable release targets Apple Silicon (`arm64`) on macOS 14 or
+newer. It does not include an Intel or universal binary.
+
 This produces an ad-hoc signed zip, SHA-256 checksum, and signed-archive Sparkle
 appcast under `dist/release`. There is no Developer ID or notarization workflow.
 A downloaded copy requires the user to approve its first launch through

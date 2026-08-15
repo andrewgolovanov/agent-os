@@ -2,6 +2,15 @@
 
 ## 2026-08-15
 
+- Hardened the tag release workflow to initialize a clean temporary private
+  home, run the complete Agent OS validator and publication audit, and reject a
+  first-release executable that is not Apple Silicon (`arm64`).
+- Documented that the first downloadable macOS application supports Apple
+  Silicon on macOS 14 or newer and does not yet include an Intel or universal
+  binary.
+- Verified from fresh Codex tasks that the installed Agent OS skill and MCP
+  tools load correctly, and exercised the vetted Task Bridge hook bundle
+  against an isolated clean private home.
 - Added preview-first `configure-slack-monitor` onboarding with a sanitized
   template, structured merge, explicit conflict/replace boundary, private file
   permissions, and clean-home coverage including paths with spaces.

@@ -13,8 +13,11 @@ transcripts or introducing another hosted task database.
 
 ## Installation
 
-Requirements: macOS or Linux, Ruby, and Node.js. Swift is needed only for the
-optional macOS app; the Codex CLI is needed only for Codex handoff features.
+Requirements: macOS or Linux, Ruby, and Node.js. The first downloadable macOS
+app release supports Apple Silicon (`arm64`) on macOS 14 or newer; an Intel or
+universal binary is not included yet. Swift is needed only to build the optional
+macOS app from source, and the Codex CLI is needed only for Codex handoff
+features.
 
 ```bash
 git clone https://github.com/andrewgolovanov/agent-os.git

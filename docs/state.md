@@ -41,7 +41,7 @@ Verified: 2026-08-15
   home.
 - The full Agent OS validator passes against both homes.
 - The current and clean-home Ruby suites pass 39 tests and 256 assertions.
-- Agent OS app builds and its 15 Swift tests pass; bundle launch verification
+- Agent OS app builds and its 16 Swift tests pass; bundle launch verification
   succeeds with both the active home and a fresh empty private home.
 - The app now maps the official shadcn default Neutral dark tokens directly into
   SwiftUI: `#0a0a0a` canvas, `#171717` sidebar/cards, `#262626` interactive
@@ -94,6 +94,10 @@ Verified: 2026-08-15
   old installed plugin snapshot has been removed.
 - The installed Agent OS MCP snapshot is byte-identical to source and
   discovers the active private home without injected environment variables.
+- Two fresh non-interactive Codex tasks loaded the installed Agent OS skill and
+  successfully invoked the real `agent_os_list_tasks` and
+  `agent_os_list_projects` MCP tools. A separately vetted automation smoke also
+  executed the plugin's Task Bridge hook bundle against an isolated clean home.
 - The official plugin validator passes for `plugins/agent-os` in an isolated
   temporary Python environment, and the new `setup-agent-os` skill passes its
   dedicated validator. No project or global Python dependency was added.
@@ -128,14 +132,17 @@ Verified: 2026-08-15
   tests/222 assertions, both plugin package checks, 15 Swift tests, and the
   publication audit.
 - The tag-triggered GitHub Release workflow is present but has not run.
+- The release workflow now initializes a clean temporary private home, runs the
+  complete Agent OS validator and publication audit before Swift packaging, and
+  refuses the first release unless the packaged executable is Apple Silicon
+  (`arm64`).
 
 ## Not configured
 
 - A published GitHub Release and real cross-version Sparkle update.
 - An offline backup of the Agent OS Ed25519 private key.
-- Fresh Codex task pickup of the newly installed monorepo plugin (the current
-  already-open task cannot reload plugin capabilities in place).
-- Trust and fresh-task pickup of the new Agent OS plugin hook bundle.
+- End-user hook trust remains a per-install Codex choice; the release source
+  cannot pre-approve it for another user.
 - A connected Slack integration and Codex Scheduled task for a clean user; the
   local CLI intentionally cannot inspect or create either product-owned state.
 - Automated secret scanning on future pull requests and tags; the initial

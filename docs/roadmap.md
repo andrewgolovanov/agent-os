@@ -24,10 +24,15 @@ Completed publication checks:
   and the publication audit — verified;
 - both monorepo marketplace plugins are installed; Agent OS MCP reads
   the active home in a standalone installed-snapshot smoke — verified;
+- fresh Codex tasks load the installed Agent OS skill and invoke its MCP tools;
+  the vetted Task Bridge hook bundle also executes against an isolated private
+  home — verified;
+- the tag workflow validates a clean temporary private home, runs the full
+  publication audit, and asserts an Apple Silicon (`arm64`) app binary before
+  publishing — verified locally against the release workflow contract;
 
 Remaining release checks:
 
-- a fresh Codex task picks up the same installed Agent OS build;
 - GitHub Actions has the matching Ed25519 repository secret — verified;
 - the Ed25519 key has an independent offline backup;
 - `v0.1.0` publishes the zip, checksum, and appcast;
