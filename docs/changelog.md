@@ -2,6 +2,9 @@
 
 ## 2026-08-15
 
+- Lowered the Agent OS package manifest requirement from Swift tools 6.2 to
+  6.1; the package uses no 6.2-only manifest features and now builds on the
+  Apple Silicon `macos-15` release runner.
 - Made Task Bridge turn-state updates explicit about their positional hash so
   the release suite behaves identically on the bundled Ruby 2.6 and runner Ruby
   3 or newer.
