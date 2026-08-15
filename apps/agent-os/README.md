@@ -55,18 +55,19 @@ button and traffic lights, while the main toolbar keeps the darker content
 canvas. Its default and maximum width is the compact 240-point layout; hiding
 and restoring the sidebar preserves that split and its divider.
 
-The application icon uses the selected minimal Agent OS `A` mark: a white
-vector symbol on the same `#0a0a0a` background as the app canvas. The editable
-source is `Resources/AppIcon.svg`; rebuild the committed macOS icon asset with:
+The application icon uses the supplied canonical Agent OS `A` mark without
+redrawing or distorting its geometry: a rounded white vector symbol on its
+original `#111111` background. The editable source is
+`Resources/AppIcon.svg`; rebuild the committed macOS icon asset with:
 
 ```bash
 ./script/generate_app_icon.sh
 ```
 
-The menu-bar extra uses a separate 18-point template rendering of the same
-mark from `Sources/AgentOS/Support/AgentOSBrandIcon.swift`. It intentionally
-omits the rounded-square background so macOS can tint it correctly for either
-menu-bar appearance.
+The menu-bar extra uses a separate 18-point template rendering of the same SVG
+path geometry from `Sources/AgentOS/Support/AgentOSBrandIcon.swift`. It omits
+the background so macOS can tint the mark correctly for either menu-bar
+appearance.
 
 ## Updates
 

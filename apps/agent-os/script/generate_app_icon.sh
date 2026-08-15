@@ -24,10 +24,13 @@ trap cleanup EXIT
 }
 
 ICONSET_DIR="$TEMP_DIR/AppIcon.iconset"
+SOURCE_PNG="$TEMP_DIR/AppIcon-source.png"
 MASTER_PNG="$TEMP_DIR/AppIcon-1024.png"
 mkdir -p "$ICONSET_DIR"
 
-/usr/bin/sips -s format png "$SOURCE_SVG" --out "$MASTER_PNG" >/dev/null
+/usr/bin/sips -s format png "$SOURCE_SVG" --out "$SOURCE_PNG" >/dev/null
+/usr/bin/sips -Z 1024 "$SOURCE_PNG" --out "$MASTER_PNG" >/dev/null
+/usr/bin/sips --padColor 111111 --padToHeightWidth 1024 1024 "$MASTER_PNG" --out "$MASTER_PNG" >/dev/null
 
 write_icon() {
   local size="$1"

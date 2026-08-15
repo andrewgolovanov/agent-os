@@ -78,10 +78,10 @@ competing background turn from a second App Server client.
   external-link affordances, privacy-safe Slack permalink context, and optional
   live GitHub pull-request title/state/review metadata; PR rows are promoted
   below the task header and excluded from the lower supporting-source list;
-- a reproducible black-and-white Agent OS `A` app icon, with an editable SVG
-  source and generated multi-resolution `.icns` copied into development and
-  release bundles, plus a dedicated 18-point template version of the same mark
-  for the menu-bar extra;
+- the supplied canonical black-and-white Agent OS `A` app icon, preserved as an
+  editable SVG without geometric distortion and generated as a multi-resolution
+  `.icns` copied into development and release bundles, plus an 18-point template
+  version of the same path geometry for the menu-bar extra;
 - create outcome and validated lifecycle changes;
 - bounded menu-bar counts and quick actions.
 - unified update settings: tagged core/plugin updates plus Sparkle app updates,

@@ -175,6 +175,14 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(backdrop.opacity, 0.48, accuracy: 0.001)
     }
 
+    func testMenuBarBrandImageUsesStandardTemplateGeometry() {
+        let image = AgentOSBrandIcon.menuBarImage
+
+        XCTAssertEqual(image.size, NSSize(width: 18, height: 18))
+        XCTAssertTrue(image.isTemplate)
+        XCTAssertNotNil(image.tiffRepresentation)
+    }
+
     func testSourceItemsPreserveCanonicalKinds() throws {
         let data = Data(#"""
         {

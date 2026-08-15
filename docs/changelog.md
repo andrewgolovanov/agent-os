@@ -115,6 +115,9 @@
   `e98dc8118585e22d6f6ba2c070a6c146347d1103` to `main`, and verified that exact
   commit from a fresh anonymous HTTPS clone through isolated-home setup,
   doctor, Ruby/plugin/Swift checks, and the publication audit.
+- Replaced the earlier hand-drawn icon geometry with the user-supplied canonical
+  SVG, preserved its aspect ratio in deterministic ICNS generation, and rebuilt
+  the 18-point menu-bar template from the same exact paths.
 
 Earlier private installation history is intentionally not part of the shareable
 product changelog.
