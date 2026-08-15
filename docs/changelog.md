@@ -110,6 +110,11 @@
   resolve normal user configuration and Keychain-backed authentication.
 - Added the public version keys to the development app bundle so Sparkle can
   initialize during real-window QA instead of rejecting an unversioned host.
+- Added the canonical Agent OS icon before the project name in the public root
+  README, fast-forwarded the accepted redesign commit
+  `e98dc8118585e22d6f6ba2c070a6c146347d1103` to `main`, and verified that exact
+  commit from a fresh anonymous HTTPS clone through isolated-home setup,
+  doctor, Ruby/plugin/Swift checks, and the publication audit.
 
 Earlier private installation history is intentionally not part of the shareable
 product changelog.

@@ -7,8 +7,10 @@ Verified: 2026-08-15
 - The reusable source is public at
   `https://github.com/andrewgolovanov/agent-os` on `main`.
 - The initial public commit is
-  `7947b27249fd757b44f946b3fa9d6d66f08cfd26`; local `main` and `origin/main`
-  were verified at the same SHA after push.
+  `7947b27249fd757b44f946b3fa9d6d66f08cfd26`.
+- The accepted native-app redesign and release-candidate assets are committed as
+  `e98dc8118585e22d6f6ba2c070a6c146347d1103`; that commit was fast-forwarded to
+  public `main` and verified against `origin/main` after push.
 - Agent OS stage 1 is implemented as one monorepo containing the Ruby control
   plane, native Agent OS app source, Agent OS plugin, and optional
   Context Loop plugin.
@@ -86,8 +88,9 @@ Verified: 2026-08-15
   old installed plugin snapshot has been removed.
 - The installed Agent OS MCP snapshot is byte-identical to source and
   discovers the active private home without injected environment variables.
-- The official plugin validator is currently unavailable in the local Python
-  runtimes because `PyYAML` is absent. No dependency was installed implicitly.
+- The official plugin validator passes for `plugins/agent-os` in an isolated
+  temporary Python environment. No project or global Python dependency was
+  added.
 - The built-in publication audit reports zero known private-state boundary
   findings for the current candidate.
 - Preview-first `install-plugin` works against the local marketplace. The macOS
@@ -110,10 +113,10 @@ Verified: 2026-08-15
 - All 126 initial publication candidates passed a dedicated Gitleaks 8.30.1
   scan with full redaction, manual filename/content review, `git diff --check`,
   and the built-in publication audit before commit.
-- A fresh anonymous HTTPS clone of the pushed SHA passed initialization into a
-  separate private home, `doctor`, the complete validator, publication audit,
-  and a clean Swift dependency resolution/build with the then-current six tests
-  passing.
+- A fresh anonymous HTTPS clone of the redesign commit passed initialization
+  into a separate private home, `doctor`, the complete validator, 37 Ruby
+  tests/222 assertions, both plugin package checks, 15 Swift tests, and the
+  publication audit.
 - The tag-triggered GitHub Release workflow is present but has not run.
 
 ## Not configured

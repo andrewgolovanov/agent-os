@@ -16,10 +16,12 @@ Completed publication checks:
   126 initial candidates;
 - no nested Git repository or generated build artifact is a commit candidate —
   verified;
-- the public source is committed and pushed to `main` — verified at
-  `7947b27249fd757b44f946b3fa9d6d66f08cfd26`;
-- anonymous HTTPS clone, clean private-home initialization, validation, and
-  Swift build/tests pass — verified;
+- the accepted app redesign and release-candidate assets are committed and
+  pushed to public `main` — verified at
+  `e98dc8118585e22d6f6ba2c070a6c146347d1103`;
+- an anonymous HTTPS clone of that exact commit passes clean private-home
+  initialization, doctor, validation, Ruby/plugin checks, Swift build/tests,
+  and the publication audit — verified;
 - both monorepo marketplace plugins are installed; Agent OS MCP reads
   the active home in a standalone installed-snapshot smoke — verified;
 
