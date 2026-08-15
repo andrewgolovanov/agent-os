@@ -39,6 +39,17 @@ This registers the checkout as the `agent-os` marketplace and installs
 `agent-os@agent-os`. Start a fresh Codex task after installation or an update;
 running tasks do not reload plugin capabilities in place.
 
+The plugin also ships the Task Bridge hook bundle. Review its exact commands in
+Codex with `/hooks`, approve them only if they resolve to the installed Agent OS
+plugin, and then start a fresh project task. Optional Slack intake and recurring
+execution are configured separately; follow [Optional integrations](optional-integrations.md).
+
+For a read-only status that includes these optional layers:
+
+```bash
+./bin/agent-os doctor --integrations
+```
+
 ## Updates
 
 Agent OS updates only from versioned Git tags, never from an arbitrary latest

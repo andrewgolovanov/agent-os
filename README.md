@@ -50,7 +50,7 @@ The checkout contains reusable product source:
 ```text
 agent-os/
 ├── apps/agent-os/              optional native macOS app
-├── bin/agent-os                init, doctor, validate, publication audit
+├── bin/agent-os                setup, doctor, update, validate, publication audit
 ├── config/examples/            sanitized configuration templates
 ├── docs/                       architecture and runbooks
 ├── lib/ and tools/             deterministic control plane
@@ -69,6 +69,19 @@ enter a release candidate accidentally.
 `install-plugin` previews its changes first. With `--apply`, it registers this
 checkout as the `agent-os` marketplace and installs `agent-os@agent-os`. Start a
 fresh Codex task afterward so Codex loads the new MCP tools and skill.
+
+The plugin also contains the Task Bridge hooks and the `setup-agent-os` skill.
+Review the hook commands with `/hooks`, start a fresh task, and ask `Set up
+optional Agent OS integrations safely.` Slack and recurring monitoring remain
+separate opt-ins; see [Optional integrations](docs/optional-integrations.md).
+
+The local Slack monitor configuration is preview-first:
+
+```bash
+./bin/agent-os configure-slack-monitor --timezone Europe/Madrid
+./bin/agent-os configure-slack-monitor --timezone Europe/Madrid --apply
+./bin/agent-os doctor --integrations
+```
 
 `update` is also preview-first. `update --apply` accepts only a clean
 fast-forward to the newest `vN.N.N` release tag, preserves the private home, and
@@ -96,9 +109,11 @@ guide for the exact flow and update trust boundary.
 
 ## Safety and publication
 
-Integrations are opt-in and read-only by default. Agent OS does not enable
-hooks, schedules, Slack access, repository writes, commits, pushes, or deploys
-during initialization.
+Integrations are opt-in and read-only by default. Initialization does not enable
+hooks, schedules, Slack access, repository writes, commits, pushes, or deploys.
+Plugin installation makes its hook bundle available, but Codex still requires
+the user to review trust with `/hooks`; the Slack connection and Scheduled task
+remain separately controlled product state.
 
 Before publishing a candidate, run:
 

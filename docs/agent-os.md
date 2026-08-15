@@ -52,6 +52,11 @@ to `~/.agent-os` for private state.
 - `doctor` is read-only; `validate` checks source structure, the selected home,
   Ruby tests, MCP source/home isolation, both plugin manifests, and Context Loop.
 - Sanitized config templates create an empty registry and no enabled monitors.
+- `configure-slack-monitor` previews and merges one sanitized read-only monitor
+  into the private home without connecting Slack or creating a schedule.
+- The Agent OS plugin ships Task Bridge hooks and a setup skill; Codex remains
+  the authority for hook trust, the connected Slack integration, and Scheduled
+  task state.
 - The Agent OS app no longer assumes a developer path and reads the source
   pointer created in the private home.
 - The Agent OS MCP server confines reads/writes independently to the

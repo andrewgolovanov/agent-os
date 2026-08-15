@@ -4,7 +4,26 @@
 
 ## Configuration
 
-1. Найти `agent-os-slack-monitor` в `config/monitors.yaml`.
+Новая установка сначала preview-ит sanitized template и только после review
+добавляет его в private home:
+
+```bash
+./bin/agent-os configure-slack-monitor \
+  --timezone Europe/Madrid \
+  --days MO,TU,WE,TH,FR \
+  --times 10:00,14:00,18:00
+./bin/agent-os configure-slack-monitor \
+  --timezone Europe/Madrid \
+  --days MO,TU,WE,TH,FR \
+  --times 10:00,14:00,18:00 \
+  --apply
+```
+
+Команда меняет только private `config/monitors.yaml`: она не подключает Slack
+и не создаёт Codex Scheduled task. Полная последовательность, canonical prompt
+и recovery описаны в [optional integrations](optional-integrations.md).
+
+1. Найти `agent-os-slack-monitor` в private `config/monitors.yaml`.
 2. Каждый run заново разрешить current Slack user profile и использовать точный user ID для mention search.
 3. Разрешить project attribution через `config/projects.yaml`; channel IDs не угадывать и не дублировать в prompt.
 4. Использовать `tools/task-board` для task state и `tools/slack-state` для runtime cursor, seen ledger и watched roots.

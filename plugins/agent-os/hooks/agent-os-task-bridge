@@ -1,0 +1,34 @@
+#!/bin/sh
+set -eu
+
+agent_os_home=${AGENT_OS_HOME:-}
+if [ -z "$agent_os_home" ]; then
+  active_pointer=${HOME:?}/.config/agent-os/home
+  if [ -f "$active_pointer" ]; then
+    IFS= read -r agent_os_home < "$active_pointer"
+  else
+    agent_os_home=${HOME:?}/.agent-os
+  fi
+fi
+
+case "$agent_os_home" in
+  /*) ;;
+  *) echo "agent-os hook: private home must be absolute" >&2; exit 0 ;;
+esac
+[ "$agent_os_home" != "/" ] || { echo "agent-os hook: refusing filesystem root as private home" >&2; exit 0; }
+
+source_pointer=$agent_os_home/source-path
+[ -f "$source_pointer" ] || { echo "agent-os hook: missing $source_pointer" >&2; exit 0; }
+IFS= read -r source_root < "$source_pointer"
+case "$source_root" in
+  /*) ;;
+  *) echo "agent-os hook: source path must be absolute" >&2; exit 0 ;;
+esac
+[ "$source_root" != "/" ] || { echo "agent-os hook: refusing filesystem root as source" >&2; exit 0; }
+
+hook=$source_root/tools/codex-activity-hook
+[ -x "$hook" ] || { echo "agent-os hook: missing executable $hook" >&2; exit 0; }
+
+export AGENT_OS_HOME="$agent_os_home"
+export AGENT_OS_SOURCE_ROOT="$source_root"
+exec "$hook"

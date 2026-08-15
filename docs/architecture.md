@@ -38,6 +38,8 @@ Optional operator UI   source/apps/agent-os/
 | Human-readable task handoff | generated `AGENT_OS_HOME/work/items/<task-id>/STATUS.md` |
 | Exact Slack events, watched roots and cursors | `AGENT_OS_HOME/.runtime/dispatcher/` |
 | Exact Codex hook turn/candidate/checkpoint state | `AGENT_OS_HOME/.runtime/task-bridge/` |
+| Slack connection and Codex recurring execution | connected Slack integration and Codex Scheduled |
+| Reusable Task Bridge event commands | installed `plugins/agent-os/hooks/hooks.json` bundle |
 | Повторяемая процедура | `.agents/skills/<skill>/SKILL.md` |
 | Код проекта, Git history and CI | соответствующий project repository |
 | Issues, PR, provider state and conversations | соответствующая внешняя система |
@@ -89,6 +91,12 @@ User-level Task Bridge обслуживает chats внутри registered proj
 Project Time параллельно учитывает каждый Codex turn внутри registered project независимо от Task Board claim. Его project-level ledger не меняет outcome lifecycle и не складывается с Task Board time: linked outcome turns уже являются частью общего project total. Historical paths и exact exclusions принадлежат project registry, а generated report агрегирует завершённые интервалы по месяцам Agent OS timezone.
 
 Slack Monitor является одним Agent OS-wide read-only heartbeat. Он собирает direct mentions, incoming DMs/group DMs и active watched roots; project channels используются для attribution, а не для полного ambient scan. Его короткий prompt ссылается на canonical `config/monitors.yaml` и `docs/slack-monitor.md`; policy не копируется в automation. Cursor продвигается только после complete scan, а watched roots компенсируют неполноту Slack search.
+
+Optional integration setup не смешивает владельцев: Agent OS CLI управляет
+только private monitor config, plugin bundle поставляет hook commands, connected
+Slack integration владеет provider access, а Codex Scheduled владеет recurring
+execution. Setup skill оркестрирует эти шаги, но не сохраняет credentials и не
+эмулирует отсутствующий product API.
 
 Agent OS for macOS реализуется как replaceable presentation/action layer над этими владельцами данных. Native app не получает собственную task database и выполняет mutations только через deterministic Agent OS tools. Agent-facing integration оформлена как installed skills + root-confined MCP. Native app создаёт и именует idle Codex task через stable App Server `stdio`, записывает exact membership, копирует подготовленный prompt и открывает публичный `codex://threads/<id>` handoff; старт turn остаётся в desktop-клиенте, чтобы два App Server client не конкурировали за один task. App/plugin source живёт в monorepo, а mutable routing и durable context — только в private home.
 

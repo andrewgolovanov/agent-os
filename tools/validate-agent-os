@@ -30,9 +30,12 @@ REQUIRED_SOURCE_PATHS = %w[
   bin/agent-os
   config/examples/projects.yaml
   config/examples/monitors.yaml
+  config/examples/slack-monitor.yaml
   config/examples/task-bridge.yaml
   docs/README.md
   docs/architecture.md
+  docs/installation.md
+  docs/optional-integrations.md
   docs/workflows.md
   docs/task-board.md
   docs/task-bridge.md
@@ -48,10 +51,16 @@ REQUIRED_SOURCE_PATHS = %w[
   docs/decisions/0009-portable-agent-os-boundary.md
   docs/decisions/0010-one-agent-os-product-name.md
   docs/decisions/0011-release-based-auto-update.md
+  docs/decisions/0012-owned-optional-integrations.md
+  lib/agent_os/slack_monitor_setup.rb
   lib/agent_os/updater.rb
   lib/agent_os/paths.rb
   plugins/context-loop/.codex-plugin/plugin.json
   plugins/agent-os/.codex-plugin/plugin.json
+  plugins/agent-os/hooks/hooks.json
+  plugins/agent-os/hooks/agent-os-task-bridge
+  plugins/agent-os/skills/setup-agent-os/SKILL.md
+  plugins/agent-os/skills/setup-agent-os/agents/openai.yaml
   projects/README.md
   templates/project/AGENTS.md
   templates/project/project.yaml

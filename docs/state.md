@@ -20,6 +20,10 @@ Verified: 2026-08-15
   affected agent instructions, human README guidance, and owning product docs
   are updated in the same change and stale renamed identifiers are searched
   before handoff.
+- The current release candidate adds a complete opt-in integration path without
+  changing provider state: preview-first Slack monitor configuration,
+  plugin-bundled Task Bridge hooks, a Codex setup skill, Scheduled task prompt,
+  recovery instructions, and optional doctor checks.
 
 ## Private instance boundary
 
@@ -36,7 +40,7 @@ Verified: 2026-08-15
 - `agent-os doctor` passes for the current instance and for a fresh temporary
   home.
 - The full Agent OS validator passes against both homes.
-- The current and clean-home Ruby suites pass 37 tests and 222 assertions.
+- The current and clean-home Ruby suites pass 39 tests and 256 assertions.
 - Agent OS app builds and its 15 Swift tests pass; bundle launch verification
   succeeds with both the active home and a fresh empty private home.
 - The app now maps the official shadcn default Neutral dark tokens directly into
@@ -91,8 +95,12 @@ Verified: 2026-08-15
 - The installed Agent OS MCP snapshot is byte-identical to source and
   discovers the active private home without injected environment variables.
 - The official plugin validator passes for `plugins/agent-os` in an isolated
-  temporary Python environment. No project or global Python dependency was
-  added.
+  temporary Python environment, and the new `setup-agent-os` skill passes its
+  dedicated validator. No project or global Python dependency was added.
+- A fresh private home whose path contains spaces passed initialization,
+  Slack-monitor preview/apply, optional doctor checks, the plugin hook runner,
+  and the full Agent OS validation. The command preserves an identical monitor
+  and refuses a differing entry unless `--replace` is explicitly supplied.
 - The built-in publication audit reports zero known private-state boundary
   findings for the current candidate.
 - Preview-first `install-plugin` works against the local marketplace. The macOS
@@ -127,6 +135,9 @@ Verified: 2026-08-15
 - An offline backup of the Agent OS Ed25519 private key.
 - Fresh Codex task pickup of the newly installed monorepo plugin (the current
   already-open task cannot reload plugin capabilities in place).
+- Trust and fresh-task pickup of the new Agent OS plugin hook bundle.
+- A connected Slack integration and Codex Scheduled task for a clean user; the
+  local CLI intentionally cannot inspect or create either product-owned state.
 - Automated secret scanning on future pull requests and tags; the initial
   candidate received a one-off dedicated scan.
 - A release support policy.

@@ -7,6 +7,7 @@ require "open3"
 require "optparse"
 require "rbconfig"
 require_relative "../lib/agent_os/paths"
+require_relative "../lib/agent_os/slack_monitor_setup"
 require_relative "../lib/agent_os/task_board"
 require_relative "../lib/agent_os/updater"
 
@@ -31,6 +32,7 @@ module AgentOS
       when "audit-publication" then audit_publication
       when "activate" then activate_home
       when "install-plugin" then install_plugin
+      when "configure-slack-monitor" then configure_slack_monitor
       when "update" then update
       else
         @out.puts usage
@@ -78,10 +80,11 @@ module AgentOS
     end
 
     def doctor
-      options = common_options(json: false)
+      options = common_options(json: false, integrations: false)
       OptionParser.new do |parser|
-        parser.banner = "Usage: agent-os doctor [--home PATH] [--source PATH] [--json]"
+        parser.banner = "Usage: agent-os doctor [--home PATH] [--source PATH] [--integrations] [--json]"
         add_common_options(parser, options)
+        parser.on("--integrations", "Include optional Slack, Scheduled, and hook checks") { options[:integrations] = true }
         parser.on("--json") { options[:json] = true }
         parser.parse!(@arguments)
       end
@@ -89,13 +92,14 @@ module AgentOS
 
       source = validated_root(options.fetch(:source), "source", allow_missing: true)
       home = validated_root(options.fetch(:home), "home", allow_missing: true)
-      checks = doctor_checks(source, home)
+      checks = doctor_checks(source, home, integrations: options.fetch(:integrations))
       ready = checks.none? { |check| check.fetch(:required) && !check.fetch(:ok) }
       result = {
         schema_version: 1,
         ready: ready,
         source: source,
         home: home,
+        integrations_checked: options.fetch(:integrations),
         checks: checks
       }
 
@@ -232,6 +236,51 @@ module AgentOS
       0
     end
 
+    def configure_slack_monitor
+      options = common_options(
+        timezone: nil,
+        days: AgentOS::SlackMonitorSetup::DEFAULT_DAYS,
+        times: AgentOS::SlackMonitorSetup::DEFAULT_TIMES,
+        replace: false,
+        apply: false,
+        json: false
+      )
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os configure-slack-monitor [--home PATH] [--source PATH] [--timezone ZONE] [--days LIST] [--times LIST] [--replace] [--json] [--apply]"
+        add_common_options(parser, options)
+        parser.on("--timezone ZONE", "IANA timezone (defaults to the Agent OS registry)") { |value| options[:timezone] = value }
+        parser.on("--days LIST", "Comma-separated weekday codes, for example MO,TU,WE,TH,FR") { |value| options[:days] = split_list(value, "days") }
+        parser.on("--times LIST", "Comma-separated local times, for example 10:00,14:00,18:00") { |value| options[:times] = split_list(value, "times") }
+        parser.on("--replace", "Replace only an existing agent-os-slack-monitor entry") { options[:replace] = true }
+        parser.on("--json", "Print the plan or result as JSON") { options[:json] = true }
+        parser.on("--apply", "Write the reviewed monitor configuration") { options[:apply] = true }
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+
+      source = validated_root(options.fetch(:source), "source")
+      home = validated_root(options.fetch(:home), "home")
+      timezone = options[:timezone] || registry_timezone(home) || local_timezone
+      setup = AgentOS::SlackMonitorSetup.new(
+        source: source,
+        home: home,
+        timezone: timezone,
+        days: options.fetch(:days),
+        times: options.fetch(:times)
+      )
+      result = options.fetch(:apply) ? setup.apply(replace: options.fetch(:replace)) : setup.plan(replace: options.fetch(:replace))
+      if options.fetch(:apply) && result.fetch(:action) == "conflict"
+        raise ArgumentError, "#{result.fetch(:monitor_key)} already differs; pass --replace only after reviewing the preview"
+      end
+
+      if options.fetch(:json)
+        @out.puts JSON.pretty_generate(result.reject { |key, _value| key == :desired_monitor })
+      else
+        print_slack_monitor_result(result, applied: options.fetch(:apply))
+      end
+      0
+    end
+
     def update
       options = { source: Paths.source_root, remote: "origin", apply: false, plugin: true, json: false }
       OptionParser.new do |parser|
@@ -327,7 +376,7 @@ module AgentOS
       @environment.fetch("TZ", "UTC").then { |value| value.empty? ? "UTC" : value }
     end
 
-    def doctor_checks(source, home)
+    def doctor_checks(source, home, integrations: false)
       required_paths = {
         "source checkout" => source,
         "source pointer" => File.join(home, "source-path"),
@@ -350,7 +399,87 @@ module AgentOS
         ok: File.file?(active) && File.read(active).strip == home,
         detail: active
       }
+      checks.concat(integration_checks(source, home)) if integrations
       checks
+    end
+
+    def integration_checks(source, home)
+      monitor_path = File.join(home, "config", "monitors.yaml")
+      monitor_ok = begin
+        payload = YAML.safe_load(File.read(monitor_path), permitted_classes: [], permitted_symbols: [], aliases: false)
+        payload.is_a?(Hash) && payload.dig("monitors", AgentOS::SlackMonitorSetup::MONITOR_KEY, "enabled") == true
+      rescue Errno::ENOENT, Psych::SyntaxError
+        false
+      end
+      hook_manifest = File.join(source, "plugins", "agent-os", "hooks", "hooks.json")
+      hook_runner = File.join(source, "plugins", "agent-os", "hooks", "agent-os-task-bridge")
+      runtime_pattern = File.join(home, ".runtime", "task-bridge", "sessions", "*", "turns", "*.json")
+      runtime_evidence = Dir.glob(runtime_pattern).any?
+
+      [
+        {
+          name: "Slack monitor configuration",
+          required: false,
+          ok: monitor_ok,
+          detail: monitor_ok ? "enabled in #{monitor_path}" : "not enabled; preview agent-os configure-slack-monitor"
+        },
+        {
+          name: "source plugin Task Bridge hooks",
+          required: false,
+          ok: File.file?(hook_manifest) && File.executable?(hook_runner),
+          detail: "#{hook_manifest}; refresh the installed plugin, then review trust with /hooks"
+        },
+        {
+          name: "Task Bridge runtime evidence",
+          required: false,
+          ok: runtime_evidence,
+          detail: runtime_evidence ? "historical turn evidence exists; verify the current task separately" : "no historical turn evidence; start a fresh task after /hooks review"
+        },
+        {
+          name: "connected Slack integration",
+          required: false,
+          ok: false,
+          detail: "verify with a minimal read-only profile check in Codex; local CLI cannot inspect connector state"
+        },
+        {
+          name: "Scheduled task",
+          required: false,
+          ok: false,
+          detail: "verify in Codex Scheduled; local CLI does not own product automation state"
+        }
+      ]
+    end
+
+    def registry_timezone(home)
+      path = File.join(home, "config", "projects.yaml")
+      return nil unless File.file?(path)
+
+      payload = YAML.safe_load(File.read(path), permitted_classes: [], permitted_symbols: [], aliases: false)
+      value = payload.dig("agent_os", "timezone") if payload.is_a?(Hash)
+      value.to_s.empty? ? nil : value.to_s
+    rescue Psych::SyntaxError
+      nil
+    end
+
+    def split_list(value, label)
+      values = value.to_s.split(",", -1).map(&:strip)
+      raise ArgumentError, "#{label} cannot contain empty values" if values.any?(&:empty?)
+      values
+    end
+
+    def print_slack_monitor_result(result, applied:)
+      schedule = result.fetch(:schedule)
+      @out.puts applied ? "Agent OS Slack monitor result" : "Agent OS Slack monitor plan"
+      @out.puts "  #{result.fetch(:action).upcase.ljust(8)} #{result.fetch(:config_path)}##{result.fetch(:monitor_key)}"
+      @out.puts "  schedule #{schedule.fetch("days").join(",")} at #{schedule.fetch("local_times").join(",")} (#{schedule.fetch("timezone")})"
+      if result.fetch(:action) == "conflict" && result[:existing_schedule].is_a?(Hash)
+        existing = result.fetch(:existing_schedule)
+        @out.puts "  existing #{Array(existing["days"]).join(",")} at #{Array(existing["local_times"]).join(",")} (#{existing["timezone"]})"
+        @out.puts "  No changes made. Re-run the preview with --replace only after reviewing this conflict."
+      end
+      @out.puts "  authority read-only Slack; local Task Board preparation only"
+      @out.puts "  Scheduled task is not created by this command. Use the Agent OS setup skill in Codex."
+      @out.puts "Preview only. Re-run with --apply after review." unless applied
     end
 
     def active_home_pointer
@@ -405,6 +534,7 @@ module AgentOS
           audit-publication  Block known private data from a release candidate
           activate   Preview or select the home used by app and plugin processes
           install-plugin  Preview or install the Agent OS Codex plugin
+          configure-slack-monitor  Preview or configure the optional read-only Slack monitor
           update     Check release tags; optionally fast-forward core and refresh plugin
       USAGE
     end

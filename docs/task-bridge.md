@@ -89,6 +89,13 @@ Legacy chat, в котором последовательно выполняли
 
 ## Codex setup
 
-User-level Codex hook configuration подключает один command hook для `UserPromptSubmit`, material `PostToolUse` и `Stop`. После изменения конфигурации её нужно открыть и доверить через `/hooks`, затем начать новый project chat: уже запущенный task не получает новую hook configuration задним числом.
+Agent OS plugin поставляет один стандартный hook bundle для `UserPromptSubmit`,
+material `PostToolUse` и `Stop`. Installer не редактирует отдельный user-level
+`hooks.json`, поэтому не возникает второй расходящейся копии команд. После
+установки или обновления bundle нужно открыть и доверить через `/hooks`, затем
+начать новый project chat: уже запущенный task не получает новую hook
+configuration задним числом. `agent-os doctor --integrations` проверяет файлы
+bundle и historical runtime evidence, но не выдаёт их за доказательство trust
+или pickup в текущем task.
 
 `AGENTS.override.md` для Task Bridge не используется: такой файл заменил бы, а не дополнил project `AGENTS.md`. Project-specific task context передаётся динамически через `additionalContext` hook response.

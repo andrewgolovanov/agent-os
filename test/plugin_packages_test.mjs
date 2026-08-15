@@ -30,6 +30,27 @@ for (const pluginRoot of pluginDirectories) {
   const skill = fs.readFileSync(skillPath, "utf8");
   assert.match(skill, new RegExp(`^---\\nname: ${manifest.name}\\ndescription: .+\\n---\\n`, "u"));
   assert(!skill.includes("[TODO:"), `TODO placeholder remains in ${skillPath}`);
+
+  for (const skillEntry of fs.readdirSync(path.join(pluginRoot, "skills"), { withFileTypes: true })) {
+    if (!skillEntry.isDirectory()) continue;
+    const nestedSkillPath = path.join(pluginRoot, "skills", skillEntry.name, "SKILL.md");
+    assert(fs.existsSync(nestedSkillPath), `Missing SKILL.md in ${skillEntry.name}`);
+    const nestedSkill = fs.readFileSync(nestedSkillPath, "utf8");
+    assert.match(nestedSkill, new RegExp(`^---\\nname: ${skillEntry.name}\\ndescription: .+\\n---\\n`, "u"));
+    assert(!nestedSkill.includes("[TODO:"), `TODO placeholder remains in ${nestedSkillPath}`);
+  }
+
+  if (manifest.name === "agent-os") {
+    const hooksPath = path.join(pluginRoot, "hooks", "hooks.json");
+    const hookRunner = path.join(pluginRoot, "hooks", "agent-os-task-bridge");
+    const hooks = JSON.parse(fs.readFileSync(hooksPath, "utf8"));
+    assert.deepEqual(Object.keys(hooks.hooks).sort(), ["PostToolUse", "Stop", "UserPromptSubmit"]);
+    assert.equal(hooks.hooks.PostToolUse[0].matcher, "apply_patch|Edit|Write");
+    for (const event of Object.values(hooks.hooks)) {
+      assert.equal(event[0].hooks[0].command, '\"$PLUGIN_ROOT/hooks/agent-os-task-bridge\"');
+    }
+    assert((fs.statSync(hookRunner).mode & 0o111) !== 0, "Agent OS hook runner must be executable");
+  }
 }
 
 process.stdout.write(`${pluginDirectories.length} Agent OS plugin packages validated.\n`);

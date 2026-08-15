@@ -2,6 +2,16 @@
 
 ## 2026-08-15
 
+- Added preview-first `configure-slack-monitor` onboarding with a sanitized
+  template, structured merge, explicit conflict/replace boundary, private file
+  permissions, and clean-home coverage including paths with spaces.
+- Bundled `UserPromptSubmit`, material `PostToolUse`, and `Stop` Task Bridge
+  hooks in the Agent OS plugin, added the `setup-agent-os` skill, and refreshed
+  the plugin cache-busting version without adding a second user hook file.
+- Added one canonical optional-integration guide and Scheduled task prompt that
+  keep local config, Slack access, hook trust, and Codex recurring execution in
+  their respective authority domains. Extended `doctor --integrations` without
+  treating unverifiable provider state as core failure.
 - Approved Agent OS as the portable product form of the local control plane:
   in-place source, external private state, one monorepo, private-first release,
   and MIT licensing.

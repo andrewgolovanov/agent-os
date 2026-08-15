@@ -1,6 +1,6 @@
 {
   "name": "agent-os",
-  "version": "0.2.0+codex.20260815131606",
+  "version": "0.2.0+codex.20260815173213",
   "description": "Use the canonical local Agent OS project registry and Task Board from Codex.",
   "author": {
     "name": "Andrew Golovanov"
@@ -21,7 +21,7 @@
     "defaultPrompt": [
       "Show my unfinished Agent OS outcomes.",
       "Create an Agent OS outcome for this project.",
-      "Update an outcome by exact task ID."
+      "Set up optional Agent OS integrations safely."
     ]
   }
 }

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Set up Agent OS"
+  short_description: "Configure optional Slack monitoring and hooks."
+  default_prompt: "Set up optional Agent OS integrations safely."

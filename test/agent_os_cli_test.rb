@@ -5,6 +5,7 @@ require "json"
 require "minitest/autorun"
 require "open3"
 require "tmpdir"
+require "yaml"
 
 class AgentOSCLITest < Minitest::Test
   def setup
@@ -61,6 +62,100 @@ class AgentOSCLITest < Minitest::Test
     payload = JSON.parse(stdout)
     assert_equal true, payload.fetch("ready")
     assert_equal @home, payload.fetch("home")
+  end
+
+  def test_slack_monitor_setup_is_preview_first_idempotent_and_conflict_safe
+    _, stderr, status = Open3.capture3(
+      { "TZ" => "Europe/Madrid" },
+      @executable, "init", "--source", @source, "--home", @home, "--apply"
+    )
+    assert status.success?, stderr
+    config_path = File.join(@home, "config", "monitors.yaml")
+    initial = File.read(config_path)
+
+    stdout, stderr, status = Open3.capture3(
+      @executable, "configure-slack-monitor", "--source", @source, "--home", @home,
+      "--timezone", "Europe/Madrid", "--days", "MO,TU,WE,TH,FR", "--times", "10:00,14:00,18:00"
+    )
+    assert status.success?, stderr
+    assert_includes stdout, "Preview only"
+    assert_equal initial, File.read(config_path)
+
+    stdout, stderr, status = Open3.capture3(
+      @executable, "configure-slack-monitor", "--source", @source, "--home", @home,
+      "--timezone", "Europe/Madrid", "--apply", "--json"
+    )
+    assert status.success?, stderr
+    assert_equal "create", JSON.parse(stdout).fetch("action")
+    config = YAML.safe_load(File.read(config_path), permitted_classes: [], permitted_symbols: [], aliases: false)
+    monitor = config.dig("monitors", "agent-os-slack-monitor")
+    assert_equal true, monitor.fetch("enabled")
+    assert_equal %w[10:00 14:00 18:00], monitor.dig("schedule", "local_times")
+    assert_equal false, monitor.dig("authority", "slack_write")
+    assert_equal File.join(@home, "work"), monitor.fetch("task_board_root")
+    assert_equal 0o600, File.stat(config_path).mode & 0o777
+
+    stdout, stderr, status = Open3.capture3(
+      @executable, "configure-slack-monitor", "--source", @source, "--home", @home,
+      "--timezone", "Europe/Madrid", "--apply", "--json"
+    )
+    assert status.success?, stderr
+    assert_equal "preserve", JSON.parse(stdout).fetch("action")
+
+    monitor.fetch("schedule")["local_times"] = ["09:00"]
+    File.write(config_path, YAML.dump(config))
+    before_conflict = File.read(config_path)
+    stdout, stderr, status = Open3.capture3(
+      @executable, "configure-slack-monitor", "--source", @source, "--home", @home,
+      "--timezone", "Europe/Madrid", "--json"
+    )
+    assert status.success?, stderr
+    conflict = JSON.parse(stdout)
+    assert_equal "conflict", conflict.fetch("action")
+    assert_equal ["09:00"], conflict.dig("existing_schedule", "local_times")
+    assert_equal before_conflict, File.read(config_path)
+
+    _stdout, stderr, status = Open3.capture3(
+      @executable, "configure-slack-monitor", "--source", @source, "--home", @home,
+      "--timezone", "Europe/Madrid", "--apply"
+    )
+    refute status.success?
+    assert_includes stderr, "already differs"
+    assert_equal before_conflict, File.read(config_path)
+
+    stdout, stderr, status = Open3.capture3(
+      @executable, "configure-slack-monitor", "--source", @source, "--home", @home,
+      "--timezone", "Europe/Madrid", "--times", "11:00,15:00", "--replace", "--apply", "--json"
+    )
+    assert status.success?, stderr
+    assert_equal "replace", JSON.parse(stdout).fetch("action")
+    replaced = YAML.safe_load(File.read(config_path), permitted_classes: [], permitted_symbols: [], aliases: false)
+    assert_equal %w[11:00 15:00], replaced.dig("monitors", "agent-os-slack-monitor", "schedule", "local_times")
+  end
+
+  def test_doctor_integration_checks_do_not_change_core_readiness
+    _, stderr, status = Open3.capture3(
+      @executable, "init", "--source", @source, "--home", @home, "--apply"
+    )
+    assert status.success?, stderr
+    _, stderr, status = Open3.capture3(
+      @executable, "configure-slack-monitor", "--source", @source, "--home", @home,
+      "--timezone", "UTC", "--apply"
+    )
+    assert status.success?, stderr
+
+    stdout, stderr, status = Open3.capture3(
+      @executable, "doctor", "--source", @source, "--home", @home, "--integrations", "--json"
+    )
+    assert status.success?, stderr
+    payload = JSON.parse(stdout)
+    assert_equal true, payload.fetch("ready")
+    assert_equal true, payload.fetch("integrations_checked")
+    checks = payload.fetch("checks").to_h { |check| [check.fetch("name"), check] }
+    assert_equal true, checks.fetch("Slack monitor configuration").fetch("ok")
+    assert_equal true, checks.fetch("source plugin Task Bridge hooks").fetch("ok")
+    assert_equal false, checks.fetch("connected Slack integration").fetch("required")
+    assert_equal false, checks.fetch("Scheduled task").fetch("ok")
   end
 
   def test_activate_is_preview_first_and_writes_user_pointer

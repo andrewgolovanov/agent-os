@@ -61,7 +61,10 @@ Done when:
 
 Provide only the repository and installation guide. Capture every undocumented
 assumption, then repair the installer/docs without copying that user's private
-state into the source tree.
+state into the source tree. If that user opts into Slack monitoring, verify the
+documented sequence end to end: minimal connected-Slack read, reviewed `/hooks`,
+fresh-task Task Bridge pickup, one manual bounded monitor pass, and the first two
+Codex Scheduled executions.
 
 ### Complete uninstall contract
 
@@ -73,5 +76,5 @@ implicitly.
 ## Later, only with demonstrated need
 
 - read-only provider enrichment;
-- richer board fields or scheduling;
+- richer board fields or scheduling beyond the single read-only Slack heartbeat;
 - a formal support policy.

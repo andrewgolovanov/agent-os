@@ -13,6 +13,7 @@
 | [project-time.md](project-time.md) | общий учёт Codex-времени по всем тредам проекта и месяцам |
 | [agent-os-app.md](agent-os-app.md) | approved boundary, UX proposal и implementation notes для native macOS app |
 | [installation.md](installation.md) | reproducible core, Codex plugin, and macOS app installation |
+| [optional-integrations.md](optional-integrations.md) | opt-in Slack monitor, Codex Scheduled, and plugin hook setup |
 | [agent-os.md](agent-os.md) | portable product boundary, local/private split и publication gates |
 | [slack-monitor.md](slack-monitor.md) | read-only Slack intake, cursor и watched-root contract |
 | [review-intake.md](review-intake.md) | безопасная маршрутизация PR review для reviewer/author |

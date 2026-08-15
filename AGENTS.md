@@ -23,6 +23,7 @@ This repository is the portable Agent OS source. Keep user project code and muta
 | Start or resume durable work | `work/README.md`, `docs/task-board.md`, and the matching `work/items/<task-id>/STATUS.md` |
 | Task correlation, Codex activity, or checkpoints | `config/task-bridge.yaml`, then `docs/task-bridge.md` |
 | Slack monitor or review intake | `config/monitors.yaml`, then `docs/slack-monitor.md` or `docs/review-intake.md` |
+| Install or repair optional integrations | `docs/optional-integrations.md`, then the relevant plugin skill and provider state |
 | Create or change a skill | `docs/extending.md` and the skill's `SKILL.md` |
 
 ## Working contract
@@ -41,4 +42,4 @@ This repository is the portable Agent OS source. Keep user project code and muta
 
 ## Validation
 
-Run `ruby tools/validate-agent-os` after structural or registry changes. Run `tools/task-board validate` after task-state tooling changes and `tools/slack-state validate` after dispatcher-state changes. Run repository-specific checks from the registered repository and its closest `AGENTS.md`.
+Run `ruby tools/validate-agent-os` after structural or registry changes. Run `tools/task-board validate` after task-state tooling changes and `tools/slack-state validate` after dispatcher-state changes. Validate every changed plugin skill, run `node test/plugin_packages_test.mjs` after plugin hook or manifest changes, and start a fresh Codex task for real hook-pickup verification. Run repository-specific checks from the registered repository and its closest `AGENTS.md`.
