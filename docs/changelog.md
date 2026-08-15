@@ -2,6 +2,8 @@
 
 ## 2026-08-15
 
+- Isolated the AppKit-backed menu-bar image provider to `MainActor`, satisfying
+  Swift 6 strict concurrency without weakening checks for the rest of the app.
 - Lowered the Agent OS package manifest requirement from Swift tools 6.2 to
   6.1; the package uses no 6.2-only manifest features and now builds on the
   Apple Silicon `macos-15` release runner.

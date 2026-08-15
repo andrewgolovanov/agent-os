@@ -175,6 +175,7 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(backdrop.opacity, 0.48, accuracy: 0.001)
     }
 
+    @MainActor
     func testMenuBarBrandImageUsesStandardTemplateGeometry() {
         let image = AgentOSBrandIcon.menuBarImage
 

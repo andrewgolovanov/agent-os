@@ -1,5 +1,6 @@
 import AppKit
 
+@MainActor
 enum AgentOSBrandIcon {
     static let menuBarImage: NSImage = {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in

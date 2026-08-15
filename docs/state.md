@@ -144,6 +144,8 @@ Verified: 2026-08-15
   (`arm64`).
 - The Swift package declares tools version 6.1, matching the Apple Silicon
   `macos-15` release runner; it also builds and tests with local Swift 6.2.
+- The static AppKit menu-bar image is main-actor isolated, preserving strict
+  Swift 6 concurrency checks on the release runner.
 - Task Bridge turn-state calls use explicit positional hashes and pass the same
   suite on the bundled Ruby 2.6 and Homebrew Ruby 4.0, covering the Ruby 3+
   keyword-argument boundary exercised by the release runner.
