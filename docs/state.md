@@ -58,6 +58,9 @@ Verified: 2026-08-15
 - The dedicated Agent OS Ed25519 key exists in the local Keychain account
   `agent-os`; only its public key is in source. The generated 0.1.0 archive
   signature was independently verified with CryptoKit.
+- The matching GitHub Actions secret `AGENT_OS_SPARKLE_PRIVATE_KEY` is configured
+  for the public repository. Its value was transferred from Keychain through a
+  validated temporary file that was overwritten and removed after upload.
 - All 126 initial publication candidates passed a dedicated Gitleaks 8.30.1
   scan with full redaction, manual filename/content review, `git diff --check`,
   and the built-in publication audit before commit.
@@ -69,8 +72,7 @@ Verified: 2026-08-15
 ## Not configured
 
 - A published GitHub Release and real cross-version Sparkle update.
-- An offline backup of the Agent OS Ed25519 private key and the repository secret
-  `AGENT_OS_SPARKLE_PRIVATE_KEY`.
+- An offline backup of the Agent OS Ed25519 private key.
 - Fresh Codex task pickup of the newly installed monorepo plugin (the current
   already-open task cannot reload plugin capabilities in place).
 - Automated secret scanning on future pull requests and tags; the initial

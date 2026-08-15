@@ -53,6 +53,8 @@
 - Verified the pushed source from a fresh anonymous HTTPS clone through private
   home initialization, doctor, complete Ruby/plugin validation, publication
   audit, and clean Swift build/tests.
+- Configured `AGENT_OS_SPARKLE_PRIVATE_KEY` in GitHub Actions without exposing
+  the private value in the repository or command output.
 
 Earlier private installation history is intentionally not part of the shareable
 product changelog.

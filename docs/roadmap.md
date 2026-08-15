@@ -26,8 +26,8 @@ Completed publication checks:
 Remaining release checks:
 
 - a fresh Codex task picks up the same installed Agent OS build;
-- the Ed25519 key has an offline backup and GitHub Actions has the matching
-  repository secret;
+- GitHub Actions has the matching Ed25519 repository secret — verified;
+- the Ed25519 key has an independent offline backup;
 - `v0.1.0` publishes the zip, checksum, and appcast;
 - a second Mac completes an approved first install and a later genuine
   old-version to new-version update.

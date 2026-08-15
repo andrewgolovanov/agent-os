@@ -68,7 +68,8 @@ to `~/.agent-os` for private state.
 ## Remaining gates
 
 1. Validate plugin pickup in a fresh Codex task from the monorepo marketplace.
-2. Back up the Sparkle private key and configure the GitHub Actions secret.
+2. Back up the Sparkle private key independently; the GitHub Actions secret is
+   configured.
 3. Publish `v0.1.0` and verify its zip, checksum, and public appcast from GitHub.
 4. Complete a user-approved install on a second Mac, then prove a genuine
    `v0.1.0` to later-version update.
