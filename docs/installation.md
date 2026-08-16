@@ -216,17 +216,17 @@ The script bundles Sparkle, ad-hoc signs the complete app and its updater
 helpers, signs the update archive with the Agent OS Ed25519 key, and verifies
 the archive signature before returning. It creates:
 
-- `dist/release/AgentOS-0.2.1-macOS.zip`;
-- `dist/release/AgentOS-0.2.1-macOS.zip.sha256`;
+- `dist/release/AgentOS-0.3.0-macOS.zip`;
+- `dist/release/AgentOS-0.3.0-macOS.zip.sha256`;
 - `dist/release/appcast.xml`.
 
 This is not a Developer ID signature and the app is not notarized. Only install
 an archive downloaded from the expected Agent OS GitHub release and compare its
 checksum before opening it. The current public package and checksum are attached
-to [Agent OS v0.2.1](https://github.com/andrewgolovanov/agent-os/releases/tag/v0.2.1):
+to [Agent OS v0.3.0](https://github.com/andrewgolovanov/agent-os/releases/tag/v0.3.0):
 
 ```bash
-shasum -a 256 -c AgentOS-0.2.1-macOS.zip.sha256
+shasum -a 256 -c AgentOS-0.3.0-macOS.zip.sha256
 ```
 
 ### App updates

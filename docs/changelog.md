@@ -2,6 +2,13 @@
 
 ## 2026-08-16
 
+- Published `v0.3.0` from
+  `e9cdf0ab0434a7ad99b36c8b5d1cbe6023d9026a` in successful workflow run
+  `31946760759`. The clean tag checkout passed 62 Ruby tests/520 assertions,
+  22 Swift tests, plugin validation, runtime synchronization, and publication
+  audit before packaging. The public zip, checksum, latest appcast,
+  Apple Silicon/macOS metadata, strict bundle signature, embedded runtime, and
+  Sparkle Ed25519 signature passed independent post-publication checks.
 - Added semantic hover and pointer feedback to selectable Focus rows, matching
   the existing Board interaction language without turning the compact list into
   a second card grid.

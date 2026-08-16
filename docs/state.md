@@ -22,9 +22,9 @@ Verified: 2026-08-16
 - The first public release, `v0.1.0`, is published from commit
   `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f` at
   `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.1.0`.
-- The current public release, `v0.2.1`, is published from commit
-  `d7607144fcf21fa4781ee9beabff9f3c0c9786d3` at
-  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.2.1`.
+- The current public release, `v0.3.0`, is published from commit
+  `e9cdf0ab0434a7ad99b36c8b5d1cbe6023d9026a` at
+  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.3.0`.
 - Documentation maintenance is part of the repository completion contract:
   affected agent instructions, human README guidance, and owning product docs
   are updated in the same change; public repository Markdown is written in
@@ -251,11 +251,20 @@ Verified: 2026-08-16
   home and passed 54 Ruby tests/420 assertions, structural validation, exact
   runtime synchronization, the plugin package and Context Loop checks, Task
   Board and Slack-state validation, and the publication audit.
+- The tag-triggered GitHub Release workflow completed successfully for
+  `v0.3.0`: the clean tag checkout passed 62 Ruby tests/520 assertions,
+  22 Swift tests, plugin package validation, runtime synchronization, and the
+  publication audit before packaging in run `31946760759`.
+- The public `v0.3.0` zip, checksum, and latest appcast were downloaded
+  independently after publication. The checksum, strict bundle signature,
+  version `0.3.0`, macOS 14 minimum, Apple Silicon executable, embedded runtime
+  version, appcast archive length and URL, stable latest feed, and Sparkle
+  Ed25519 archive signature all passed verification.
 
 ## Not configured
 
-- A real second-Mac install and cross-version Sparkle update from `v0.2.0` to
-  `v0.2.1`.
+- A real second-Mac install and cross-version Sparkle update from `v0.2.1` to
+  `v0.3.0`.
 - End-user hook trust remains a per-install Codex choice; the release source
   cannot pre-approve it for another user.
 - A connected Slack integration and Codex Scheduled task for a clean user; the
