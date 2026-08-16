@@ -1,46 +1,46 @@
 # Codex task model
 
-Корневая Agent OS task координирует архитектуру, monitoring и cross-project работу. Обычная реализация должна выполняться в saved Codex project конкретного проекта, когда такой project настроен.
+The root Agent OS task coordinates architecture, monitoring, and cross-project work. Ordinary implementation should happen in the registered project path so repository instructions and project-scoped tooling apply.
 
 ## Durable membership
 
-- Durable Codex task регистрируется только по точному `thread_id`.
-- Title, время создания, branch или semantic similarity не заменяют thread ID.
-- Independent tasks и forks являются peer relationships; у outcome нет обязательного primary task.
-- Spawned subagent threads не регистрируются.
-- Disposable questions не создают Task Board membership.
+- A durable Codex task is registered only by exact `thread_id`.
+- Title, creation time, branch, and semantic similarity never replace the thread ID.
+- Independent tasks and forks are peer relationships; an outcome has no required primary task.
+- Spawned subagent threads are not registered.
+- Disposable questions do not create Task Board membership.
 
-## Как начинать project work
+## Starting project work
 
-1. Найти или создать один Task Board outcome.
-2. Открыть отдельный Codex task в registered project path и включить в первый meaningful prompt exact Task Board ID или stable Slack/GitHub/Figma source.
-3. Task Bridge прикрепит exact `session_id` только при одном exact match. При отсутствии exact match агент покажет candidates и потребует explicit `claim` до substantive mutations.
-4. После material changes агент checkpoint-ит verified summary, next action и `active`/`review`/`waiting`; `done` и `cancelled` остаются только explicit user decisions.
+1. Find or create one Task Board outcome.
+2. Open a separate Codex task in the registered project path and include the exact Task Board ID or a stable Slack, GitHub, or Figma source in the first meaningful prompt.
+3. Task Bridge attaches the exact `session_id` only when there is one exact match. Without one, the agent presents candidates and requires an explicit `claim` before substantive mutations.
+4. After material changes, checkpoint a verified summary, one next action, and `active`, `review`, or `waiting`. Only explicit user decisions set `done` or `cancelled`.
 
-Hook считает время linked Codex-turn, автоматически переключает membership `active`/`idle` и переводит начатую карточку в `active`. `Stop` означает завершение ответа агента, а не завершение всей карточки; lifecycle после реализации фиксирует checkpoint.
+The hook measures linked Codex turns, changes membership between `active` and `idle`, and activates a newly started outcome. `Stop` ends one agent response, not the whole outcome; the checkpoint records lifecycle after implementation.
 
-Открытие saved Codex project само по себе не выбирает карточку: в одном проекте одновременно может быть несколько outcomes. Надёжный пользовательский flow:
+Opening a registered project path does not select an outcome because several outcomes may exist in one project. The reliable flow is:
 
-1. В project chat написать задачу и приложить её exact ID/source URL; Task Bridge сам выполнит claim/start.
-2. Если в prompt нет exact identity, выполнить предложенную agent-команду `claim TASK_ID`; похожее название само ничего не связывает.
-3. Во время работы агент автоматически сохраняет checkpoint после material changes; пользователь сообщает только domain decisions: `поставь в ожидание`, `продолжи`, `готово к проверке`, `закрой` или `отмени`.
-4. Если работа была начата до установки Bridge, один раз импортировать exact session/turn timestamps и затем продолжать в fresh hooked chat.
+1. Mention the exact outcome ID or stable source URL in the project task so Task Bridge can claim and start it.
+2. If the prompt has no exact identity, use the suggested `claim TASK_ID`; a similar title never links work automatically.
+3. Let the agent checkpoint material progress; the user supplies only domain decisions such as wait, resume, ready for review, close, or cancel.
+4. If work began before Task Bridge was installed, import only proven session and turn timestamps, then continue in a fresh hooked task.
 
-Таким образом, существуют два независимых состояния: Codex membership показывает, выполняется ли turn прямо сейчас (`active`/`idle`), а Task Board status показывает состояние всего результата (`inbox`/`planned`/`active`/`waiting`/`review`/`done`/`cancelled`).
+Codex membership and Task Board lifecycle are independent. Membership says whether a turn is running now (`active` or `idle`); lifecycle describes the overall result (`inbox`, `planned`, `active`, `waiting`, `review`, `done`, or `cancelled`).
 
 ## Ownership gate
 
-Прямое сообщение пользователя в routed Codex task передаёт task под user ownership. Monitor после этого может обновить Task Board, но не должен писать, будить, останавливать или перенаправлять этот task без нового пользовательского запроса.
+A direct user message in a routed Codex task transfers that task to user ownership. Monitoring may continue to update Task Board, but it must not write to, wake, stop, or reroute the task without another explicit user request.
 
 ## Handoff
 
-Self-contained handoff содержит:
+A self-contained handoff includes:
 
-- Task Board ID и goal;
-- exact project/repository paths;
-- current summary и next action;
-- exact external identities/URLs;
-- permissions и явные запреты;
-- validation уже выполненную и ещё необходимую.
+- Task Board ID and goal;
+- exact project and repository paths;
+- current verified summary and next action;
+- exact external identities and URLs;
+- permissions and explicit prohibitions;
+- validation already completed and validation still required.
 
-Если saved project или stable thread ID неизвестен, создать `routing_pending`, а не вымышленную membership.
+If a registered path or stable thread ID is unknown, create `routing_pending` rather than inventing membership.

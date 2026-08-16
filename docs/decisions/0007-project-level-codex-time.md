@@ -15,7 +15,7 @@ Path-only attribution also has known false positives: unrelated system maintenan
 - Keep outcome activity in Task Board unchanged.
 - Add a separate project ledger generated from exact local Codex `task_started` and terminal events, deduplicated by `thread_id + turn_id`.
 - Resolve project scope from current registry paths plus explicit historical paths; allow exact manual include and reasoned exclude lists.
-- Update the project ledger from the user-level hook for every registered project chat, even when no Task Board outcome is claimed.
+- Update the project ledger from the Agent OS plugin's Task Bridge hook for every registered project chat, even when no Task Board outcome is claimed.
 - Aggregate completed intervals by the Agent OS timezone and split turns that cross a month boundary.
 - Generate both machine-readable JSON and a human-readable monthly report.
 

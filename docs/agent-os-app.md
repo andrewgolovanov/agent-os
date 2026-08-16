@@ -19,9 +19,9 @@ the canonical Agent OS registry and Task Board remain usable without this app.
 
 | Concern | Canonical owner | Console role |
 | --- | --- | --- |
-| Project identity and paths | private `config/projects.yaml` | read and present |
+| Project identity and paths | private `AGENT_OS_HOME/config/projects.yaml` | read and present |
 | Outcome lifecycle | private Task Board via `tools/task-board` | invoke validated actions |
-| Task index | generated private `work/board.json` | refresh/read model |
+| Task index | generated private `AGENT_OS_HOME/work/board.json` | refresh/read model |
 | Codex tasks | Codex App Server | create/name exact idle task and hand off |
 | Provider context | exact source URLs | contextual display and open only; optional read-only `gh` PR lookup |
 
@@ -49,10 +49,27 @@ the exact membership through `tools/task-board`, copies the prepared first
 prompt, and opens the public `codex://threads/<id>` handoff. It does not start a
 competing background turn from a second App Server client.
 
+AppKit and Dispatch callbacks have explicit Swift 6 executor boundaries. Task
+Board filesystem events are delivered on the main actor queue before the
+observable store is touched. The LaunchServices completion for Codex handoff is
+created outside the main actor as a Sendable continuation bridge, so the system
+may call it on its own queue without entering main-actor-isolated code.
+
 ## UI scope
 
-- regular SwiftUI window with Focus and Board views;
+- regular SwiftUI window with Focus, Board, and Done views;
 - project/outcome filtering and search;
+- independently vertically scrollable Board columns inside the horizontal
+  workflow canvas, keeping every card reachable without moving column headers;
+- a Done view for durable `done` and `cancelled` outcomes, with project,
+  completion-period, lifecycle, and completion-follow-up filters plus summary
+  cards for visible outcomes, exact-linked time, and pending follow-up; grouped
+  outcome rows reopen the same inspector so goal, summary, next action, source
+  links, PR status, Codex memberships, and exact-linked time remain inspectable
+  after completion;
+- completion follow-up is separate from lifecycle. Done outcomes with Slack
+  sources begin as `pending`; the inspector prepares a copyable completion
+  update, but the user sends it and explicitly records `sent` or `not_required`;
 - the official shadcn default Neutral dark tokens mapped into SwiftUI semantic
   roles: `#0a0a0a` background, `#171717` card/sidebar, `#262626`
   muted/accent, 10% borders, 15% input borders, and `#a3a3a3` muted text;
@@ -67,8 +84,11 @@ competing background turn from a second App Server client.
 - selected outcome details with goal, summary, next action, blocker, sources,
   Codex memberships, and tracked outcome time in the header;
 - registered project display names directly in Focus rows for mixed-project
-  scanning without opening task details;
+  scanning without opening task details, plus the shared semantic hover surface
+  and pointing-hand feedback that make every selectable row visibly interactive;
 - tracked outcome time at the top of every Board card for immediate scanning;
+- compact status-only markers in Done use a fixed 24-point circular
+  surface instead of retaining the horizontal padding of a text badge;
 - a full-height sidebar surface and divider through the titlebar, compact icons
   aligned to the first label line, and a document-style detail view with one
   clear hierarchy instead of nested detail cards; the sidebar is capped at the
@@ -113,6 +133,16 @@ The companion MCP clean-home test lives in `test/agent_os_mcp_test.rb`.
 Release packaging additionally verifies nested code signatures, SHA-256, and
 the Sparkle Ed25519 archive signature.
 
+Swift regression coverage writes a watched file from a detached task and
+asserts main-actor delivery, then invokes the Codex-open completion from a
+utility queue. Live verification additionally mutates the canonical Task Board
+while the built app is running and confirms that the process remains alive
+without producing a new macOS diagnostic report.
+
 Authenticated `gh` is optional and is discovered from the process `PATH` plus
 the standard Apple Silicon and Intel Homebrew locations. Without it, PR rows
 remain usable links with repository and PR-number context.
+
+Done does not archive or delete canonical outcomes when a Codex task is
+removed from the Codex sidebar. Outcome retention remains a Task Board concern;
+Codex membership is only one linked source of activity evidence.

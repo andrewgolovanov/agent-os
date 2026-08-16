@@ -17,6 +17,7 @@ module AgentOS
     THREAD_ORIGINS = %w[new fork routed automation].freeze
     ROUTING_STATES = %w[routing_pending routed cancelled].freeze
     FINISHED_STATUSES = %w[done cancelled].freeze
+    FOLLOW_UP_STATUSES = %w[pending sent not_required].freeze
 
     attr_reader :root
 
@@ -50,10 +51,12 @@ module AgentOS
           "sources" => SOURCE_KINDS.to_h { |kind| [kind, []] },
           "codex_threads" => [],
           "activity" => empty_activity,
+          "completion" => empty_completion,
           "routing" => [],
           "created_at" => now,
           "updated_at" => now
         }
+        update_completion_for_status!(task, previous_status: "inbox", now: now)
         validate_task!(task)
         raise ArgumentError, "task already exists: #{task.fetch("id")}" if File.exist?(task_path(task.fetch("id")))
 
@@ -68,6 +71,7 @@ module AgentOS
     def update(id, attributes)
       with_lock do
         task = read_task(id)
+        previous_status = task.fetch("status")
         allowed = %w[title projects kind status goal summary constraints next_action waiting_on]
         attributes.each do |key, value|
           raise ArgumentError, "unsupported update field: #{key}" unless allowed.include?(key)
@@ -75,9 +79,31 @@ module AgentOS
           task[key] = %w[projects constraints].include?(key) ? Array(value) : value
         end
         task["updated_at"] = timestamp
+        update_completion_for_status!(task, previous_status: previous_status, now: task.fetch("updated_at"))
         validate_task!(task)
         write_task!(task)
         append_event!(id, "updated", attributes, task.fetch("updated_at"))
+        rebuild_board!
+        task
+      end
+    end
+
+    def update_completion(id, follow_up_status:)
+      raise ArgumentError, "invalid completion follow-up status: #{follow_up_status}" unless FOLLOW_UP_STATUSES.include?(follow_up_status)
+
+      with_lock do
+        task = read_task(id)
+        raise ArgumentError, "completion follow-up is only available for done tasks" unless task.fetch("status") == "done"
+
+        now = timestamp
+        completion = task["completion"] ||= empty_completion
+        completion["completed_at"] ||= task.fetch("updated_at")
+        completion["follow_up_status"] = follow_up_status
+        completion["follow_up_sent_at"] = follow_up_status == "sent" ? now : nil
+        task["updated_at"] = now
+        validate_task!(task)
+        write_task!(task)
+        append_event!(id, "completion_follow_up_updated", completion, now)
         rebuild_board!
         task
       end
@@ -101,6 +127,12 @@ module AgentOS
         unless entries.any? { |item| item["identity"] == source.fetch("identity") }
           source["added_at"] = timestamp
           entries << source
+          if kind == "slack_threads" && task.fetch("status") == "done"
+            completion = task["completion"] ||= empty_completion
+            completion["completed_at"] ||= source.fetch("added_at")
+            completion["follow_up_status"] = "pending"
+            completion["follow_up_sent_at"] = nil
+          end
           task["updated_at"] = source.fetch("added_at")
           validate_task!(task)
           write_task!(task)
@@ -426,6 +458,27 @@ module AgentOS
       { "total_seconds" => 0, "turns" => [] }
     end
 
+    def empty_completion
+      {
+        "completed_at" => nil,
+        "follow_up_status" => "not_required",
+        "follow_up_sent_at" => nil
+      }
+    end
+
+    def update_completion_for_status!(task, previous_status:, now:)
+      return unless task.fetch("status") != previous_status
+
+      completion = task["completion"] ||= empty_completion
+      if task.fetch("status") == "done"
+        completion["completed_at"] = now
+        completion["follow_up_status"] = task.dig("sources", "slack_threads")&.any? ? "pending" : "not_required"
+        completion["follow_up_sent_at"] = nil
+      else
+        completion.replace(empty_completion)
+      end
+    end
+
     def activity_identity(session_id, turn_id)
       raise ArgumentError, "session_id is required" if session_id.to_s.strip.empty?
       raise ArgumentError, "turn_id is required" if turn_id.to_s.strip.empty?
@@ -535,6 +588,26 @@ module AgentOS
         raise ArgumentError, "activity total_seconds is stale" unless completed_total == activity.fetch("total_seconds")
       end
 
+      if task.key?("completion")
+        completion = task["completion"]
+        raise ArgumentError, "completion must be a mapping" unless completion.is_a?(Hash)
+        unless FOLLOW_UP_STATUSES.include?(completion["follow_up_status"])
+          raise ArgumentError, "invalid completion follow-up status"
+        end
+        if task.fetch("status") == "done"
+          raise ArgumentError, "done tasks need completion completed_at" if completion["completed_at"].to_s.strip.empty?
+          Time.iso8601(completion.fetch("completed_at"))
+        elsif completion["completed_at"] || completion["follow_up_status"] != "not_required" || completion["follow_up_sent_at"]
+          raise ArgumentError, "unfinished and cancelled tasks cannot retain completion state"
+        end
+        if completion["follow_up_status"] == "sent"
+          raise ArgumentError, "sent completion follow-up needs follow_up_sent_at" if completion["follow_up_sent_at"].to_s.strip.empty?
+          Time.iso8601(completion.fetch("follow_up_sent_at"))
+        elsif completion["follow_up_sent_at"]
+          raise ArgumentError, "only sent completion follow-up may have follow_up_sent_at"
+        end
+      end
+
       raise ArgumentError, "routing must be an array" unless task["routing"].is_a?(Array)
       task["routing"].each do |route|
         raise ArgumentError, "invalid routing state" unless ROUTING_STATES.include?(route["state"])
@@ -579,7 +652,9 @@ module AgentOS
             "codex_thread_ids" => task.fetch("codex_threads").map { |thread| thread.fetch("thread_id") }.sort,
             "routing_pending" => task.fetch("routing").count { |route| route["state"] == "routing_pending" },
             "tracked_seconds" => task.dig("activity", "total_seconds") || 0,
-            "active_turns" => task.fetch("activity", {}).fetch("turns", []).count { |turn| turn["stopped_at"].nil? }
+            "active_turns" => task.fetch("activity", {}).fetch("turns", []).count { |turn| turn["stopped_at"].nil? },
+            "completed_at" => task.dig("completion", "completed_at"),
+            "completion_follow_up" => task.dig("completion", "follow_up_status")
           }
         end
       }
@@ -682,6 +757,16 @@ module AgentOS
       activity = task.fetch("activity", empty_activity)
       active_turns = activity.fetch("turns").count { |turn| turn["stopped_at"].nil? }
       constraint_lines = task.fetch("constraints").map { |constraint| "- #{constraint}" }
+      completion = task["completion"] || empty_completion
+      completion_lines = if task.fetch("status") == "done"
+                           [
+                             "Completed at: `#{completion["completed_at"] || task.fetch("updated_at")}`",
+                             "Follow-up: `#{completion.fetch("follow_up_status", "not_required")}`",
+                             completion["follow_up_sent_at"] ? "Follow-up sent at: `#{completion["follow_up_sent_at"]}`" : nil
+                           ].compact.join("\n\n")
+                         else
+                           "Not applicable."
+                         end
       <<~MARKDOWN
         # #{task.fetch("title")}
 
@@ -724,6 +809,10 @@ module AgentOS
         Completed turn time: #{format_duration(activity.fetch("total_seconds"))} (#{activity.fetch("total_seconds")} seconds).
 
         Active turns: #{active_turns}.
+
+        ## Completion
+
+        #{completion_lines}
       MARKDOWN
     end
 

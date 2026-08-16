@@ -4,7 +4,6 @@ require "fileutils"
 require "open3"
 require "pathname"
 require "tempfile"
-require "tmpdir"
 require "yaml"
 
 module AgentOS
@@ -15,7 +14,6 @@ module AgentOS
       @source = File.expand_path(source)
       @home = File.expand_path(home)
       @registry_path = File.join(@home, "config", "projects.yaml")
-      @template_root = File.join(@source, "templates", "project")
     end
 
     def onboard(repository:, key: nil, display_name: nil, apply: false)
@@ -25,16 +23,14 @@ module AgentOS
       registry = load_registry
 
       if (existing = project_for_repository(registry, repository.fetch(:path)))
+        project = existing.fetch(:project)
+        if legacy_project?(project)
+          raise ArgumentError, "project uses obsolete registry metadata; run upgrade-project-registry first"
+        end
         return result(
-          action: "preserve",
-          apply: apply,
-          key: existing.fetch(:key),
-          display_name: existing.fetch(:project).fetch("display_name"),
-          layout: existing.fetch(:project).fetch("layout", "wrapper"),
-          wrapper: existing.fetch(:project).fetch("wrapper"),
-          repository: repository,
-          files: [],
-          reason: "repository is already registered"
+          action: "preserve", apply: false, key: existing.fetch(:key),
+          display_name: project.fetch("display_name"), root: project_root(project),
+          repository: repository, files: [], reason: "repository is already registered"
         )
       end
 
@@ -43,47 +39,62 @@ module AgentOS
         raise ArgumentError, "project key #{key.inspect} already belongs to another repository"
       end
 
-      wrapper = File.join(@home, "projects", key)
-      layout = same_path?(repository.fetch(:path), wrapper) ? "direct-repository" : "wrapper"
       files = [@registry_path]
-      files.concat(wrapper_files(wrapper)) if layout == "wrapper"
-      entry = project_entry(
-        key: key,
-        display_name: display_name,
-        layout: layout,
-        wrapper: wrapper,
-        repository: repository
-      )
-
       unless apply
         return result(
-          action: "create",
-          apply: false,
-          key: key,
-          display_name: display_name,
-          layout: layout,
-          wrapper: wrapper,
-          repository: repository,
-          files: files,
+          action: "create", apply: false, key: key, display_name: display_name,
+          root: repository.fetch(:path), repository: repository, files: files,
           reason: "preview only"
         )
       end
 
-      validate_destination!(wrapper, layout)
-      create_wrapper(wrapper, key, entry, repository) if layout == "wrapper"
-      update_registry(key, entry)
-
+      update_registry(key, project_entry(display_name: display_name, repository: repository))
       result(
-        action: "created",
-        apply: true,
-        key: key,
-        display_name: display_name,
-        layout: layout,
-        wrapper: wrapper,
-        repository: repository,
-        files: files,
+        action: "created", apply: true, key: key, display_name: display_name,
+        root: repository.fetch(:path), repository: repository, files: files,
         reason: "project registered without moving or changing the repository"
       )
+    end
+
+    def upgrade_registry(apply: false)
+      registry = load_registry
+      candidates = registry.fetch("projects").each_with_object([]) do |(key, project), items|
+        next unless project.is_a?(Hash) && legacy_project?(project)
+
+        upgraded = upgraded_project(project)
+        legacy_path = managed_legacy_path(key, project)
+        backup = legacy_path && File.directory?(legacy_path) ? legacy_backup_path(key) : nil
+        raise ArgumentError, "legacy project backup already exists: #{backup}" if backup && File.exist?(backup)
+
+        items << {
+          key: key,
+          project: upgraded,
+          previous_root: legacy_project_root(project),
+          root: upgraded.fetch("root"),
+          legacy_path: legacy_path,
+          backup: backup
+        }
+      end
+
+      result = {
+        schema_version: 1,
+        action: candidates.empty? ? "preserve" : (apply ? "upgraded" : "upgrade"),
+        applied: apply && !candidates.empty?,
+        projects: candidates.map do |candidate|
+          {
+            key: candidate.fetch(:key),
+            previous_root: candidate.fetch(:previous_root),
+            root: candidate.fetch(:root),
+            backup: candidate.fetch(:backup)
+          }
+        end,
+        files: candidates.empty? ? [] : [@registry_path],
+        reason: candidates.empty? ? "registry already uses root and repositories only" : "legacy project metadata is replaced by registry-only roots"
+      }
+      return result unless apply && !candidates.empty?
+
+      apply_registry_upgrade!(candidates)
+      result
     end
 
     def relink(repository:, key:, repository_id: nil, apply: false)
@@ -94,6 +105,9 @@ module AgentOS
         raise ArgumentError, "project key #{key.inspect} is not registered"
       end
       raise ArgumentError, "project entry must be a mapping" unless project.is_a?(Hash)
+      if legacy_project?(project)
+        raise ArgumentError, "project uses obsolete registry metadata; run upgrade-project-registry first"
+      end
 
       registered = Array(project["repositories"])
       entry = if repository_id.to_s.empty?
@@ -105,27 +119,105 @@ module AgentOS
       raise ArgumentError, "registered repository was not found" unless entry.is_a?(Hash)
 
       previous_path = File.expand_path(entry.fetch("path"))
-      return relink_result(key, project, entry, repository, previous_path, apply: false, action: "preserve", files: []) if same_path?(previous_path, repository.fetch(:path))
+      if same_path?(previous_path, repository.fetch(:path))
+        return relink_result(key, project, entry, repository, previous_path, apply: false, action: "preserve")
+      end
 
       other = project_for_repository(registry, repository.fetch(:path))
       if other && other.fetch(:key) != key
         raise ArgumentError, "repository is already registered as #{other.fetch(:key)}"
       end
       verify_repository_identity!(entry, previous_path, repository)
-      files = [@registry_path]
-      files.concat(wrapper_metadata_files(project, previous_path)) if project["layout"] == "wrapper"
 
       unless apply
-        return relink_result(key, project, entry, repository, previous_path, apply: false, action: "replace", files: files)
+        return relink_result(key, project, entry, repository, previous_path, apply: false, action: "replace")
       end
 
       relink_registry!(key, entry.fetch("id"), previous_path, repository)
       updated = load_registry.fetch("projects").fetch(key)
       updated_entry = updated.fetch("repositories").find { |item| item.fetch("id") == entry.fetch("id") }
-      relink_result(key, updated, updated_entry, repository, previous_path, apply: true, action: "relinked", files: files)
+      relink_result(key, updated, updated_entry, repository, previous_path, apply: true, action: "relinked")
     end
 
     private
+
+    def apply_registry_upgrade!(candidates)
+      moved = []
+      lock_path = File.join(@home, ".runtime", "projects.lock")
+      FileUtils.mkdir_p(File.dirname(lock_path))
+      File.open(lock_path, File::RDWR | File::CREAT, 0o600) do |lock|
+        lock.flock(File::LOCK_EX)
+        registry = load_registry
+
+        candidates.each do |candidate|
+          key = candidate.fetch(:key)
+          current = registry.fetch("projects").fetch(key)
+          raise ArgumentError, "project #{key} changed during registry upgrade" unless legacy_project?(current)
+
+          if (source = candidate.fetch(:legacy_path)) && File.directory?(source)
+            backup = candidate.fetch(:backup)
+            raise ArgumentError, "legacy project backup already exists: #{backup}" if File.exist?(backup)
+
+            FileUtils.mkdir_p(File.dirname(backup))
+            File.rename(source, backup)
+            moved << [source, backup]
+          end
+          registry.fetch("projects")[key] = candidate.fetch(:project)
+        end
+
+        atomic_write(@registry_path, YAML.dump(registry), mode: 0o600)
+      end
+    rescue StandardError
+      moved.reverse_each do |source, backup|
+        File.rename(backup, source) if File.exist?(backup) && !File.exist?(source)
+      end
+      raise
+    end
+
+    def legacy_project?(project)
+      project.key?("layout") || project.key?("wrapper") || !project.key?("root")
+    end
+
+    def upgraded_project(project)
+      repositories = Array(project["repositories"]).map do |entry|
+        raise ArgumentError, "registered repository must be a mapping" unless entry.is_a?(Hash)
+
+        verified = verified_repository(entry.fetch("path"))
+        normalized = Marshal.load(Marshal.dump(entry))
+        normalized["path"] = verified.fetch(:path)
+        normalized["primary_branch"] = verified.fetch(:primary_branch) if normalized["primary_branch"].to_s.empty? || normalized["primary_branch"] == "unknown"
+        normalized["remotes"] ||= { "origin" => verified.fetch(:remote) } if verified[:remote]
+        normalized
+      end
+      raise ArgumentError, "legacy project must register at least one repository" if repositories.empty?
+
+      upgraded = Marshal.load(Marshal.dump(project))
+      upgraded.delete("layout")
+      upgraded.delete("wrapper")
+      upgraded["root"] = primary_repository_path(repositories)
+      upgraded["repositories"] = repositories
+      upgraded
+    end
+
+    def primary_repository_path(repositories)
+      primary = repositories.find { |entry| entry["role"] == "primary" } || repositories.first
+      File.expand_path(primary.fetch("path"))
+    end
+
+    def managed_legacy_path(key, project)
+      return nil unless project["layout"] == "wrapper"
+
+      raw = project["wrapper"].to_s
+      return nil if raw.empty?
+
+      path = File.expand_path(raw)
+      expected = File.join(@home, "projects", key)
+      same_path?(path, expected) ? path : nil
+    end
+
+    def legacy_backup_path(key)
+      File.join(@home, ".runtime", "legacy-project-backups", key)
+    end
 
     def verified_repository(path)
       raw = path.to_s
@@ -133,13 +225,11 @@ module AgentOS
       raise ArgumentError, "repository path cannot be the filesystem root" if File.expand_path(raw) == File::SEPARATOR
       raise ArgumentError, "repository path does not exist: #{raw}" unless File.directory?(raw)
 
-      root = git(raw, "rev-parse", "--show-toplevel")
-      root = File.realpath(root)
+      root = File.realpath(git(raw, "rev-parse", "--show-toplevel"))
       head = git(root, "rev-parse", "HEAD")
       branch = git_optional(root, "branch", "--show-current")
       remote = git_optional(root, "remote", "get-url", "origin")
-      primary_branch = git_optional(root, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
-        &.delete_prefix("origin/")
+      primary_branch = git_optional(root, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")&.delete_prefix("origin/")
       status = git(root, "status", "--short", "--branch")
 
       {
@@ -159,12 +249,7 @@ module AgentOS
     def load_registry
       raise ArgumentError, "missing project registry: #{@registry_path}" unless File.file?(@registry_path)
 
-      payload = YAML.safe_load(
-        File.read(@registry_path),
-        permitted_classes: [],
-        permitted_symbols: [],
-        aliases: false
-      )
+      payload = YAML.safe_load(File.read(@registry_path), permitted_classes: [], permitted_symbols: [], aliases: false)
       raise ArgumentError, "project registry must be a mapping" unless payload.is_a?(Hash)
       raise ArgumentError, "project registry schema_version must be 1" unless payload["schema_version"] == 1
       raise ArgumentError, "project registry projects must be a mapping" unless payload["projects"].is_a?(Hash)
@@ -180,20 +265,27 @@ module AgentOS
         next unless project.is_a?(Hash)
 
         repositories = Array(project["repositories"])
-        if repositories.any? { |item| item.is_a?(Hash) && File.expand_path(item["path"].to_s) == expanded }
+        if repositories.any? { |item| item.is_a?(Hash) && registered_repository_path(item["path"]) == expanded }
           return { key: key, project: project }
         end
       end
       nil
     end
 
-    def project_entry(key:, display_name:, layout:, wrapper:, repository:)
+    def registered_repository_path(path)
+      expanded = File.expand_path(path.to_s)
+      return expanded unless File.directory?(expanded)
+
+      root = git_optional(expanded, "rev-parse", "--show-toplevel")
+      root.to_s.empty? ? expanded : File.expand_path(root)
+    end
+
+    def project_entry(display_name:, repository:)
       entry = {
         "display_name" => display_name,
         "status" => "active",
-        "layout" => layout,
         "aliases" => [],
-        "wrapper" => wrapper,
+        "root" => repository.fetch(:path),
         "repositories" => [
           {
             "id" => repository.fetch(:id),
@@ -209,6 +301,17 @@ module AgentOS
       entry
     end
 
+    def project_root(project)
+      File.expand_path(project.fetch("root"))
+    end
+
+    def legacy_project_root(project)
+      root = project["root"] || project["wrapper"]
+      root ||= Array(project["repositories"]).find { |entry| entry.is_a?(Hash) && entry["role"] == "primary" }&.dig("path")
+      root ||= Array(project["repositories"]).find { |entry| entry.is_a?(Hash) }&.dig("path")
+      root && File.expand_path(root)
+    end
+
     def verify_repository_identity!(entry, previous_path, repository)
       remotes = entry["remotes"].is_a?(Hash) ? entry["remotes"].values : []
       if remotes.empty? && File.directory?(previous_path)
@@ -217,9 +320,7 @@ module AgentOS
       end
       expected = remotes.map { |remote| normalized_remote(remote) }.compact
       actual = normalized_remote(repository[:remote])
-      if expected.empty?
-        raise ArgumentError, "cannot verify repository identity because the registered entry has no remote"
-      end
+      raise ArgumentError, "cannot verify repository identity because the registered entry has no remote" if expected.empty?
       return if actual && expected.include?(actual)
 
       raise ArgumentError, "repository remote does not match the registered project"
@@ -228,10 +329,10 @@ module AgentOS
     def normalized_remote(value)
       remote = value.to_s.strip
       return nil if remote.empty?
+
       remote = remote.sub(/\Agit@github\.com:/, "https://github.com/")
       remote = remote.sub(/\Assh:\/\/git@github\.com\//, "https://github.com/")
-      remote = remote.delete_suffix(".git").delete_suffix("/")
-      remote.downcase
+      remote.delete_suffix(".git").delete_suffix("/").downcase
     end
 
     def relink_registry!(key, repository_id, previous_path, repository)
@@ -244,110 +345,11 @@ module AgentOS
         entry = project.fetch("repositories").find { |item| item.fetch("id") == repository_id }
         raise ArgumentError, "registered repository changed during relink" unless same_path?(entry.fetch("path"), previous_path)
 
-        if project["layout"] == "wrapper"
-          update_wrapper_metadata!(project, repository_id, previous_path, repository.fetch(:path))
-        elsif same_path?(project.fetch("wrapper"), previous_path)
-          project["wrapper"] = repository.fetch(:path)
-        end
+        project["root"] = repository.fetch(:path) if same_path?(project.fetch("root"), previous_path)
         entry["path"] = repository.fetch(:path)
         entry["remotes"] ||= { "origin" => repository.fetch(:remote) } if repository[:remote]
         atomic_write(@registry_path, YAML.dump(registry), mode: 0o600)
       end
-    end
-
-    def wrapper_metadata_files(project, previous_path)
-      wrapper = File.expand_path(project.fetch("wrapper"))
-      return [] unless wrapper.start_with?("#{@home}/") && File.directory?(wrapper)
-
-      Dir.glob(File.join(wrapper, "**", "*"), File::FNM_DOTMATCH).select do |path|
-        File.file?(path) && !File.symlink?(path) && File.read(path).include?(previous_path)
-      end
-    end
-
-    def update_wrapper_metadata!(project, repository_id, previous_path, repository_path)
-      wrapper_metadata_files(project, previous_path).each do |path|
-        if File.basename(path) == "project.yaml"
-          payload = YAML.safe_load(File.read(path), permitted_classes: [], permitted_symbols: [], aliases: false)
-          item = payload.fetch("repositories").find { |candidate| candidate.fetch("id") == repository_id }
-          raise ArgumentError, "wrapper repository metadata is missing #{repository_id}" unless item
-          item["path"] = repository_path
-          atomic_write(path, YAML.dump(payload), mode: 0o600)
-        else
-          atomic_write(path, File.read(path).gsub(previous_path, repository_path), mode: File.stat(path).mode & 0o777)
-        end
-      end
-    rescue Psych::SyntaxError, KeyError => error
-      raise ArgumentError, "invalid wrapper metadata: #{error.message}"
-    end
-
-    def relink_result(key, project, entry, repository, previous_path, apply:, action:, files:)
-      {
-        schema_version: 1,
-        action: action,
-        applied: apply && action == "relinked",
-        project: {
-          key: key,
-          display_name: project.fetch("display_name"),
-          layout: project.fetch("layout", "wrapper"),
-          wrapper: project.fetch("wrapper")
-        },
-        repository: repository.merge(id: entry.fetch("id")),
-        previous_path: previous_path,
-        files: files,
-        reason: action == "preserve" ? "repository path is already current" : "registry metadata only; repository files and Git state are unchanged"
-      }
-    end
-
-    def create_wrapper(wrapper, key, entry, repository)
-      raise ArgumentError, "missing project template: #{@template_root}" unless File.directory?(@template_root)
-
-      parent = File.dirname(wrapper)
-      FileUtils.mkdir_p(parent)
-      stage = Dir.mktmpdir(".#{File.basename(wrapper)}-", parent)
-      begin
-        FileUtils.cp_r(Dir.glob(File.join(@template_root, "*"), File::FNM_DOTMATCH).reject { |path| %w[. ..].include?(File.basename(path)) }, stage)
-        rewrite_wrapper(stage, key, entry, repository)
-        File.rename(stage, wrapper)
-        stage = nil
-      ensure
-        FileUtils.remove_entry(stage) if stage && File.directory?(stage)
-      end
-    end
-
-    def rewrite_wrapper(root, key, entry, repository)
-      display_name = entry.fetch("display_name")
-      project_payload = {
-        "schema_version" => 1,
-        "key" => key,
-        "display_name" => display_name,
-        "status" => "active",
-        "aliases" => [],
-        "repositories" => entry.fetch("repositories"),
-        "sources" => { "slack" => "unknown", "task_tracker" => "unknown", "design" => "unknown" },
-        "deployments" => []
-      }
-      File.write(File.join(root, "project.yaml"), YAML.dump(project_payload), mode: "w", perm: 0o600)
-
-      replace_text(File.join(root, "AGENTS.md"), "Replace template values during onboarding; do not leave invented facts.", "Verified repository paths are owned by project.yaml and the Agent OS registry; unknown optional facts remain explicit.")
-      replace_text(File.join(root, "README.md"), "# Project Name", "# #{display_name}")
-      replace_text(
-        File.join(root, "README.md"),
-        "| `unknown` | `unknown` | `unknown` | `unknown` |",
-        "| `#{repository.fetch(:id)}` | `primary` | `unknown` | `#{repository.fetch(:primary_branch)}` |"
-      )
-      replace_text(File.join(root, "docs", "PROJECT.md"), "# Project Name", "# #{display_name}")
-      replace_text(
-        File.join(root, "docs", "PROJECT.md"),
-        "Unknown.\n\n## Sources of truth",
-        "Primary repository: `#{repository.fetch(:path)}`. The repository was registered in place and was not moved.\n\n## Sources of truth"
-      )
-    end
-
-    def replace_text(path, from, to)
-      content = File.read(path)
-      raise ArgumentError, "template marker is missing in #{path}: #{from.inspect}" unless content.include?(from)
-
-      File.write(path, content.sub(from, to))
     end
 
     def update_registry(key, entry)
@@ -377,19 +379,6 @@ module AgentOS
       end
     end
 
-    def validate_destination!(wrapper, layout)
-      return if layout == "direct-repository"
-      return unless File.exist?(wrapper)
-
-      raise ArgumentError, "wrapper path already exists and is not registered: #{wrapper}"
-    end
-
-    def wrapper_files(wrapper)
-      Dir.glob(File.join(@template_root, "**", "*"), File::FNM_DOTMATCH)
-        .select { |path| File.file?(path) }
-        .map { |path| File.join(wrapper, path.delete_prefix("#{@template_root}/")) }
-    end
-
     def normalized_key(value)
       key = value.to_s.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-+|-+\z/, "")
       raise ArgumentError, "project key must use lowercase kebab-case" unless key.match?(KEY_PATTERN)
@@ -406,7 +395,11 @@ module AgentOS
     end
 
     def same_path?(left, right)
-      File.expand_path(left) == File.expand_path(right)
+      left_path = File.expand_path(left)
+      right_path = File.expand_path(right)
+      left_path = File.realpath(left_path) if File.exist?(left_path)
+      right_path = File.realpath(right_path) if File.exist?(right_path)
+      left_path == right_path
     end
 
     def git(directory, *arguments)
@@ -421,21 +414,29 @@ module AgentOS
       status.success? ? stdout.strip : nil
     end
 
-    def result(action:, apply:, key:, display_name:, layout:, wrapper:, repository:, files:, reason:)
+    def result(action:, apply:, key:, display_name:, root:, repository:, files:, reason:)
       {
         schema_version: 1,
         action: action,
         applied: apply && action == "created",
-        project: {
-          key: key,
-          display_name: display_name,
-          layout: layout,
-          wrapper: wrapper
-        },
+        project: { key: key, display_name: display_name, root: root },
         repository: repository,
         files: files,
         unchanged: [repository.fetch(:path)],
         reason: reason
+      }
+    end
+
+    def relink_result(key, project, entry, repository, previous_path, apply:, action:)
+      {
+        schema_version: 1,
+        action: action,
+        applied: apply && action == "relinked",
+        project: { key: key, display_name: project.fetch("display_name"), root: project_root(project) },
+        repository: repository.merge(id: entry.fetch("id")),
+        previous_path: previous_path,
+        files: action == "preserve" ? [] : [@registry_path],
+        reason: action == "preserve" ? "repository path is already current" : "registry metadata only; repository files and Git state are unchanged"
       }
     end
   end

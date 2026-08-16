@@ -80,11 +80,64 @@ struct CodexMembership: Codable, Hashable, Identifiable, Sendable {
     }
 }
 
+struct AgentOSActivityTurn: Codable, Hashable, Sendable {
+    let startedAt: String
+    let stoppedAt: String?
+    let durationSeconds: Int?
+
+    private enum CodingKeys: String, CodingKey {
+        case startedAt = "started_at"
+        case stoppedAt = "stopped_at"
+        case durationSeconds = "duration_seconds"
+    }
+}
+
 struct AgentOSActivity: Codable, Hashable, Sendable {
     let totalSeconds: Int
+    let turns: [AgentOSActivityTurn]
+
+    init(totalSeconds: Int, turns: [AgentOSActivityTurn] = []) {
+        self.totalSeconds = totalSeconds
+        self.turns = turns
+    }
 
     private enum CodingKeys: String, CodingKey {
         case totalSeconds = "total_seconds"
+        case turns
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        totalSeconds = try container.decode(Int.self, forKey: .totalSeconds)
+        turns = try container.decodeIfPresent([AgentOSActivityTurn].self, forKey: .turns) ?? []
+    }
+}
+
+enum AgentOSCompletionFollowUpStatus: String, Codable, CaseIterable, Identifiable, Hashable, Sendable {
+    case pending
+    case sent
+    case notRequired = "not_required"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .pending: "Pending"
+        case .sent: "Sent"
+        case .notRequired: "Not required"
+        }
+    }
+}
+
+struct AgentOSCompletion: Codable, Hashable, Sendable {
+    let completedAt: String?
+    let followUpStatus: AgentOSCompletionFollowUpStatus
+    let followUpSentAt: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case completedAt = "completed_at"
+        case followUpStatus = "follow_up_status"
+        case followUpSentAt = "follow_up_sent_at"
     }
 }
 
@@ -102,6 +155,7 @@ struct AgentOSTask: Codable, Hashable, Identifiable, Sendable {
     let sources: AgentOSSources
     let codexThreads: [CodexMembership]
     let activity: AgentOSActivity
+    let completion: AgentOSCompletion?
     let createdAt: String
     let updatedAt: String
 
@@ -119,6 +173,7 @@ struct AgentOSTask: Codable, Hashable, Identifiable, Sendable {
         case sources
         case codexThreads = "codex_threads"
         case activity
+        case completion
         case createdAt = "created_at"
         case updatedAt = "updated_at"
     }
@@ -139,8 +194,19 @@ struct AgentOSTask: Codable, Hashable, Identifiable, Sendable {
         codexThreads = try container.decode([CodexMembership].self, forKey: .codexThreads)
         activity = try container.decodeIfPresent(AgentOSActivity.self, forKey: .activity)
             ?? AgentOSActivity(totalSeconds: 0)
+        completion = try container.decodeIfPresent(AgentOSCompletion.self, forKey: .completion)
         createdAt = try container.decode(String.self, forKey: .createdAt)
         updatedAt = try container.decode(String.self, forKey: .updatedAt)
+    }
+
+    var completionFollowUpStatus: AgentOSCompletionFollowUpStatus {
+        guard status == .done else { return .notRequired }
+        if let completion { return completion.followUpStatus }
+        return sources.slackThreads.isEmpty ? .notRequired : .pending
+    }
+
+    var completedAt: String {
+        completion?.completedAt ?? updatedAt
     }
 }
 

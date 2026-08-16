@@ -39,9 +39,6 @@ source_files = [
   *Dir.glob(File.join(ROOT, "config", "examples", "*"), File::FNM_DOTMATCH)
     .select { |path| File.file?(path) }
     .map { |path| path.delete_prefix("#{ROOT}/") },
-  *Dir.glob(File.join(ROOT, "templates", "project", "**", "*"), File::FNM_DOTMATCH)
-    .select { |path| File.file?(path) }
-    .map { |path| path.delete_prefix("#{ROOT}/") },
   *tool_files
 ].uniq.sort
 

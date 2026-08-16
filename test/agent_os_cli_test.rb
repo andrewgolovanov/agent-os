@@ -325,7 +325,7 @@ class AgentOSCLITest < Minitest::Test
     assert_equal "#{second}\n", File.read(File.join(@temporary, ".config", "agent-os", "home"))
   end
 
-  def test_migrate_home_copies_private_state_and_wrapper_without_copying_repositories
+  def test_migrate_home_copies_private_state_and_archives_legacy_project_folder
     legacy = File.join(@temporary, "legacy-home")
     migrated = File.join(@temporary, "migrated-home")
     environment = { "HOME" => @temporary, "AGENT_OS_HOME" => nil }
@@ -394,11 +394,15 @@ class AgentOSCLITest < Minitest::Test
     assert status.success?, stderr
     assert_equal true, JSON.parse(stdout).fetch("applied")
     assert_equal "preserved\n", File.read(File.join(migrated, ".runtime", "task-bridge", "marker"))
-    assert_equal "private wrapper\n", File.read(File.join(migrated, "projects", "example", "README.md"))
+    legacy_backup = File.join(migrated, ".runtime", "legacy-project-backups", "example")
+    assert_equal "private wrapper\n", File.read(File.join(legacy_backup, "README.md"))
     migrated_registry = YAML.safe_load(File.read(File.join(migrated, "config", "projects.yaml")), aliases: false)
     assert_equal migrated, migrated_registry.dig("agent_os", "root")
-    assert_equal File.join(migrated, "projects", "example"), migrated_registry.dig("projects", "example", "wrapper")
+    assert_equal repository, migrated_registry.dig("projects", "example", "root")
+    refute migrated_registry.dig("projects", "example").key?("layout")
+    refute migrated_registry.dig("projects", "example").key?("wrapper")
     assert_equal repository, migrated_registry.dig("projects", "example", "repositories", 0, "path")
+    refute File.exist?(File.join(migrated, "projects"))
     migrated_monitors = YAML.safe_load(File.read(File.join(migrated, "config", "monitors.yaml")), aliases: false)
     migrated_monitor = migrated_monitors.dig("monitors", "agent-os-slack-monitor")
     assert_equal File.join(@source, "docs", "slack-monitor.md"), migrated_monitor.fetch("runbook")

@@ -4,7 +4,8 @@
 AI-agent work across multiple projects.**
 
 Agent OS gives OpenAI Codex work a durable, cross-project control plane. It
-combines a visual task board, project routing, exact Codex task correlation,
+combines a visual task board, a durable Done workflow with exact-linked outcome
+time, project routing, exact Codex task correlation,
 pull-request and source context, optional read-only intake, and installable
 plugins in one portable setup.
 
@@ -28,7 +29,7 @@ downloadable macOS app supports Apple Silicon (`arm64`) on macOS 14 or newer;
 an Intel or universal binary is not included yet.
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.2.1
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.3.0
 codex plugin add agent-os@agent-os
 ```
 
@@ -44,8 +45,10 @@ Open any existing Git repository from any folder in Codex and ask:
 Onboard this repository into Agent OS safely.
 ```
 
-The plugin previews the registry and wrapper changes before applying them. It
-does not move, copy, rename, commit, or otherwise modify the project repository.
+The plugin previews the registry change before applying it. Every project is
+registered at its existing Git root, regardless of where that folder lives.
+Agent OS does not create a second project folder or move, copy, rename, commit,
+or otherwise modify the project repository.
 If the user later moves a registered repository, ask Agent OS to relink that
 project. The plugin verifies repository identity and previews only the private
 path metadata that will change.
@@ -64,14 +67,13 @@ agent-os/
 ├── docs/                       architecture and runbooks
 ├── lib/ and tools/             deterministic control plane
 ├── plugins/                    Agent OS Codex plugin, including Context Loop
-├── templates/                  project wrapper template
 └── test/                       isolated and clean-home verification
 ```
 
-Each user's private home owns `config/*.yaml`, `work/`, `.runtime/`, generated
-project wrappers, and a pointer to the selected packaged runtime. Registered
-project repositories remain wherever the user already keeps them; Agent OS
-stores their paths but does not copy their code. Private tasks, provider
+Each user's private home owns `config/*.yaml`, `work/`, `.runtime/`, and a
+pointer to the selected packaged runtime. Registered project repositories
+remain wherever the user already keeps them; Agent OS stores their paths but
+does not copy their code. Private tasks, provider
 identifiers, and repository paths never belong in a release candidate.
 
 ## Codex plugin
@@ -106,6 +108,12 @@ the old home remains untouched until the migrated copy has been verified.
 The app owns no database. Its bundle contains the same minimal runtime as the
 plugin, initializes `~/.agent-os` when needed, reads the private registry, and
 invokes the packaged `tools/task-board` executable with argument arrays.
+Focus and Board keep current work actionable. Done retains completed and
+cancelled outcomes with their context, source links, PR state, Codex membership,
+tracked time, and explicit completion follow-up. Its project, period, lifecycle,
+and follow-up filters keep the completion journal useful without a separate
+time-only navigation surface. The broader generated Project Time ledger remains
+available through the CLI for reporting across all project chats.
 
 For a release artifact, run `./script/package_release.sh`. It creates an ad-hoc
 signed zip, SHA-256 checksum, and Sparkle appcast without Developer ID or

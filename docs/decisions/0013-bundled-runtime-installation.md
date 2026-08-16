@@ -14,7 +14,7 @@ that project repositories also had to live under one Agent OS `projects/`
 directory.
 
 The app and plugin already operate on the same small deterministic subset of
-Agent OS: configuration templates, project wrappers, Task Board tools, runtime
+Agent OS: configuration templates, project registry helpers, Task Board tools, runtime
 correlation helpers, and the CLI. The rest of the public repository is useful
 for development, tests, and documentation but is not required at runtime.
 
@@ -47,8 +47,8 @@ for development, tests, and documentation but is not required at runtime.
   required.
 - Codex owns the installed plugin snapshot, the app owns its bundle resources,
   and the private home remains the sole owner of mutable Agent OS state.
-- Projects may remain anywhere on the computer. Agent OS records an absolute
-  routing path and creates only private wrapper metadata when needed.
+- Projects may remain anywhere on the computer. Agent OS records absolute roots
+  only in the private registry and creates no project container folders.
 - Plugin and app package size increases by the minimal allowlisted runtime, but
   product source, tests, documentation, Git history, and private data remain
   excluded.

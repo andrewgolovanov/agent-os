@@ -1,28 +1,28 @@
 # 0002: Support direct repositories under projects
 
-- Status: accepted; amended by 0013
+- Status: superseded by 0016
 - Date: 2026-08-09
 
 ## Context
 
-Первый реальный pilot был вручную помещён в `projects/<key>` как полноценный Git-репозиторий. Исходная архитектура предполагала только wrappers и требовала бы либо повторного перемещения репозитория, либо добавления Agent OS metadata внутрь product source tree.
+The first real pilot had been placed manually at `projects/<key>` as a complete Git repository. The original architecture supported only wrappers, which would have required another repository move or Agent OS metadata inside product source.
 
-## Decision
+## Historical decision
 
-Поддерживать два явных project layout:
+Support two explicit project layouts:
 
-- `wrapper` для Agent OS-owned context, который ссылается на один или несколько внешних репозиториев;
-- `direct-repository` для одного существующего Git root, который совпадает с
-  зарегистрированным project root. Первоначально этот root находился под
-  `projects/<key>`; decision 0013 и identity-checked relink разрешили сохранить
-  layout после отдельного переноса repository в любую абсолютную папку.
+- `wrapper` for Agent OS-owned context pointing to one or more external repositories;
+- `direct-repository` for one existing Git root that also served as the registered project root.
 
-В direct layout structured Agent OS metadata хранится только в `config/projects.yaml`. Agent OS не добавляет `project.yaml` и документацию внутрь репозитория и исключает его точный каталог из собственной Git history.
+The direct root initially lived under `projects/<key>`. Decisions 0013 and the identity-checked relink later allowed that repository to remain in any absolute user-selected folder. Direct layout stored structured Agent OS metadata only in `AGENT_OS_HOME/config/projects.yaml` and excluded the exact embedded repository from Agent OS Git history.
 
-## Consequences
+## Historical consequences
 
-- Direct repository остаётся на месте и сохраняет независимые remotes, history,
-  instructions и dirty worktree; relink меняет только private path metadata.
-- Agent OS не создаёт случайный embedded-repository gitlink.
-- Multi-repository projects и личный operational context продолжают использовать wrapper layout.
-- Переход direct project в wrapper требует отдельного явного решения и безопасного перемещения вне onboarding.
+- Direct repositories kept independent remotes, history, instructions, and dirty worktrees.
+- Agent OS avoided accidental embedded-repository gitlinks.
+- Multi-repository projects still depended on wrapper layout.
+- Moving between layouts required a separate explicit operation.
+
+## Supersession
+
+Decision 0016 replaces both layouts with one registry-only `root + repositories` model. This record remains only as historical rationale for keeping repositories in user-selected locations.

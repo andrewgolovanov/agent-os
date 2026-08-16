@@ -12,15 +12,12 @@ struct AgentOSProject: Codable, Hashable, Identifiable, Sendable {
     let key: String
     let displayName: String
     let status: String
-    let wrapper: String
+    let root: String
     let repositories: [AgentOSRepository]
 
     var id: String { key }
 
     var preferredWorkingDirectory: URL {
-        if let repository = repositories.first {
-            return URL(fileURLWithPath: repository.path, isDirectory: true)
-        }
-        return URL(fileURLWithPath: wrapper, isDirectory: true)
+        URL(fileURLWithPath: root, isDirectory: true)
     }
 }

@@ -62,6 +62,7 @@ enum AgentOSMetrics {
     static let controlHeight: CGFloat = 36
     static let compactControlHeight: CGFloat = 32
     static let iconSize: CGFloat = 16
+    static let statusMarkerDiameter: CGFloat = 24
     static let radius: CGFloat = 10
     static let radiusSmall: CGFloat = 6
     static let radiusMedium: CGFloat = 8

@@ -69,10 +69,6 @@ REQUIRED_SOURCE_PATHS = %w[
   plugins/agent-os/skills/onboard-project/SKILL.md
   plugins/agent-os/skills/setup-agent-os/SKILL.md
   plugins/agent-os/skills/setup-agent-os/agents/openai.yaml
-  projects/README.md
-  templates/project/AGENTS.md
-  templates/project/project.yaml
-  work/README.md
   tools/task-board
   tools/audit-publication
   tools/task-bridge
@@ -121,7 +117,6 @@ end
 
 registry_path = File.join(HOME_ROOT, "config/projects.yaml")
 registry = load_yaml(registry_path) if File.file?(registry_path)
-direct_project_roots = []
 project_keys = []
 
 if registry
@@ -195,45 +190,22 @@ if registry
           end
         end
 
-        wrapper = project["wrapper"]
-        if wrapper.nil? || !Pathname.new(wrapper.to_s).absolute?
-          error("project #{key} wrapper must be an absolute path")
+        legacy_fields = %w[layout wrapper].select { |field| project.key?(field) }
+        unless legacy_fields.empty?
+          error("project #{key} contains obsolete fields: #{legacy_fields.join(", ")}; run upgrade-project-registry")
+        end
+
+        root = project["root"]
+        if root.nil? || !Pathname.new(root.to_s).absolute?
+          error("project #{key} root must be an absolute path")
           next
         end
 
-        resolved_wrapper = File.expand_path(wrapper)
-        layout = project.fetch("layout", "wrapper").to_s
-        error("project #{key} has invalid layout: #{layout}") unless %w[wrapper direct-repository].include?(layout)
-        if layout == "wrapper"
-          expected_parent = File.join(HOME_ROOT, "projects") + File::SEPARATOR
-          error("project #{key} wrapper must be inside projects/") unless resolved_wrapper.start_with?(expected_parent)
-        end
-        error("project #{key} wrapper does not exist: #{wrapper}") unless File.directory?(resolved_wrapper)
-
+        resolved_root = File.expand_path(root)
+        error("project #{key} root does not exist: #{root}") unless File.directory?(resolved_root)
         repositories = Array(project["repositories"])
-
-        if layout == "direct-repository"
-          direct_project_roots << resolved_wrapper
-          error("project #{key} direct repository must contain .git") unless File.exist?(File.join(resolved_wrapper, ".git"))
-          error("project #{key} direct layout must contain exactly one repository") unless repositories.length == 1
-
-          direct_path = repositories.first["path"] if repositories.first.is_a?(Hash)
-          if direct_path && File.expand_path(direct_path) != resolved_wrapper
-            error("project #{key} direct repository path must equal wrapper")
-          end
-        else
-          error("project #{key} is missing AGENTS.md") unless File.file?(File.join(resolved_wrapper, "AGENTS.md"))
-          error("project #{key} is missing project.yaml") unless File.file?(File.join(resolved_wrapper, "project.yaml"))
-        end
-
-        project_yaml_path = File.join(resolved_wrapper, "project.yaml")
-        project_yaml = load_yaml(project_yaml_path) if layout == "wrapper" && File.file?(project_yaml_path)
-        if project_yaml.is_a?(Hash)
-          error("project #{key} project.yaml key mismatch") unless project_yaml["key"].to_s == key
-          registry_paths = Array(project["repositories"]).map { |repo| repo["path"] if repo.is_a?(Hash) }.compact.sort
-          project_paths = Array(project_yaml["repositories"]).map { |repo| repo["path"] if repo.is_a?(Hash) }.compact.sort
-          error("project #{key} repository paths differ between registry and project.yaml") unless registry_paths == project_paths
-        end
+        error("project #{key} must register at least one repository") if repositories.empty?
+        repository_paths = []
 
         repositories.each do |repository|
           unless repository.is_a?(Hash)
@@ -246,7 +218,14 @@ if registry
             error("project #{key} repository path must be absolute")
           elsif !File.directory?(path)
             error("project #{key} repository path does not exist: #{path}")
+          else
+            resolved_path = File.expand_path(path)
+            repository_paths << resolved_path
+            error("project #{key} repository is not a Git root: #{path}") unless File.exist?(File.join(resolved_path, ".git"))
           end
+        end
+        unless repository_paths.include?(resolved_root)
+          error("project #{key} root must equal one registered repository path")
         end
       end
     else
@@ -390,12 +369,14 @@ markdown_paths = [
   Dir.glob(File.join(ROOT, "apps", "**", "*.md")),
   Dir.glob(File.join(ROOT, "docs", "**", "*.md")),
   Dir.glob(File.join(ROOT, "plugins", "**", "*.md")),
-  Dir.glob(File.join(ROOT, "templates", "**", "*.md")),
-  File.join(ROOT, "projects", "README.md"),
   File.join(ROOT, "work", "README.md")
 ].flatten.select { |path| File.file?(path) }.uniq.sort
 
 markdown_paths.each do |markdown_path|
+  content = File.read(markdown_path)
+  if content.match?(/[А-Яа-яЁё]/)
+    error("repository Markdown must be written in English: #{markdown_path.sub("#{ROOT}/", "")}")
+  end
 
   File.readlines(markdown_path, chomp: true).each_with_index do |line, index|
     line.scan(/\]\(([^)]+)\)/).flatten.each do |raw_target|

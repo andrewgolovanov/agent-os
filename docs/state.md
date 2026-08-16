@@ -25,10 +25,14 @@ Verified: 2026-08-16
 - The current public release, `v0.2.1`, is published from commit
   `d7607144fcf21fa4781ee9beabff9f3c0c9786d3` at
   `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.2.1`.
-- Documentation maintenance is now part of the repository completion contract:
+- Documentation maintenance is part of the repository completion contract:
   affected agent instructions, human README guidance, and owning product docs
-  are updated in the same change and stale renamed identifiers are searched
-  before handoff.
+  are updated in the same change; public repository Markdown is written in
+  English; and stale renamed identifiers are searched before handoff.
+- The obsolete source-local `work/README.md` has been removed. Durable outcome
+  state and generated reports have exactly one owner under the selected private
+  `AGENT_OS_HOME/work`; the public source checkout contains only the Task Board
+  contract and implementation.
 - The `v0.2.0` release adds a complete opt-in integration path without
   changing provider state: preview-first Slack monitor configuration,
   plugin-bundled Task Bridge hooks, a Codex setup skill, Scheduled task prompt,
@@ -43,8 +47,14 @@ Verified: 2026-08-16
   valid explicitly selected development checkout remains authoritative.
 - MCP and CLI onboarding can preview and register an existing Git repository
   from any absolute location without moving, cloning, renaming, or modifying it.
+- Project onboarding now has one registry-only topology: every project records
+  `root + repositories` and creates no generated folder under
+  `AGENT_OS_HOME/projects`, including multi-repository registrations.
+- MCP and CLI one-way registry upgrade remove obsolete `layout` and `wrapper`
+  fields while preserving any old managed folder in a private recovery backup
+  and leaving repository files and Git state unchanged.
 - MCP and CLI relinking can verify a moved repository by its registered origin
-  and update only private registry and wrapper paths.
+  and update only private registry paths.
 - Leaving an explicitly selected development checkout now requires the separate
   preview-first `bootstrap --replace-source` action; automatic packaged
   bootstrap continues to preserve valid development selection.
@@ -69,11 +79,33 @@ Verified: 2026-08-16
 - `agent-os doctor` passes for the current instance and for a fresh temporary
   home.
 - The full Agent OS validator passes against both homes.
-- The current Ruby suite passes 54 tests and 420 assertions, including active
-  private-home resolution, safe home migration, monitor-path rewriting, and
-  identity-checked repository relinking.
-- Agent OS app builds and its 18 Swift tests pass; bundle launch verification
+- The current Ruby suite passes 62 tests and 520 assertions, including active
+  private-home resolution, safe home migration, monitor-path rewriting,
+  identity-checked repository relinking, completion follow-up, and Project Time
+  reporting contracts.
+- Agent OS app builds and its 22 Swift tests pass; bundle launch verification
   succeeds with both the active home and a fresh empty private home.
+- The two recurrent native crash signatures are covered at their executor
+  boundaries: Task Board filesystem events enter the main-actor watcher on the
+  main queue, and the LaunchServices Codex-open callback is a nonisolated
+  Sendable continuation bridge. A live canonical Task Board update left the
+  rebuilt app running and produced no diagnostic report beyond the recorded
+  pre-fix baseline.
+- Real-window accessibility and screenshot QA verified that Board lifecycle
+  columns scroll vertically and independently inside the horizontal workflow
+  canvas, keeping their headers fixed while lower cards remain reachable.
+- The native Done view retains all `done` and `cancelled` outcomes with the
+  canonical inspector, source and pull-request context, project/completion-
+  period/lifecycle/follow-up filters, and a visible summary of exact-linked task
+  time. Slack-backed done outcomes
+  expose explicit `pending`, `sent`, and `not_required` follow-up states and a
+  copyable completion update; no external message is sent automatically.
+- Broader generated Project Time ledgers remain available through the CLI and
+  private reports. They are intentionally not mixed into Done's exact-linked
+  outcome total or exposed as a competing primary navigation page.
+- Status-only rows in Done use fixed 24-point circular markers; full
+  lifecycle badges continue to retain their text and capsule geometry where
+  the label is part of the interface.
 - The app now maps the official shadcn default Neutral dark tokens directly into
   SwiftUI: `#0a0a0a` canvas, `#171717` sidebar/cards, `#262626` interactive
   accents, 10% borders, 15% input borders, and `#a3a3a3` secondary text. Large
@@ -82,7 +114,8 @@ Verified: 2026-08-16
   sizing and the shadcn radius scale. Status badges retain text and distinct
   icons while Active is green, Waiting amber, Review blue, Planned violet,
   Inbox neutral, Done emerald, and Cancelled red. Focus rows also expose the
-  registered project display name in a compact folder badge.
+  registered project display name in a compact folder badge and use the shared
+  semantic hover surface with pointer feedback for task selection.
 - The task detail is no longer a permanent empty third column or animated
   inspector sheet. Real-window accessibility and screenshot QA verified a
   closed-at-launch, open-on-selection, resizable native split with explicit
@@ -91,9 +124,10 @@ Verified: 2026-08-16
   detail on click while leaving the inspector, toolbar, and project sidebar
   unobscured.
 - Development and release bundles register `agent-os://`; the tested
-  `agent-os://board` and `agent-os://focus` destinations select, refresh, and
-  foreground the corresponding native view without carrying task data outside
-  the canonical private home.
+  `agent-os://board`, `agent-os://focus`, and `agent-os://done` destinations
+  select, refresh, and foreground the corresponding native view without
+  carrying task data outside the canonical private home. `agent-os://history`
+  and `agent-os://time` remain compatibility aliases for Done.
 - The sidebar color and AppKit-backed divider now continue through the titlebar
   and content while SwiftUI remains the state owner. The native sidebar toggle
   sits on that same surface; live-window QA verified hide and restore retain the
@@ -180,7 +214,7 @@ Verified: 2026-08-16
   packaging, and GitHub publication all passed in run `31905346346`.
 - The release workflow now initializes a clean temporary private home, runs the
   complete Agent OS validator and publication audit before Swift packaging, and
-  refuses the first release unless the packaged executable is Apple Silicon
+  refuses publication unless the packaged executable is Apple Silicon
   (`arm64`).
 - The Swift package declares tools version 6.1, matching the Apple Silicon
   `macos-15` release runner; it also builds and tests with local Swift 6.2.

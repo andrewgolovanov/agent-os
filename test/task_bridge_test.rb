@@ -21,7 +21,7 @@ class TaskBridgeTest < Minitest::Test
         schema_version: 1
         projects:
           phrasso:
-            wrapper: #{@project_root}
+            root: #{@project_root}
             repositories:
               - id: site
                 path: #{@project_root}

@@ -22,7 +22,7 @@ class ProjectTimeTest < Minitest::Test
         projects:
           phrasso:
             display_name: Example Site
-            wrapper: #{@current}
+            root: #{@current}
             repositories:
               - path: #{@current}
             activity:

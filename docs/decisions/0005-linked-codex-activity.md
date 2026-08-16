@@ -1,30 +1,28 @@
-# 0005 — Linked Codex activity and unfinished totals
+# 0005: Linked Codex activity and unfinished totals
 
-Date: 2026-08-10
-
-Status: accepted
-
-Supersedes: activity deferral in `0003-structured-continuity-before-hooks.md`
+- Status: accepted
+- Date: 2026-08-10
+- Supersedes: activity deferral in `0003-structured-continuity-before-hooks.md`
 
 ## Context
 
-Первый реальный continuity cycle дошёл до active implementation task. Появился конкретный consumer: пользователю нужна общая сумма незавершённых outcomes в monitor notifications и измеримое время Codex work по каждой карточке.
+The first real continuity cycle reached active implementation. A concrete consumer now existed: the user needed the total number of unfinished outcomes in monitor notifications and measurable Codex execution time for each outcome.
 
 ## Decision
 
-- Task Board generated index всегда содержит `unfinished_total`; `done` и `cancelled` исключаются.
-- Каждый Slack Monitor `NOTIFY` показывает общую Agent OS-сумму незавершённых outcomes.
-- Activity учитывается только после exact Codex `thread_id` membership.
-- `UserPromptSubmit` открывает turn, `Stop` завершает тот же exact `turn_id`; повторная доставка события не удваивает время.
-- Hook синхронизирует только Codex membership `active`/`idle`; lifecycle outcome остаётся explicit.
-- Незарегистрированные Codex sessions игнорируются. Hook не делает semantic routing и не меняет lifecycle outcome автоматически.
+- The generated Task Board index always contains `unfinished_total`; `done` and `cancelled` are excluded.
+- Every Slack Monitor `NOTIFY` displays the Agent OS-wide unfinished total.
+- Activity starts only after exact Codex `thread_id` membership.
+- `UserPromptSubmit` opens a turn and `Stop` closes the same exact `turn_id`; repeated events do not duplicate time.
+- Hooks synchronize only Codex membership `active` and `idle`; outcome lifecycle remains explicit.
+- Unregistered Codex sessions are ignored. Hooks perform no semantic routing and never change outcome lifecycle automatically.
 
 ## Rationale
 
-Codex hook payload даёт стабильные `session_id` и `turn_id`, но не готовую длительность outcome. Собственный bounded timer делает evidence воспроизводимым, а exact membership не позволяет случайно приписать время похожей карточке.
+Codex hook payload exposes stable `session_id` and `turn_id` but not outcome duration. A bounded timer makes evidence reproducible, while exact membership prevents time from being assigned to a similar but unrelated outcome.
 
 ## Consequences
 
-- Это agent execution time по completed turns, не человеческий timesheet и не UI `Working for…`.
-- Новый hook требует review/trust и fresh task; прошлое время не реконструируется догадкой.
-- Status `review`, `waiting`, `done` остаётся explicit domain decision.
+- The metric is agent execution time for completed turns, not a human timesheet or the Codex UI “Working for…” duration.
+- A new hook requires inspection, trust, and a fresh task; historical time is never reconstructed by guessing.
+- `review`, `waiting`, and `done` remain explicit domain decisions.

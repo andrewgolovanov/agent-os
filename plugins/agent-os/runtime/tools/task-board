@@ -78,6 +78,19 @@ begin
 
     task = AgentOS::TaskBoard.new(options.fetch(:root)).attach_source(id, kind: options.fetch(:kind), value: options.fetch(:value))
     puts JSON.pretty_generate(task)
+  when "completion"
+    id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options, = common_options(ARGV) do |opts, values|
+      opts.on("--follow-up-status STATUS", "pending, sent, or not_required") { |value| values[:follow_up_status] = value }
+    end
+    raise OptionParser::MissingArgument, "follow-up-status" unless options[:follow_up_status]
+
+    puts JSON.pretty_generate(
+      AgentOS::TaskBoard.new(options.fetch(:root)).update_completion(
+        id,
+        follow_up_status: options.fetch(:follow_up_status)
+      )
+    )
   when "codex"
     id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
     options, = common_options(ARGV) do |opts, values|
@@ -192,6 +205,7 @@ begin
         create --title TITLE [--project KEY] --goal TEXT --next-action TEXT
         update TASK_ID [fields]
         source TASK_ID --kind KIND --value URL_OR_ID
+        completion TASK_ID --follow-up-status pending|sent|not_required
         codex TASK_ID --thread-id ID --role ROLE [fields]
         activity-start TASK_ID --session-id ID --turn-id ID [--at TIMESTAMP]
         activity-stop TASK_ID --session-id ID --turn-id ID [--at TIMESTAMP]

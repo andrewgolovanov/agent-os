@@ -25,6 +25,14 @@ struct SidebarView: View {
                         image: "rectangle.3.group",
                         count: tasks.filter(\.status.isUnfinished).count
                     )
+
+                    sidebarRow(
+                        key: "done",
+                        title: "Done",
+                        detail: "Completed work, time, follow-up",
+                        image: "checkmark.circle",
+                        count: tasks.filter { !$0.status.isUnfinished }.count
+                    )
                 }
 
                 sidebarSection("Projects") {

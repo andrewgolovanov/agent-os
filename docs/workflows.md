@@ -1,93 +1,85 @@
-# Рабочие процессы
+# Workflows
 
-## Подключить проект
+## Onboard a project
 
-1. Вызвать `$onboard-project`.
-2. Передать project key, display name и абсолютные пути существующих репозиториев.
-3. Проверить для каждого репозитория root, remotes, branch, HEAD и dirty state.
-4. Использовать private `wrapper` по умолчанию. `direct-repository` допустим
-   только когда Git root уже точно совпадает с private
-   `AGENT_OS_HOME/projects/<key>/`; после отдельного пользовательского переноса
-   identity-checked relink может сохранить direct layout в другом абсолютном
-   каталоге.
-5. Просмотреть план создаваемых файлов и registry entry.
-6. Для wrapper создать private `AGENT_OS_HOME/projects/<key>/` из
-   `templates/project/`. Source repository остаётся в исходной папке.
-7. Обновить private `AGENT_OS_HOME/config/projects.yaml` только через MCP/CLI.
-8. Запустить `ruby tools/validate-agent-os` и `tools/task-board validate` для
-   выбранного private home.
-9. Отдельно отметить verified и unknown facts.
+1. Invoke `$onboard-project` from the existing repository.
+2. Provide a project key, display name, and absolute paths for its repositories.
+3. Verify each repository root, remotes, branch, HEAD, and dirty state.
+4. Register the existing Git root from any folder as project `root`.
+5. Review the registry mutation preview.
+6. Update private `AGENT_OS_HOME/config/projects.yaml` only through Agent OS MCP or CLI operations.
+7. Run `ruby tools/validate-agent-os` and `tools/task-board validate` against the selected private home.
+8. Report verified and unknown facts separately.
 
-Подключение не даёт разрешения на clone, move, remote changes, commit или publish.
+Onboarding does not authorize clone, move, remote changes, commits, or publication. It writes no wrapper or Agent OS metadata into the product repository.
 
-## Перепривязать перенесённый repository
+If the registry still has legacy `layout` or `wrapper` fields, preview `agent_os_upgrade_project_registry`. Apply performs a one-way migration to `root + repositories` and preserves the former managed directory in a private recovery backup. New onboarding never creates those directories.
 
-1. Убедиться, что физический перенос уже выполнен по явному запросу пользователя.
-2. Проверить новый Git root, origin, branch, HEAD и dirty state.
-3. Вызвать `agent_os_relink_project` с существующим project key и новым
-   абсолютным path; для multi-repository project передать repository ID.
-4. Сначала просмотреть preview и убедиться, что меняются только private registry
-   и wrapper metadata.
-5. После approval применить тот же relink и валидировать registry/Task Board.
+## Relink a moved repository
 
-Relink никогда не перемещает repository и не меняет Git files, remotes, branch
-или history.
+1. Confirm that the physical move already happened under explicit user intent.
+2. Verify the new Git root, origin, branch, HEAD, and dirty state.
+3. Invoke `agent_os_relink_project` with the existing project key and new absolute path; include repository ID for a multi-repository project.
+4. Review the preview and verify that only private registry metadata changes.
+5. Apply the same relink after approval and validate registry and Task Board state.
 
-## Начать проектную работу
+Relink never moves a repository or changes Git files, remotes, branches, or history.
 
-1. Разрешить имя/alias через `config/projects.yaml`.
-2. Определить layout и прочитать `AGENTS.md` зарегистрированного project root.
-3. Для wrapper перейти в точный repository path и прочитать ближайший repository `AGENTS.md`, если он есть.
-4. Проверить Git identity и dirty state.
-5. Для durable outcome передать в первый project-chat prompt exact Task Board ID или stable source URL. Task Bridge автоматически прикрепит stable `session_id` только при одном exact match.
-6. Если exact match отсутствует, выбрать предложенную карточку через `tools/task-bridge claim` или сначала создать outcome через `tools/task-board`; не угадывать его по title или branch.
-7. Выполнить и проверить работу в проектном репозитории. Task Bridge считает exact Codex turns, а не человеческие паузы.
-8. После material changes выполнить checkpoint с verified summary, next action и status; `done` остаётся explicit user action.
+## Start project work
 
-## Жизненный цикл durable task
+1. Resolve the project name or alias through private `AGENT_OS_HOME/config/projects.yaml`.
+2. Read `AGENTS.md` at the registered project root.
+3. For a multi-repository project, read the nearest repository `AGENTS.md` before editing it.
+4. Verify Git identity and dirty state.
+5. For durable work, include the exact Task Board ID or a stable source URL in the first project-task prompt. Task Bridge attaches `session_id` only for one exact match.
+6. Without an exact match, explicitly claim a suggested outcome through `tools/task-bridge claim` or create one through `tools/task-board`; never guess by title or branch.
+7. Perform and validate work in the project repository. Task Bridge measures exact Codex turns, not human pauses.
+8. After material changes, checkpoint a verified summary, next action, and lifecycle status. `done` remains an explicit user decision.
+
+## Durable outcome lifecycle
 
 ```text
 inbox -> planned -> active -> review -> done
                        \-> waiting -> active
 ```
 
-- `inbox`: outcome обнаружен, но ещё не triaged.
-- `planned`: scope и следующий шаг подтверждены.
-- `active`: есть один текущий next action.
-- `waiting`: указан внешний blocker и условие возобновления.
-- `review`: реализация или analysis ждёт проверки/merge.
-- `done`: результат и validation зафиксированы; дальнейших обязательных действий нет.
-- `cancelled`: outcome сознательно остановлен с зафиксированной причиной.
+- `inbox`: discovered but not triaged.
+- `planned`: scope and next action are confirmed.
+- `active`: one current next action exists.
+- `waiting`: an external blocker and resume condition are recorded.
+- `review`: implementation or analysis awaits verification or merge.
+- `done`: result and validation are recorded with no required work left.
+- `cancelled`: the outcome was intentionally stopped with a recorded reason.
 
-Статус меняется только через `tools/task-board`. `task.json` остаётся structured source, `STATUS.md` — автоматически обновляемый handoff, `events.jsonl` — append-only material history.
+Change lifecycle only through `tools/task-board`. Private `task.json` is the structured source, `STATUS.md` is generated handoff, and `events.jsonl` is append-only material history.
 
 ## Slack intake
 
-1. Один Agent OS heartbeat разрешает current Slack user profile через connected integration.
-2. Active watched roots читаются до global mentions/DM search.
-3. Direct mentions ищутся во всех доступных public/private channels; DMs и group DMs читаются отдельно.
-4. Exact event identity проверяется через `tools/slack-state`.
-5. Correlation идёт по stable Task Board sources и registry attribution, а не по похожему тексту.
-6. Unknown-project signal может стать unassigned inbox task.
-7. Cursor продвигается только после полного успешного scan.
-8. Внешние сообщения, ambient full-channel scans, code/Git/deploy actions и управление user-owned Codex tasks запрещены.
+1. One Agent OS heartbeat resolves the current Slack user through the connected integration.
+2. Active watched roots are read before global mention and DM search.
+3. Direct mentions are searched across accessible public and private channels; DMs and group DMs are read separately.
+4. Exact event identity is checked through `tools/slack-state`.
+5. Correlation uses stable Task Board sources and verified registry attribution, not similar text.
+6. An unknown-project signal may become an unassigned inbox outcome.
+7. The cursor advances only after a complete successful scan.
+8. External messages, ambient full-channel scans, code or Git mutations, deployments, and management of user-owned Codex tasks are prohibited.
 
-Canonical sequence и circuit breaker описаны в `docs/slack-monitor.md`.
+See `docs/slack-monitor.md` for the canonical sequence and circuit breaker.
 
-## Изменить Agent OS
+## Change Agent OS
 
-1. Определить владельца изменяемого знания по `docs/architecture.md`.
-2. Сделать минимальное изменение без дублирования facts.
-3. Обновить `docs/state.md` и `docs/changelog.md`.
-4. Добавить decision record, если rationale не очевиден.
-5. Запустить Agent OS validation.
+1. Identify the owner of the changed knowledge through `docs/architecture.md`.
+2. Make the smallest change without duplicating facts.
+3. Update the owning document, `docs/state.md`, and `docs/changelog.md`.
+4. Add a decision record when the rationale is non-obvious.
+5. Run Agent OS validation.
 
-## Создать skill
+## Create a skill
 
-1. Собрать минимум два реальных примера одинаковой процедуры.
-2. Сформулировать один job и точные trigger phrases.
-3. По умолчанию создать instruction-only skill в `.agents/skills/<name>/`.
-4. Добавить script только для детерминированной или хрупкой операции.
-5. Проверить skill validator и один реалистичный dry run.
+1. Gather at least two real examples of the repeated procedure.
+2. Define one job and precise trigger phrases.
+3. Default to an instruction-only skill in `.agents/skills/<name>/`.
+4. Add a script only for a deterministic or fragile operation.
+5. Run the skill validator and one realistic dry run.
 
-Подробные критерии находятся в `docs/extending.md`.
+See `docs/extending.md` for the full criteria.

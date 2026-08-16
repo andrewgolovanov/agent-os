@@ -20,7 +20,7 @@ At the same time, choosing a task from project path or similar title is unsafe b
 - Exact claim sets the outcome active and starts exact turn activity; `Stop` closes it. A later turn in the same session safely closes a lost predecessor with a configured idle cap; global reconcile remains explicit so parallel active chats are not truncated.
 - Material project changes require a Task Board checkpoint with verified summary, next action and `active`/`waiting`/`review` status before Stop may complete.
 - `done` and `cancelled` remain explicit user acceptance decisions.
-- Exact runtime correlation lives under ignored `.runtime/task-bridge/` and stores a prompt hash, not raw prompt content.
+- Exact runtime correlation lives under ignored `AGENT_OS_HOME/.runtime/task-bridge/` and stores a prompt hash, not raw prompt content.
 
 ## Rationale
 

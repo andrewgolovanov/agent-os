@@ -1,4 +1,4 @@
 interface:
   display_name: "Onboard Project"
-  short_description: "Safely add a project to this workspace"
-  default_prompt: "Use $onboard-project to add a verified project wrapper and registry entry."
+  short_description: "Register a repository from any local folder"
+  default_prompt: "Use $onboard-project to register this repository directly in Agent OS without moving it."

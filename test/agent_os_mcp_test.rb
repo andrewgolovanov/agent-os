@@ -31,8 +31,9 @@ class AgentOSMCPTest < Minitest::Test
       assert_equal "agent-os", initialize_result.dig("result", "serverInfo", "name")
 
       tool_list = request(stdin, stdout, 2, "tools/list")
-      assert_equal 6, tool_list.dig("result", "tools").length
+      assert_equal 7, tool_list.dig("result", "tools").length
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_onboard_project" }
+      assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_upgrade_project_registry" }
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_relink_project" }
 
       tasks = request(
@@ -68,7 +69,8 @@ class AgentOSMCPTest < Minitest::Test
         { "name" => "agent_os_onboard_project", "arguments" => { "repositoryPath" => repository } }
       )
       assert_equal "create", preview.dig("result", "structuredContent", "action")
-      refute File.exist?(File.join(@home, "projects", "mcp-project"))
+      assert_equal File.realpath(repository), preview.dig("result", "structuredContent", "project", "root")
+      refute File.exist?(File.join(@home, "projects"))
 
       applied = request(
         stdin,
@@ -78,7 +80,11 @@ class AgentOSMCPTest < Minitest::Test
         { "name" => "agent_os_onboard_project", "arguments" => { "repositoryPath" => repository, "apply" => true } }
       )
       assert_equal "created", applied.dig("result", "structuredContent", "action")
-      assert File.file?(File.join(@home, "projects", "mcp-project", "project.yaml"))
+      refute File.exist?(File.join(@home, "projects"))
+      registry = YAML.safe_load(File.read(File.join(@home, "config", "projects.yaml")), aliases: false)
+      assert_equal File.realpath(repository), registry.dig("projects", "mcp-project", "root")
+      refute registry.dig("projects", "mcp-project").key?("layout")
+      refute registry.dig("projects", "mcp-project").key?("wrapper")
 
       moved_repository = File.join(@temporary, "mcp-project-moved")
       FileUtils.mv(repository, moved_repository)
@@ -107,6 +113,44 @@ class AgentOSMCPTest < Minitest::Test
       assert_equal "relinked", relink_applied.dig("result", "structuredContent", "action")
       registry = YAML.safe_load(File.read(File.join(@home, "config", "projects.yaml")), aliases: false)
       assert_equal File.realpath(moved_repository), registry.dig("projects", "mcp-project", "repositories", 0, "path")
+      assert_equal File.realpath(moved_repository), registry.dig("projects", "mcp-project", "root")
+
+      legacy_path = File.join(@home, "projects", "mcp-project")
+      FileUtils.mkdir_p(legacy_path)
+      File.write(File.join(legacy_path, "README.md"), "legacy context\n")
+      registry.dig("projects", "mcp-project")["layout"] = "wrapper"
+      registry.dig("projects", "mcp-project")["wrapper"] = legacy_path
+      File.write(File.join(@home, "config", "projects.yaml"), YAML.dump(registry))
+
+      upgrade_preview = request(
+        stdin,
+        stdout,
+        5,
+        "tools/call",
+        {
+          "name" => "agent_os_upgrade_project_registry",
+          "arguments" => {}
+        }
+      )
+      assert_equal "upgrade", upgrade_preview.dig("result", "structuredContent", "action")
+      assert File.exist?(legacy_path)
+
+      upgrade_applied = request(
+        stdin,
+        stdout,
+        6,
+        "tools/call",
+        {
+          "name" => "agent_os_upgrade_project_registry",
+          "arguments" => { "apply" => true }
+        }
+      )
+      assert_equal "upgraded", upgrade_applied.dig("result", "structuredContent", "action")
+      refute File.exist?(legacy_path), "legacy path still exists after upgrade: #{Dir.glob(File.join(@home, '**', '*'), File::FNM_DOTMATCH).sort.inspect}; result=#{upgrade_applied.inspect}"
+      assert_equal "legacy context\n", File.read(File.join(@home, ".runtime", "legacy-project-backups", "mcp-project", "README.md"))
+      registry = YAML.safe_load(File.read(File.join(@home, "config", "projects.yaml")), aliases: false)
+      refute registry.dig("projects", "mcp-project").key?("layout")
+      refute registry.dig("projects", "mcp-project").key?("wrapper")
 
       stdin.close
       assert wait_thread.value.success?, stderr.read
@@ -131,6 +175,75 @@ class AgentOSMCPTest < Minitest::Test
       private_home = File.join(isolated_user_home, ".agent-os")
       assert File.file?(File.join(private_home, "config", "projects.yaml"))
       assert_equal "#{File.realpath(bundled_runtime)}\n", File.read(File.join(private_home, "source-path"))
+
+      stdin.close
+      assert wait_thread.value.success?, stderr.read
+    end
+  end
+
+  def test_server_updates_completion_follow_up_separately_from_lifecycle
+    with_server("AGENT_OS_SOURCE_ROOT" => @source, "AGENT_OS_HOME" => @home) do |stdin, stdout, stderr, wait_thread|
+      created = request(
+        stdin,
+        stdout,
+        1,
+        "tools/call",
+        {
+          "name" => "agent_os_create_task",
+          "arguments" => {
+            "title" => "Verify completion follow-up",
+            "goal" => "Keep completed work actionable",
+            "nextAction" => "Finish the outcome"
+          }
+        }
+      )
+      task_id = created.dig("result", "structuredContent", "task", "id")
+      refute_nil task_id
+
+      completed = request(
+        stdin,
+        stdout,
+        2,
+        "tools/call",
+        {
+          "name" => "agent_os_update_task",
+          "arguments" => { "taskId" => task_id, "status" => "done" }
+        }
+      )
+      assert_equal "done", completed.dig("result", "structuredContent", "task", "status")
+
+      follow_up = request(
+        stdin,
+        stdout,
+        3,
+        "tools/call",
+        {
+          "name" => "agent_os_update_task",
+          "arguments" => { "taskId" => task_id, "completionFollowUp" => "sent" }
+        }
+      )
+      assert_equal "sent", follow_up.dig("result", "structuredContent", "task", "completion", "follow_up_status")
+      assert_equal 1, follow_up.dig("result", "structuredContent", "eventDelta")
+
+      invalid_combination = request(
+        stdin,
+        stdout,
+        4,
+        "tools/call",
+        {
+          "name" => "agent_os_update_task",
+          "arguments" => {
+            "taskId" => task_id,
+            "status" => "review",
+            "completionFollowUp" => "pending"
+          }
+        }
+      )
+      assert invalid_combination.dig("result", "isError")
+      assert_match(
+        /must be updated separately/,
+        invalid_combination.dig("result", "structuredContent", "error")
+      )
 
       stdin.close
       assert wait_thread.value.success?, stderr.read

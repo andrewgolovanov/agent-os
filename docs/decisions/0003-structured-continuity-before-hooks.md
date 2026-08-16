@@ -1,33 +1,32 @@
-# 0003 — Structured continuity before activity hooks
+# 0003: Structured continuity before activity hooks
 
-Date: 2026-08-09
-
-Status: accepted
+- Status: accepted; activity deferral superseded by 0005
+- Date: 2026-08-09
 
 ## Context
 
-Первый read-only intake pilot доказал, что plain Markdown folders недостаточны для надёжной корреляции replies, Codex tasks и будущих PR. Изученный reference harness решает это через Task Board, exact-event ledger, watched roots, routing queue и activity hooks.
+The first read-only intake pilot showed that plain Markdown folders were insufficient for reliable correlation among replies, Codex tasks, and future PRs. The reference harness used a Task Board, exact-event ledger, watched roots, routing queue, and activity hooks.
 
 ## Decision
 
-Сначала внедрить structured Task Board и отдельный Slack runtime state:
+Implement a structured Task Board and separate Slack runtime state first:
 
-- один coherent outcome имеет stable task ID;
-- exact external identities связываются с task;
-- Codex threads являются peer memberships;
-- Slack event de-duplication отделено от durable task correlation;
-- failed Codex routing становится `routing_pending`, а не replay Slack event;
-- automation prompt остаётся коротким и ссылается на local runbook.
+- one coherent outcome has a stable task ID;
+- exact external identities attach to the outcome;
+- Codex tasks are peer memberships;
+- Slack event de-duplication is separate from durable task correlation;
+- failed Codex routing becomes `routing_pending` rather than replaying the Slack event;
+- the automation prompt stays short and refers to a local runbook.
 
-Activity hooks, time evidence, Daily Chores и автоматическое управление Codex tasks пока не устанавливать.
+Activity hooks, time evidence, Daily Chores, and automatic Codex task management were initially deferred.
 
 ## Rationale
 
-Hooks измеряют активность, но не исправляют потерю task identity. Их ранняя установка добавила бы глобальный шум и privacy surface до появления проверенного consumer. Structured continuity уже нужна monitor workflow и может быть протестирована локально без внешних write permissions.
+Hooks measure activity but do not repair lost task identity. Installing them first would have added global noise and privacy surface before a verified consumer existed. Structured continuity was already required by monitor workflows and could be tested locally without external write permission.
 
 ## Consequences
 
-- `work/` меняется с status folders на locked structured Task Board.
-- Monitor хранит only identifiers/dispositions в ignored `.runtime/dispatcher/`.
-- Следующий pilot должен проверить полный Slack → task → Codex handoff → PR/review цикл.
-- К Activity возвращаемся только после нескольких циклов, когда понятны нужные поля и отчёт.
+- Private task state moved from status folders to a locked structured Task Board.
+- Monitor runtime stores only identifiers and dispositions under ignored `AGENT_OS_HOME/.runtime/dispatcher/`.
+- The next pilot had to verify the complete Slack-to-task-to-Codex-to-review cycle.
+- Decision 0005 later enabled exact linked activity after that consumer was proven.

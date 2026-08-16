@@ -1,16 +1,16 @@
-# Решения
+# Decision records
 
-Здесь хранятся решения, rationale которых должно пережить конкретный Codex task.
+This directory stores rationale that must survive an individual Codex task.
 
-Формат имени: `NNNN-short-title.md`.
+File names use `NNNN-short-title.md`.
 
-Каждый record содержит:
+Every record contains:
 
-- Status: `accepted`, `superseded` или `deprecated`;
+- Status: `accepted`, `superseded`, or `deprecated`;
 - Date;
 - Context;
 - Decision;
 - Consequences;
-- при необходимости ссылку `Supersedes`/`Superseded by`.
+- `Supersedes` or `Superseded by` when applicable.
 
-Accepted records не переписываются задним числом. Новое решение создаёт новый record и явно отменяет старое.
+Do not rewrite accepted records retroactively. Create a new record and explicitly supersede the old one.

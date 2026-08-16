@@ -5,13 +5,21 @@ struct BoardView: View {
     @Binding var selectedTaskID: String?
 
     var body: some View {
-        ScrollView(.horizontal) {
-            LazyHStack(alignment: .top, spacing: AgentOSMetrics.itemSpacing) {
-                ForEach(TaskStatus.boardColumns) { status in
-                    boardColumn(status)
+        GeometryReader { proxy in
+            ScrollView(.horizontal) {
+                LazyHStack(alignment: .top, spacing: AgentOSMetrics.itemSpacing) {
+                    ForEach(TaskStatus.boardColumns) { status in
+                        boardColumn(status)
+                            .frame(
+                                height: max(
+                                    240,
+                                    proxy.size.height - (AgentOSMetrics.contentPadding * 2)
+                                )
+                            )
+                    }
                 }
+                .padding(AgentOSMetrics.contentPadding)
             }
-            .padding(AgentOSMetrics.contentPadding)
         }
         .background(AgentOSTheme.canvas)
         .navigationTitle("Board")
@@ -31,30 +39,35 @@ struct BoardView: View {
                     .background(AgentOSTheme.muted, in: RoundedRectangle(cornerRadius: AgentOSMetrics.radiusSmall))
             }
 
-            if columnTasks.isEmpty {
-                VStack(spacing: AgentOSMetrics.grid * 2) {
-                    Image(systemName: status.systemImage)
-                        .foregroundStyle(status.tint.opacity(0.7))
-                    Text("No \(status.displayName.lowercased()) tasks")
-                        .font(.caption)
-                        .foregroundStyle(AgentOSTheme.textTertiary)
-                }
-                .frame(maxWidth: .infinity, minHeight: 144)
-                .accessibilityElement(children: .combine)
-            } else {
-                ForEach(columnTasks) { task in
-                    Button {
-                        selectedTaskID = task.id
-                    } label: {
-                        TaskCardView(task: task, isSelected: selectedTaskID == task.id)
+            ScrollView(.vertical) {
+                if columnTasks.isEmpty {
+                    VStack(spacing: AgentOSMetrics.grid * 2) {
+                        Image(systemName: status.systemImage)
+                            .foregroundStyle(status.tint.opacity(0.7))
+                        Text("No \(status.displayName.lowercased()) tasks")
+                            .font(.caption)
+                            .foregroundStyle(AgentOSTheme.textTertiary)
                     }
-                    .buttonStyle(.plain)
+                    .frame(maxWidth: .infinity, minHeight: 144)
+                    .accessibilityElement(children: .combine)
+                } else {
+                    LazyVStack(spacing: AgentOSMetrics.itemSpacing) {
+                        ForEach(columnTasks) { task in
+                            Button {
+                                selectedTaskID = task.id
+                            } label: {
+                                TaskCardView(task: task, isSelected: selectedTaskID == task.id)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
             }
-            Spacer(minLength: 0)
+            .scrollIndicators(.visible)
         }
         .padding(AgentOSMetrics.itemSpacing)
-        .frame(width: 320, alignment: .top)
+        .frame(width: 320)
+        .frame(maxHeight: .infinity, alignment: .top)
         .agentOSPanel(
             cornerRadius: AgentOSMetrics.radiusExtraLarge,
             background: AgentOSTheme.background

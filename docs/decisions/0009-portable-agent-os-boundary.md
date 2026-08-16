@@ -2,7 +2,7 @@
 
 Date: 2026-08-15
 
-Status: accepted
+Status: accepted; amended by decisions 0013 and 0014
 
 ## Context
 
@@ -19,13 +19,14 @@ duplicate plugin sources.
   `AGENT_OS_SOURCE_ROOT` and `AGENT_OS_HOME`.
 - Default new private homes to `~/.agent-os`; support a preview-first active-home
   pointer for app/plugin processes.
-- Keep real registry, outcomes, reports, runtime, source pointers, and project
-  checkouts outside the release candidate.
-- Consolidate the Agent OS macOS app and both Codex plugins into the monorepo while
-  preserving previous standalone directories as local recoverable backups.
-- Keep the first remote private and require path, provider-identity, client
-  context, credential, nested-repository, clean-home, app, and plugin gates
-  before commit or push.
+- Keep real registry, outcomes, reports, runtime, and source pointers outside
+  the release candidate. Registered project repositories remain in their
+  existing user-selected folders.
+- Consolidate the Agent OS macOS app and the unified Codex plugin into the
+  monorepo. Context Loop is a skill inside that plugin; obsolete standalone
+  snapshots are migration history, not product packages.
+- Require path, provider-identity, client-context, credential,
+  nested-repository, clean-home, app, and plugin gates before publication.
 - License the product under MIT.
 
 ## Consequences
@@ -34,11 +35,12 @@ duplicate plugin sources.
 - Initialization and activation must be preview-first and preserve existing
   state.
 - Separating a legacy source-plus-home installation must copy only private
-  state and wrapper metadata, validate before activation, leave project
+  state and obsolete project metadata, validate before activation, leave project
   repositories in place, and preserve the previous home for rollback.
 - Plugin and app code may read source and home independently but may not escape
   either configured root.
 - The source repository cannot be treated as a backup for personal tasks or
   project repositories.
-- Public visibility requires a second-user installation pilot after the private
-  release is proven.
+- The initial privacy and publication gates have been satisfied. A second-user
+  and second-Mac pilot remains a product-validation goal, not a visibility
+  blocker for the already public source and releases.

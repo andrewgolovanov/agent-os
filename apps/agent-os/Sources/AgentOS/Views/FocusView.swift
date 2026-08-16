@@ -4,6 +4,7 @@ struct FocusView: View {
     let projects: [AgentOSProject]
     let tasks: [AgentOSTask]
     @Binding var selectedTaskID: String?
+    @State private var hoveredTaskID: String?
 
     var body: some View {
         List(selection: $selectedTaskID) {
@@ -27,7 +28,25 @@ struct FocusView: View {
                     Spacer()
                     StatusBadge(status: task.status)
                 }
+                .padding(.horizontal, 10)
                 .padding(.vertical, 7)
+                .background(
+                    hoveredTaskID == task.id ? AgentOSTheme.surfaceHover : Color.clear,
+                    in: RoundedRectangle(
+                        cornerRadius: AgentOSMetrics.radiusMedium,
+                        style: .continuous
+                    )
+                )
+                .contentShape(Rectangle())
+                .onHover { isHovering in
+                    if isHovering {
+                        hoveredTaskID = task.id
+                    } else if hoveredTaskID == task.id {
+                        hoveredTaskID = nil
+                    }
+                }
+                .pointingHandCursor()
+                .animation(.easeOut(duration: 0.12), value: hoveredTaskID == task.id)
                 .tag(task.id)
                 .listRowBackground(AgentOSTheme.canvas)
                 .listRowSeparatorTint(AgentOSTheme.border)

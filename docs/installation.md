@@ -10,8 +10,8 @@ manual repository checkout.
 - macOS or Linux with Ruby for the packaged control plane;
 - Node.js for the Codex MCP server;
 - Codex desktop or CLI with plugin support;
-- Apple Silicon (`arm64`) with macOS 14 or newer for the first downloadable
-  native app release; an Intel or universal binary is not included yet;
+- Apple Silicon (`arm64`) with macOS 14 or newer for the current downloadable
+  native app; an Intel or universal binary is not included yet;
 - Swift 6.2 only when building the native app from source.
 
 ## 1. Install the Codex plugin
@@ -20,11 +20,11 @@ Add the public Git marketplace at the release tag you want to install, then add
 the Agent OS plugin from that marketplace:
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.2.1
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.3.0
 codex plugin add agent-os@agent-os
 ```
 
-For a later release, replace `v0.2.1` with the latest published `vN.N.N` tag
+For a later release, replace `v0.3.0` with the latest published `vN.N.N` tag
 shown on the [Agent OS Releases page](https://github.com/andrewgolovanov/agent-os/releases).
 Codex downloads and manages the plugin snapshot; the user does not clone or
 maintain the Agent OS repository.
@@ -66,11 +66,12 @@ Onboard this repository into Agent OS safely.
 ```
 
 The onboarding skill resolves the Git root, remote, branch, and current HEAD,
-previews the exact private registry and wrapper changes, and waits for approval
-before applying them. It never moves, clones, renames, commits, pushes, or
-writes files inside the project repository. Once registered, Agent OS and Codex
-can open that project through its absolute path; no common `projects/` parent
-folder is required.
+previews the exact private registry change, and waits for approval before
+applying it. It creates no folder under `~/.agent-os/projects` and writes no
+Agent OS metadata inside the project repository. Onboarding never moves,
+clones, renames, commits, or pushes the repository. Once registered, Agent OS
+and Codex can open that project through its absolute path; no common
+`projects/` parent folder is required.
 
 ### Move an already registered project
 
@@ -83,9 +84,8 @@ Relink this registered Agent OS project to its current folder safely.
 ```
 
 The plugin checks the new Git root and origin against the registered identity,
-previews the private registry and wrapper metadata changes, and updates only
-those paths after approval. Git history, remotes, branches, and project files
-remain untouched.
+previews the private registry change, and updates only those paths after
+approval. Git history, remotes, branches, and project files remain untouched.
 
 ## 3. Install the macOS app
 
@@ -187,8 +187,12 @@ preview every copied and replaced path:
   --source /absolute/path/to/installed-or-packaged/runtime
 ```
 
-The migration copies `config/`, `work/`, `.runtime/`, and registered wrapper
-metadata. It never copies, moves, renames, or rewrites project repositories.
+The migration copies `config/`, `work/`, and `.runtime/` from the legacy home.
+If the old registry
+still references a legacy Agent OS-managed project folder, its contents are
+copied only to `AGENT_OS_HOME/.runtime/legacy-project-backups/` and the registry
+is upgraded to `root + repositories`. It never copies, moves, renames, or
+rewrites project repositories.
 It rejects symbolic links in copied private state, refuses an existing target,
 validates the staged registry and Task Board JSON, and switches the active-home
 pointer only after the staged home is complete. Apply the reviewed plan with
@@ -247,7 +251,7 @@ or an authenticated feed is intentionally designed.
 Pushing a `vN.N.N` tag runs `.github/workflows/release.yml`. The workflow runs
 the full Agent OS validation against a clean temporary private home, the
 publication audit, and the Swift tests. It then builds the ad-hoc app, asserts
-that the first-release binary is `arm64`, signs its Sparkle archive, verifies
+that the release executable is `arm64`, signs its Sparkle archive, verifies
 the signature, and publishes the zip, checksum, and appcast. It requires one
 non-Apple repository secret:
 
@@ -255,9 +259,10 @@ non-Apple repository secret:
 AGENT_OS_SPARKLE_PRIVATE_KEY
 ```
 
-The corresponding private key must also have an offline backup before the
-first release. Never commit it. Local release builds use the Keychain account
-`agent-os`; CI passes the same exported base64 seed through the secret.
+The corresponding private key must have an independently verified encrypted
+recovery copy before publishing with that key. Never commit it. The current key
+already has a verified recovery copy. Local release builds use the Keychain
+account `agent-os`; CI passes the same exported base64 seed through the secret.
 
 
 ## Verify

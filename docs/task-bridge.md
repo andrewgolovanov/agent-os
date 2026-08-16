@@ -1,13 +1,13 @@
 # Task Bridge
 
-Task Bridge автоматически связывает работу в registered Codex project с одной canonical Task Board карточкой. Он решает две отдельные проблемы: активность карточки начинается вместе с первым точным рабочим turn, а verified summary/next action сохраняются до завершения ответа агента.
+Task Bridge connects work in a registered project path to one canonical Task Board outcome. It starts outcome activity with the first exact working turn and persists a verified summary and next action before the response ends.
 
 ## Data flow
 
 ```text
-project Codex chat
+project Codex task
   -> UserPromptSubmit
-  -> project-time start for every registered project chat
+  -> project-time start for every registered project task
   -> registered cwd + exact task/source identity
   -> one Task Board membership
   -> activity-start
@@ -17,55 +17,55 @@ project Codex chat
   -> project-time stop and monthly rollup
 ```
 
-Canonical outcome остаётся только в `work/items/<task-id>/task.json`. В project repository не создаются копии задач, конфиги или runtime-файлы.
+The canonical outcome remains only in `AGENT_OS_HOME/work/items/<task-id>/task.json`. Agent OS creates no task copies, configuration, or runtime files in the product repository.
 
-Project-level time хранится отдельно в `work/reports/project-time/`: он включает и exact-linked, и пока непривязанные chats. Task Bridge state и lifecycle от этого отчёта не зависят.
+Project-level time is stored separately under `AGENT_OS_HOME/work/reports/project-time/`. It includes exact-linked and unlinked project tasks. Task Bridge state and lifecycle do not depend on this report.
 
-## Автоматическая корреляция
+## Automatic correlation
 
-Task Bridge разрешает project по самому длинному точному path из `config/projects.yaml`. Автоматический claim допустим только при одном exact match:
+Task Bridge resolves a project by the longest exact registered path in `AGENT_OS_HOME/config/projects.yaml`. Automatic claim is allowed only for one exact match:
 
-- Task Board ID прямо указан в prompt;
-- Slack permalink совпадает по canonical channel/root timestamp;
-- GitHub PR совпадает по owner/repository/number;
-- Figma URL совпадает точно или содержит тот же file key и `node-id`.
+- the prompt contains a Task Board ID;
+- a Slack permalink matches the canonical channel and root timestamp;
+- a GitHub PR matches owner, repository, and number;
+- a Figma URL matches exactly or contains the same file key and `node-id`.
 
-Title и похожий текст используются только для списка кандидатов. Semantic similarity никогда не прикрепляет Codex chat автоматически. При нуле или нескольких exact matches hook возвращает инструкции и кандидатов, но оставляет outcome неизменным.
+Titles and similar text only produce candidates. Semantic similarity never attaches a Codex task automatically. With zero or multiple exact matches, the hook returns instructions and candidates without changing the outcome.
 
-## Lifecycle и время
+## Lifecycle and time
 
-- Первый exact claim прикрепляет `session_id`, переводит outcome из `inbox`, `planned` или `review` в `active` и открывает exact `turn_id`.
-- Каждый следующий `UserPromptSubmit` в linked chat открывает новый turn; повторное событие идемпотентно.
-- `Stop` закрывает тот же turn и переводит только Codex membership в `idle`. Outcome остаётся `active`, `waiting` или `review` согласно checkpoint.
-- Exact `Stop` timestamp всегда имеет приоритет. Новый turn в том же session закрывает предыдущий незавершённый turn, а `idle_timeout_minutes` ограничивает его длительность; текущий default — 30 минут. Глобальный reconcile запускается только явно и не вмешивается в параллельный активный chat.
-- Считается время выполнения Codex turns, а не человеческое время между сообщениями.
-- `done` и `cancelled` никогда не выставляются автоматически. Их подтверждает пользователь через обычный Task Board flow.
+- The first exact claim attaches `session_id`, moves `inbox`, `planned`, or `review` to `active`, and opens the exact `turn_id`.
+- Each later `UserPromptSubmit` in a linked task opens a new turn; repeated events are idempotent.
+- `Stop` closes that turn and changes only Codex membership to `idle`. The checkpoint controls whether the outcome remains `active`, `waiting`, or `review`.
+- An exact `Stop` timestamp wins. A new turn in the same session closes the previous unfinished turn, and `idle_timeout_minutes` caps it; the default is 30 minutes. Global reconcile runs only when explicitly requested and does not interfere with a parallel active task.
+- The system counts Codex execution, not human time between messages.
+- `done` and `cancelled` are never automatic; the user confirms them through the normal Task Board flow.
 
-После material file mutation (`apply_patch`, `Edit`, `Write`) `Stop` требует checkpoint с verified `summary`, одним concrete `next_action` и status `active`, `waiting` или `review`. Это не даёт реализации исчезнуть из доски только потому, что завершился один ответ.
+After a material file mutation such as `apply_patch`, `Edit`, or `Write`, `Stop` requires a checkpoint with a verified `summary`, one concrete `next_action`, and `active`, `waiting`, or `review`. This prevents work from disappearing from the Board merely because one response ended.
 
-## Runtime state и privacy
+## Runtime state and privacy
 
-Exact hook state хранится в ignored `.runtime/task-bridge/`:
+Exact hook state lives in ignored private runtime storage:
 
 ```text
-.runtime/task-bridge/sessions/<session-id>/turns/<turn-id>.json
+AGENT_OS_HOME/.runtime/task-bridge/sessions/<session-id>/turns/<turn-id>.json
 ```
 
-Runtime содержит IDs, timestamps, candidate IDs, claim reason, material/checkpoint flags и SHA-256 prompt. Raw prompt, source content и tool payload не сохраняются. Durable summary и task state меняются только через Task Board API.
+Runtime state stores IDs, timestamps, candidate IDs, claim reason, material and checkpoint flags, and a SHA-256 prompt digest. It never stores raw prompts, source content, or tool payloads. Durable summary and task state change only through the Task Board API.
 
 ## Policy
 
-`config/task-bridge.yaml` задаёт defaults и редкие project overrides:
+Private `AGENT_OS_HOME/config/task-bridge.yaml` defines defaults and rare project overrides:
 
-- `enabled` — участвует ли registered project в bridge;
-- `auto_claim` — `exact_sources` или `disabled`;
-- `require_checkpoint` — блокировать ли Stop после material mutation без checkpoint;
-- `max_candidates` — размер безопасного candidate list;
-- `idle_timeout_minutes` — fallback cap для orphaned turns.
+- `enabled`: whether the registered project participates;
+- `auto_claim`: `exact_sources` or `disabled`;
+- `require_checkpoint`: whether material mutation blocks `Stop` without a checkpoint;
+- `max_candidates`: safe candidate-list size;
+- `idle_timeout_minutes`: fallback cap for orphaned turns.
 
-## Ручные команды
+## Manual commands
 
-Обычно команды вызывает сам агент из hook context:
+The agent normally invokes these commands from hook context:
 
 ```bash
 tools/task-bridge claim TASK_ID \
@@ -83,19 +83,14 @@ tools/task-bridge context --session-id SESSION_ID --turn-id TURN_ID
 tools/task-bridge reconcile --session-id SESSION_ID
 ```
 
-Если exact outcome ещё не существует, агент сначала создаёт его через `tools/task-board`, затем выполняет `claim`. Старые turns импортируются только по exact Codex timestamps; guessed time запрещён.
+If the exact outcome does not exist, create it through `tools/task-board` before `claim`. Import old turns only from exact Codex timestamps; guessed time is prohibited.
 
-Legacy chat, в котором последовательно выполнялись разные outcomes, нельзя автоматически переиспользовать как durable membership. К нему прикрепляется только доказанная historical activity, membership получает `archived`, а следующая работа начинается в fresh project chat. Иначе один старый thread ID навсегда смешивал бы время нескольких карточек.
+A legacy task that sequentially handled several outcomes cannot become durable membership automatically. Attach only proven historical activity, mark its membership `archived`, and continue future work in a fresh project task. Otherwise one old thread ID would permanently mix time from unrelated outcomes.
 
 ## Codex setup
 
-Agent OS plugin поставляет один стандартный hook bundle для `UserPromptSubmit`,
-material `PostToolUse` и `Stop`. Installer не редактирует отдельный user-level
-`hooks.json`, поэтому не возникает второй расходящейся копии команд. После
-установки или обновления bundle нужно открыть и доверить через `/hooks`, затем
-начать новый project chat: уже запущенный task не получает новую hook
-configuration задним числом. `agent-os doctor --integrations` проверяет файлы
-bundle и historical runtime evidence, но не выдаёт их за доказательство trust
-или pickup в текущем task.
+The unified Agent OS plugin supplies the standard hook bundle for `UserPromptSubmit`, material `PostToolUse`, and `Stop`. The installer does not edit a separate user-level `hooks.json`, avoiding a divergent command copy. After installing or updating the bundle, inspect and trust it through `/hooks`, then start a new project task because an already-open task cannot receive hook configuration retroactively.
 
-`AGENTS.override.md` для Task Bridge не используется: такой файл заменил бы, а не дополнил project `AGENTS.md`. Project-specific task context передаётся динамически через `additionalContext` hook response.
+`agent-os doctor --integrations` verifies bundle files and historical runtime evidence. It cannot prove trust or hook pickup in the current task.
+
+Task Bridge does not use `AGENTS.override.md` because that file would replace rather than extend a project `AGENTS.md`. The hook supplies project-specific task context dynamically through `additionalContext`.

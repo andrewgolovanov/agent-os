@@ -7,15 +7,34 @@ registered project directory.
 
 The app intentionally owns no task database. Durable state remains in:
 
-- `config/projects.yaml` for project identity and repository paths;
-- `work/items/*/task.json` through `tools/task-board` for outcomes;
+- `AGENT_OS_HOME/config/projects.yaml` for project identity and repository paths;
+- private `AGENT_OS_HOME/work/items/*/task.json` through `tools/task-board` for outcomes;
 - Codex App Server and `codex://threads/<id>` for execution state and handoff.
 
 Slack monitor notifications use `agent-os://board` to launch the app directly
-on the shared Board. `agent-os://focus` opens the Focus view. Both links refresh
-the canonical private Task Board; they do not import or duplicate task data.
+on the shared Board. `agent-os://focus` opens the Focus view, while
+`agent-os://done` opens completed outcomes. The older `agent-os://history` and
+`agent-os://time` links remain compatibility aliases for Done. Every
+destination refreshes canonical private state; none imports or duplicates task
+data.
+
+Board keeps unfinished outcomes in independently scrollable lifecycle columns.
+Done is the operational completion journal: it retains `done` and `cancelled`
+outcomes with their complete inspector, sources, pull-request state, linked
+Codex activity, and completion follow-up state. Its project, completion-period,
+lifecycle, and follow-up filters drive one exact-linked time summary for the
+visible completed outcomes. A completed outcome with a Slack source starts as
+`Pending`; the user can copy a prepared completion update and explicitly mark it
+`Sent` or `Not required`. Agent OS does not send external messages automatically
+and does not mix broader project-wide time into this task-owned total.
 
 `Open new Codex task` creates a named task in the registered project, records its exact membership, copies a prepared continuation prompt, and opens that task in Codex. The app deliberately does not start a background turn: paste and send the prepared prompt when you are ready to begin work.
+
+Task Board filesystem notifications are delivered on the main actor before the
+SwiftUI store is refreshed. The LaunchServices completion used for Codex
+handoff is a nonisolated Sendable bridge that only resumes the awaiting
+continuation. These queue boundaries keep file refreshes and Codex opens safe
+under Swift 6 strict concurrency.
 
 ## Install
 
@@ -104,7 +123,7 @@ Gatekeeper boundary still applies.
 ./script/package_release.sh
 ```
 
-The first downloadable release targets Apple Silicon (`arm64`) on macOS 14 or
+The current downloadable release targets Apple Silicon (`arm64`) on macOS 14 or
 newer. It does not include an Intel or universal binary.
 
 This produces an ad-hoc signed zip, SHA-256 checksum, and signed-archive Sparkle

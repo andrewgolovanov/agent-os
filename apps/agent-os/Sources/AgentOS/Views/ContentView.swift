@@ -13,6 +13,8 @@ struct ContentView: View {
         let scoped: [AgentOSTask]
         if scope == "focus" {
             scoped = store.attentionTasks
+        } else if scope == "done" {
+            scoped = store.completedTasks
         } else if let project = scopeProject {
             scoped = store.unfinishedTasks.filter { $0.projects.contains(project) }
         } else {
@@ -24,7 +26,10 @@ struct ContentView: View {
         return scoped.filter {
             $0.title.localizedCaseInsensitiveContains(query)
                 || $0.summary.localizedCaseInsensitiveContains(query)
+                || $0.goal.localizedCaseInsensitiveContains(query)
                 || $0.nextAction.localizedCaseInsensitiveContains(query)
+                || $0.projects.contains { $0.localizedCaseInsensitiveContains(query) }
+                || $0.sources.all.contains { $0.url.localizedCaseInsensitiveContains(query) }
         }
     }
 
@@ -83,6 +88,12 @@ struct ContentView: View {
                         onClose: closeInspector,
                         onStatusChange: { status in
                             Task { await store.updateStatus(taskID: selectedTask.id, status: status) }
+                        },
+                        onCompletionFollowUpChange: { status in
+                            Task { await store.updateCompletionFollowUp(taskID: selectedTask.id, status: status) }
+                        },
+                        onCopyCompletionUpdate: {
+                            store.copyCompletionUpdate(taskID: selectedTask.id)
                         },
                         onOpenNewCodex: {
                             Task { await store.openNewCodexTask(taskID: selectedTask.id) }
@@ -176,6 +187,10 @@ struct ContentView: View {
                 scope = "focus"
                 closeInspector()
                 Task { await store.refresh() }
+            case .done:
+                scope = "done"
+                closeInspector()
+                Task { await store.refresh() }
             case nil:
                 break
             }
@@ -198,7 +213,15 @@ struct ContentView: View {
                 selectedTaskID: taskSelection
             )
         } else {
-            BoardView(tasks: visibleTasks, selectedTaskID: taskSelection)
+            if scope == "done" {
+                DoneView(
+                    projects: store.projects,
+                    tasks: visibleTasks,
+                    selectedTaskID: taskSelection
+                )
+            } else {
+                BoardView(tasks: visibleTasks, selectedTaskID: taskSelection)
+            }
         }
     }
 

@@ -8,7 +8,7 @@ struct AgentOSCLIService: Sendable {
         key: key,
         displayName: value.fetch("display_name"),
         status: value.fetch("status"),
-        wrapper: value.fetch("wrapper"),
+        root: value.fetch("root"),
         repositories: value.fetch("repositories").map do |repository|
           {
             id: repository.fetch("id"),
@@ -25,9 +25,12 @@ struct AgentOSCLIService: Sendable {
 
     func loadSnapshot(configuration: AgentOSConfiguration) async throws -> AgentOSSnapshot {
         try validate(configuration)
-        async let projects = loadProjects(home: configuration.homeURL)
-        async let tasks = loadTasks(configuration: configuration)
-        return try await AgentOSSnapshot(projects: projects, tasks: tasks)
+        let projects = try await loadProjects(home: configuration.homeURL)
+        let tasks = try await loadTasks(configuration: configuration)
+        return AgentOSSnapshot(
+            projects: projects,
+            tasks: tasks
+        )
     }
 
     func createTask(
@@ -57,6 +60,18 @@ struct AgentOSCLIService: Sendable {
         _ = try await runTaskBoard(
             configuration: configuration,
             arguments: ["update", taskID, "--status", status.rawValue]
+        )
+    }
+
+    func updateCompletionFollowUp(
+        configuration: AgentOSConfiguration,
+        taskID: String,
+        status: AgentOSCompletionFollowUpStatus
+    ) async throws {
+        try validateTaskID(taskID)
+        _ = try await runTaskBoard(
+            configuration: configuration,
+            arguments: ["completion", taskID, "--follow-up-status", status.rawValue]
         )
     }
 

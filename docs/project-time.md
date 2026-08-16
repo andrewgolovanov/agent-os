@@ -1,10 +1,10 @@
-# Project time
+# Project Time
 
-Project Time отвечает на отдельный от Task Board вопрос: сколько активного Codex-времени было затрачено на проект во всех его тредах, независимо от того, была ли каждая сессия привязана к конкретной карточке.
+Project Time answers a different question from Task Board: how much active Codex execution time was spent across all tasks in a project, whether or not every task was linked to an outcome.
 
-## Источник и scope
+## Source and scope
 
-Canonical project paths находятся в `config/projects.yaml`. Для перенесённых репозиториев проект может дополнительно определить:
+Canonical project paths live in private `AGENT_OS_HOME/config/projects.yaml`. A moved repository may also define:
 
 ```yaml
 activity:
@@ -16,32 +16,32 @@ activity:
       reason: Why this thread is not client project work.
 ```
 
-- Current `wrapper` и repository paths включаются автоматически.
-- `historical_paths` нужны только для точных старых checkout paths после физического переноса.
-- `include_thread_ids` — узкое ручное включение доказанной project-сессии, запущенной из другого cwd.
-- `exclude_threads` удаляет ложную атрибуцию, например системное обслуживание, случайно начатое из project cwd.
+- Current project `root` and repository paths are included automatically.
+- `historical_paths` is only for exact previous checkout paths after a physical move.
+- `include_thread_ids` narrowly includes a proven project task that started from another working directory.
+- `exclude_threads` removes false attribution, such as system maintenance accidentally started from a project path.
 
-## Что измеряется
+## Measurement
 
-Единица учёта — exact Codex turn:
+The accounting unit is one exact Codex turn:
 
 ```text
 task_started / hook start
-  -> активное выполнение Codex
+  -> active Codex execution
 task_complete | turn_aborted | hook stop
 ```
 
-Учитываются только завершённые интервалы. Паузы между сообщениями, Slack, встречи, ручная browser QA и любая работа вне Codex не входят. Поэтому отчёт является воспроизводимым минимумом Codex-времени, а не автоматическим доказательством всех billable human hours.
+Only completed intervals count. Time between messages, Slack, meetings, manual browser QA, and work outside Codex are excluded. The report is therefore a reproducible minimum of Codex execution time, not proof of every billable human hour.
 
-Turn, пересекающий границу месяца, делится между месяцами в `agent_os.timezone`. Exact `thread_id + turn_id` предотвращает двойной подсчёт при повторяющихся session events, compaction или повторном refresh.
+A turn that crosses a month boundary is split between months in `agent_os.timezone`. Exact `thread_id + turn_id` prevents double counting after repeated session events, compaction, or refresh.
 
-Месячный `thread_count` означает число тредов с активным временем в этом месяце. Один долгий тред может присутствовать в двух месяцах, тогда как общий `thread_count` дедуплицирован по thread ID.
+Monthly `thread_count` is the number of tasks with active time in that month. One long task may appear in two months, while the overall count is deduplicated by thread ID.
 
-## Файлы и команды
+## Files and commands
 
 ```text
-work/reports/project-time/<project>.json  canonical generated ledger
-work/reports/project-time/<project>.md    human-readable monthly report
+AGENT_OS_HOME/work/reports/project-time/<project>.json  canonical generated ledger
+AGENT_OS_HOME/work/reports/project-time/<project>.md    human-readable monthly report
 ```
 
 ```bash
@@ -51,13 +51,15 @@ tools/project-time show --project example-site --json
 tools/project-time validate --project example-site
 ```
 
-`refresh` заново читает локальные Codex session histories, применяет configured scope/exclusions и атомарно пересобирает оба файла. User-level hook обновляет тот же ledger на каждом новом turn и Stop даже тогда, когда chat ещё не имеет exact Task Board outcome.
+`refresh` rereads local Codex session histories, applies configured scope and exclusions, and atomically rebuilds both files. The installed Agent OS Task Bridge hook updates the same ledger at each new turn and `Stop`, even before a task has an exact Task Board outcome.
 
-## Связь с Task Board
+The generated ledger remains a private CLI report for all project tasks. The native app intentionally has no separate Time page: Done shows outcome-level activity attached to visible completed outcomes. The app does not recalculate session history, create another time database, or combine overlapping project-wide and task-linked totals.
 
-- Task Board time отвечает: сколько Codex-времени связано с конкретным outcome.
-- Project Time отвечает: сколько Codex-времени прошло во всех project chats.
-- Эти суммы нельзя складывать: task turns уже входят в project total.
-- Project report не создаёт task, не меняет lifecycle карточек и не пишет в product repository.
+## Relationship to Task Board
 
-Для внешнего отчёта используйте помесячную таблицу из generated Markdown и отдельно добавляйте подтверждённое ручное время, если оно учитывается договором.
+- Task Board time answers how much Codex execution is linked to one outcome.
+- Project Time answers how much Codex execution occurred across all project tasks.
+- These totals must not be added because linked turns already appear in the project total.
+- A project report does not create outcomes, change lifecycle, or write to a product repository.
+
+For an external report, use the monthly table from generated Markdown and add separately verified manual time only when required by the engagement.

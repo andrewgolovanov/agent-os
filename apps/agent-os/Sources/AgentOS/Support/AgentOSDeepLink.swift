@@ -3,6 +3,7 @@ import Foundation
 enum AgentOSDeepLinkDestination: Equatable {
     case board
     case focus
+    case done
 }
 
 enum AgentOSDeepLink {
@@ -14,6 +15,7 @@ enum AgentOSDeepLink {
         switch url.host?.lowercased() {
         case "board": return .board
         case "focus": return .focus
+        case "done", "history", "time": return .done
         default: return nil
         }
     }

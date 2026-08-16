@@ -6,7 +6,7 @@ Status: accepted
 
 ## Context
 
-Agent OS can provide a useful read-only Slack monitor and automatic Task Bridge continuity, but a shareable installation cannot assume one developer's Slack account, schedule, user-level hook file, paths, or runtime state. Codex Scheduled, connected integrations, local private configuration, and plugin hooks are separate trust domains.
+Agent OS can provide a useful read-only Slack monitor and automatic Task Bridge continuity, but a shareable installation cannot assume one developer's Slack account, schedule, hook approval state, paths, or runtime state. Codex Scheduled, connected integrations, local private configuration, and plugin hooks are separate trust domains.
 
 ## Decision
 

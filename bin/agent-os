@@ -39,6 +39,7 @@ module AgentOS
       when "activate" then activate_home
       when "install-plugin" then install_plugin
       when "onboard-project" then onboard_project
+      when "upgrade-project-registry" then upgrade_project_registry
       when "relink-project" then relink_project
       when "configure-slack-monitor" then configure_slack_monitor
       when "update" then update
@@ -342,7 +343,7 @@ module AgentOS
         parser.on("--key KEY", "Lowercase kebab-case project key") { |value| options[:key] = value }
         parser.on("--display-name NAME", "Human-readable project name") { |value| options[:display_name] = value }
         parser.on("--json", "Print machine-readable preview or result") { options[:json] = true }
-        parser.on("--apply", "Create the reviewed wrapper and registry entry") { options[:apply] = true }
+        parser.on("--apply", "Create the reviewed registry-only project entry") { options[:apply] = true }
         parser.parse!(@arguments)
       end
       reject_extra_arguments!
@@ -362,12 +363,42 @@ module AgentOS
         project = outcome.fetch(:project)
         repository = outcome.fetch(:repository)
         @out.puts options.fetch(:apply) ? "Agent OS project onboarding result" : "Agent OS project onboarding plan"
-        @out.puts "  #{outcome.fetch(:action).upcase.ljust(8)} #{project.fetch(:key)} (#{project.fetch(:layout)})"
+        @out.puts "  #{outcome.fetch(:action).upcase.ljust(8)} #{project.fetch(:key)}"
+        @out.puts "  root       #{project.fetch(:root)}"
         @out.puts "  repository #{repository.fetch(:path)}"
         @out.puts "  HEAD #{repository.fetch(:head)} on #{repository.fetch(:checked_out_branch) || "detached HEAD"}"
         @out.puts "  remote #{repository.fetch(:remote) || "unknown"}"
         outcome.fetch(:files).each { |path| @out.puts "  file #{path}" }
         @out.puts "Preview only. Re-run with --apply after reviewing the exact topology." unless options.fetch(:apply)
+      end
+      0
+    end
+
+    def upgrade_project_registry
+      options = common_options(apply: false, json: false)
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os upgrade-project-registry [--home PATH] [--source PATH] [--json] [--apply]"
+        add_common_options(parser, options)
+        parser.on("--json", "Print the machine-readable preview or result") { options[:json] = true }
+        parser.on("--apply", "Replace legacy layout fields and preserve managed project folders in a private backup") { options[:apply] = true }
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+
+      source = validated_root(options.fetch(:source), "source")
+      home = validated_root(options.fetch(:home), "home")
+      outcome = AgentOS::ProjectRegistry.new(source: source, home: home).upgrade_registry(apply: options.fetch(:apply))
+      if options.fetch(:json)
+        @out.puts JSON.pretty_generate(outcome)
+      else
+        @out.puts options.fetch(:apply) ? "Agent OS project registry result" : "Agent OS project registry plan"
+        outcome.fetch(:projects).each do |project|
+          @out.puts "  #{project.fetch(:key)}: #{project.fetch(:root)}"
+          @out.puts "  backup #{project.fetch(:backup)}" if project[:backup]
+        end
+        outcome.fetch(:files).each { |path| @out.puts "  file #{path}" }
+        @out.puts outcome.fetch(:reason)
+        @out.puts "Preview only. Re-run with --apply after reviewing the exact private migration." unless options.fetch(:apply)
       end
       0
     end
@@ -381,7 +412,7 @@ module AgentOS
         parser.on("--key KEY", "Existing lowercase kebab-case project key") { |value| options[:key] = value }
         parser.on("--repository-id ID", "Repository id for a multi-repository project") { |value| options[:repository_id] = value }
         parser.on("--json", "Print machine-readable preview or result") { options[:json] = true }
-        parser.on("--apply", "Replace only the reviewed registry and wrapper metadata paths") { options[:apply] = true }
+        parser.on("--apply", "Replace only the reviewed registry paths") { options[:apply] = true }
         parser.parse!(@arguments)
       end
       reject_extra_arguments!
@@ -402,7 +433,8 @@ module AgentOS
         project = outcome.fetch(:project)
         repository = outcome.fetch(:repository)
         @out.puts options.fetch(:apply) ? "Agent OS project relink result" : "Agent OS project relink plan"
-        @out.puts "  #{outcome.fetch(:action).upcase.ljust(8)} #{project.fetch(:key)} (#{project.fetch(:layout)})"
+        @out.puts "  #{outcome.fetch(:action).upcase.ljust(8)} #{project.fetch(:key)}"
+        @out.puts "  root       #{project.fetch(:root)}"
         @out.puts "  previous   #{outcome.fetch(:previous_path)}"
         @out.puts "  repository #{repository.fetch(:path)}"
         @out.puts "  HEAD #{repository.fetch(:head)} on #{repository.fetch(:checked_out_branch) || "detached HEAD"}"
@@ -621,7 +653,7 @@ module AgentOS
     end
 
     def init_plan(home, templates)
-      paths = [home, File.join(home, "config"), File.join(home, "projects"), File.join(home, ".runtime")]
+      paths = [home, File.join(home, "config"), File.join(home, ".runtime")]
       planned = paths.map { |path| { action: File.exist?(path) ? :preserve : :create, path: path } }
       templates.each_key do |name|
         path = File.join(home, "config", name)
@@ -636,7 +668,7 @@ module AgentOS
 
     def apply_init(home, templates, source)
       home_existed = File.exist?(home)
-      FileUtils.mkdir_p([home, File.join(home, "config"), File.join(home, "projects"), File.join(home, ".runtime")])
+      FileUtils.mkdir_p([home, File.join(home, "config"), File.join(home, ".runtime")])
       File.chmod(0o700, home) unless home_existed
 
       templates.each do |name, template|
@@ -828,6 +860,7 @@ module AgentOS
           activate   Preview or select the home used by app and plugin processes
           install-plugin  Preview or install the Agent OS Codex plugin
           onboard-project  Preview or register an existing Git repository
+          upgrade-project-registry  Preview or upgrade obsolete project registry metadata
           relink-project  Preview or update the path of an already registered repository
           configure-slack-monitor  Preview or configure the optional read-only Slack monitor
           update     Check release tags; optionally fast-forward core and refresh plugin

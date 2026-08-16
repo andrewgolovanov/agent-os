@@ -35,18 +35,12 @@ final class AgentOSStore {
         tasks.filter { [.active, .waiting, .review].contains($0.status) }
     }
 
+    var completedTasks: [AgentOSTask] {
+        tasks.filter { !$0.status.isUnfinished }
+    }
+
     func bootstrap() async {
-        if watcher == nil {
-            do {
-                watcher = try AgentOSFileWatcher(
-                    directory: configuration.homeURL.appendingPathComponent("work", isDirectory: true)
-                ) { [weak self] in
-                    Task { await self?.refresh() }
-                }
-            } catch {
-                errorMessage = "Live refresh unavailable: \(error.localizedDescription)"
-            }
-        }
+        installWatchersIfAvailable()
         await refresh()
         let packagedRuntime = FileManager.default.fileExists(
             atPath: configuration.sourceURL.appendingPathComponent(".agent-os-runtime.json").path
@@ -65,10 +59,25 @@ final class AgentOSStore {
             let snapshot = try await agentOSService.loadSnapshot(configuration: configuration)
             projects = snapshot.projects.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
             tasks = snapshot.tasks.sorted { $0.updatedAt > $1.updatedAt }
+            installWatchersIfAvailable()
             lastRefreshedAt = Date()
             errorMessage = nil
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func installWatchersIfAvailable() {
+        if watcher == nil {
+            do {
+                watcher = try AgentOSFileWatcher(
+                    directory: configuration.homeURL.appendingPathComponent("work", isDirectory: true)
+                ) { [weak self] in
+                    Task { await self?.refresh() }
+                }
+            } catch {
+                errorMessage = "Live refresh unavailable: \(error.localizedDescription)"
+            }
         }
     }
 
@@ -109,6 +118,49 @@ final class AgentOSStore {
             await refresh()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    func updateCompletionFollowUp(taskID: String, status: AgentOSCompletionFollowUpStatus) async {
+        busyTaskID = taskID
+        defer { busyTaskID = nil }
+        do {
+            try await agentOSService.updateCompletionFollowUp(
+                configuration: configuration,
+                taskID: taskID,
+                status: status
+            )
+            await refresh()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func copyCompletionUpdate(taskID: String) {
+        guard let task = tasks.first(where: { $0.id == taskID }) else { return }
+
+        let pullRequests = task.sources.pullRequestItems.map { item -> String in
+            let metadata = sourceMetadata[item.id] ?? AgentOSSourcePresentation.localMetadata(for: item)
+            let status = metadata.status.map { " — \($0)" } ?? ""
+            return "- \(metadata.title)\(status): \(item.link.url)"
+        }
+        let project = task.projects.isEmpty ? "Unassigned" : task.projects.joined(separator: ", ")
+        let pullRequestSection = pullRequests.isEmpty
+            ? ""
+            : "\n\nPull requests:\n\(pullRequests.joined(separator: "\n"))"
+        let update = """
+        ✅ \(task.title)
+
+        Project: \(project)
+
+        \(task.summary)\(pullRequestSection)
+        """
+
+        do {
+            try CodexHandoffService.copyPrompt(update)
+            noticeMessage = "Completion update copied. Send it in the relevant Slack thread, then mark follow-up as Sent."
+        } catch {
+            errorMessage = "Could not copy completion update: \(error.localizedDescription)"
         }
     }
 

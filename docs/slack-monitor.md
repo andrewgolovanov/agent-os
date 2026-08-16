@@ -23,13 +23,13 @@ private home:
   --apply
 ```
 
-The command changes only private `config/monitors.yaml`; it neither connects
+The command changes only private `AGENT_OS_HOME/config/monitors.yaml`; it neither connects
 Slack nor creates a Codex Scheduled task. The complete sequence, canonical
 prompt, and recovery procedure are in [optional integrations](optional-integrations.md).
 
-1. Find `agent-os-slack-monitor` in private `config/monitors.yaml`.
+1. Find `agent-os-slack-monitor` in private `AGENT_OS_HOME/config/monitors.yaml`.
 2. Resolve the current Slack user profile again on every run and use its exact user ID for mention search.
-3. Resolve project attribution through `config/projects.yaml`; never guess channel IDs or duplicate them in the Scheduled prompt.
+3. Resolve project attribution through `AGENT_OS_HOME/config/projects.yaml`; never guess channel IDs or duplicate them in the Scheduled prompt.
 4. Use `tools/task-board` for outcome state and `tools/slack-state` for the runtime cursor, seen ledger, and watched roots.
 
 If the config, registry, or connected Slack integration is unavailable, record
@@ -54,7 +54,7 @@ request, deploy, or manage a user-owned Codex task.
 1. Read the current Slack user profile. This is both the availability check and the source of the exact user ID and timezone.
 2. Check the bounded set of open outcomes and `routing_pending` entries.
 3. Read active exact-root watches before general search because Slack search does not guarantee that every reply is returned.
-4. Load the last successful cursor from `.runtime/dispatcher/slack-monitor.json` and apply the configured overlap. If the cursor is `null`, read only one configured interval plus overlap; do not backfill old history.
+4. Load the last successful cursor from `AGENT_OS_HOME/.runtime/dispatcher/slack-monitor.json` and apply the configured overlap. If the cursor is `null`, read only one configured interval plus overlap; do not backfill old history.
 5. Search for exact `<@USER_ID>` mentions in all accessible public and private channels within the bounded window.
 6. Search incoming direct messages and group direct messages separately. Deduplicate conversations and expand only candidates with a new unresolved ask; acknowledgements and FYI messages do not become outcomes.
 7. For candidate roots and replies, read only enough thread or channel context to determine whether action remains. Registered project channels are attribution evidence, not permission to scan ambient traffic.

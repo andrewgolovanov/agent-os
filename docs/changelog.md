@@ -2,6 +2,52 @@
 
 ## 2026-08-16
 
+- Added semantic hover and pointer feedback to selectable Focus rows, matching
+  the existing Board interaction language without turning the compact list into
+  a second card grid.
+- Removed the obsolete source-local `work/README.md` and its structural
+  validation dependency. Agent instructions now route durable work through the
+  canonical Task Board documentation and private `AGENT_OS_HOME/work` outcome
+  records instead of implying that mutable task state belongs in the source
+  checkout.
+- Standardized repository README files, product documentation, agent
+  instructions, examples, and decision records on English. Current documents
+  now qualify every private state path with `AGENT_OS_HOME`, while historical
+  architecture remains only in explicitly superseded decision records. The
+  repository validator rejects Cyrillic text in maintained Markdown to prevent
+  accidental language drift.
+- Replaced the two-layout project model with one registry-only topology.
+  Onboarding records `root + repositories` for projects in any local folder and
+  never creates `AGENT_OS_HOME/projects`, project wrappers, or metadata inside
+  product repositories.
+- Added a preview-first, one-way MCP/CLI registry upgrade for obsolete
+  `layout`/`wrapper` entries. Any old managed folder is retained in a private
+  recovery backup; repository files and Git state remain unchanged.
+- Removed project-wrapper templates and the public path for creating or
+  switching back to wrapper layout.
+- Fixed two recurrent Swift 6 executor crashes in the native app. Task Board
+  filesystem events now enter actor-isolated refresh logic from the main queue,
+  while the LaunchServices Codex-open completion uses a nonisolated Sendable
+  continuation bridge. Background-queue regression tests cover both paths, and
+  live Task Board mutation no longer terminates the running app.
+- Replaced the textless capsule status badges in Done rows with
+  fixed 24-point circular markers, keeping the existing semantic colors and SF
+  Symbols without the stretched empty horizontal padding.
+- Added a native Done workflow for durable completed and cancelled outcomes,
+  including project/completion-period/lifecycle/follow-up filters, exact-linked
+  time and pending-follow-up summaries, and the existing detail inspector with
+  source, pull-request, Codex, and exact-linked time context.
+  Slack-backed done outcomes now carry separate pending/sent/not-required
+  completion follow-up state and a copyable completion update without automatic
+  external messaging.
+- Kept broader generated Project Time reporting in the CLI/private ledger while
+  consolidating task-owned time into Done. The app has no separate Time page and
+  never adds overlapping project-wide and exact-linked measurements.
+- Made each Board column independently vertically scrollable inside the
+  horizontal workflow canvas so lower cards remain reachable while column
+  headers stay visible. Added the tested `agent-os://done` destination, retained
+  `agent-os://history` and `agent-os://time` as Done compatibility aliases, and
+  added completion decoding and completion-period coverage.
 - Replaced Slack monitor links to the generated private `BOARD.md` file with a
   native `agent-os://board` destination, added tested Board/Focus deep-link
   handling to both development and release app bundles, and rewrote the
@@ -13,7 +59,7 @@
 
 - Added preview-first migration from a legacy source-plus-home installation to
   a separate private `~/.agent-os`: config, Task Board, runtime evidence, and
-  wrapper metadata are staged and validated without copying project
+  obsolete project metadata are staged and validated without copying project
   repositories; the previous home remains intact for rollback.
 - Added an explicit `activate --replace` gate so an existing valid active-home
   pointer can be changed only after a visible preview and deliberate apply.
@@ -21,7 +67,7 @@
   from a selected development checkout to a chosen packaged runtime while
   preserving the existing automatic-bootstrap safety boundary.
 - Added identity-checked MCP/CLI project relinking after a user moves a
-  registered repository; only private registry and wrapper metadata change.
+  registered repository; only private registry metadata changes.
 - Migrated the verified development installation to a separate private home,
   kept source repositories in independent user-selected folders, and removed
   the old assumption that project code belongs under the Agent OS checkout.
@@ -65,7 +111,7 @@
   initialize the shared private home on first use.
 - Added preview-first MCP and CLI onboarding for an existing Git repository in
   any folder, preserving its path, Git state, remotes, and files while writing
-  only private Agent OS registry and wrapper metadata.
+  only private Agent OS registry metadata.
 - Added runtime source/package hashes, executable-mode checks, isolated
   clean-home bootstrap coverage, app-bundle packaging checks, and documented
   the new app-plus-plugin installation and update boundary.

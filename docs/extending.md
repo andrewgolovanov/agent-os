@@ -1,98 +1,87 @@
-# Как расширять Agent OS
+# Extending Agent OS
 
-## Принцип
+## Principle
 
-Расширение начинается с наблюдаемой боли, а не с красивой симметрии каталогов. Новый слой должен уменьшать повторную работу или риск и иметь понятного владельца данных.
+An extension starts with observed pain, not directory symmetry. A new layer must reduce repeated work or risk and must have one clear data owner.
 
-## Как выбрать механизм
+## Choose the smallest mechanism
 
-| Сигнал | Добавить |
+| Signal | Add |
 | --- | --- |
-| Нужна одна постоянная норма | правило в owning doc или `AGENTS.md` |
-| Правило относится только к одному проекту | wrapper `AGENTS.md` или существующий direct repository `AGENTS.md` |
-| Один workflow повторился минимум два раза | focused skill |
-| Одни и те же точные команды переписываются или операция хрупкая | validated script/tool |
-| Нужен компактный current handoff между чатами | task snapshot в `work/` |
-| Нужно искать/связывать десятки задач | отдельный structured Task Board после пилота |
-| Внешнее событие регулярно запускает одинаковую обработку | automation после определения authority, retries и idempotency |
+| One durable rule is needed | a rule in the owning document or `AGENTS.md` |
+| The rule applies to one project | the registered repository `AGENTS.md` |
+| One workflow has repeated at least twice | a focused skill |
+| Exact commands repeat or an operation is fragile | a validated script or tool |
+| A compact handoff must survive chats | a Task Board outcome in private `AGENT_OS_HOME/work/` |
+| Many outcomes need exact search and correlation | the structured Task Board |
+| One external event repeatedly triggers the same work | automation after authority, retry, and idempotency boundaries are defined |
 
-## Новая документация
+## New documentation
 
-Перед созданием файла ответьте:
+Before creating a document, answer:
 
-1. Какой вопрос он единолично закрывает?
-2. Кто должен его читать и по какому trigger?
-3. Какой существующий документ перестанет владеть этой информацией?
-4. Как проверить, что документ не устарел?
+1. Which question does it own exclusively?
+2. Who reads it and under which trigger?
+3. Which existing document stops owning this information?
+4. How can the claim be checked for staleness?
 
-Если на эти вопросы нет ответа, расширьте существующий owning doc.
+If these questions have no clear answers, extend the existing owning document. Repository documentation and examples are written in English; private user-authored task and project content may use the user's preferred language.
 
-## Новый skill
+## New skill
 
-Repo-local skills хранятся в `.agents/skills/<skill-name>/`. Каждый skill:
+Repository-scoped skills live in `.agents/skills/<skill-name>/`. Each skill:
 
-- решает одну задачу;
-- имеет `SKILL.md` с `name` и точным `description`;
-- использует imperative steps и явные inputs/outputs;
-- не содержит собственного README, changelog или дублированной общей документации;
-- добавляет `scripts/`, `references/` или `assets/` только при реальной необходимости;
-- проходит `quick_validate.py` из системного `skill-creator`.
+- solves one job;
+- has `SKILL.md` with `name` and a precise `description`;
+- uses imperative steps and explicit inputs and outputs;
+- has no independent README, changelog, or duplicate general documentation;
+- adds `scripts/`, `references/`, or `assets/` only when required;
+- passes `quick_validate.py` from the system `skill-creator`.
 
-Размещение соответствует [официальной документации Codex по skills](https://learn.chatgpt.com/docs/build-skills), где `.agents/skills` указан как repository scope.
+This location follows the [official Codex skills documentation](https://learn.chatgpt.com/docs/build-skills), which defines `.agents/skills` as repository scope.
 
-Если workflow нужен вне этой установки Agent OS или должен поставляться вместе с connector/MCP, его можно упаковать в plugin. До этого repo-local skill проще и прозрачнее.
+Package a workflow in a plugin when it must work without a source checkout or ship with a connector or MCP server. Otherwise a repository-scoped skill remains simpler and more transparent.
 
-## Брендинг plugin
+## Plugin branding
 
-`apps/agent-os/Resources/AppIcon.svg` — канонический источник знака Agent OS.
-Единый plugin хранит архивную копию в `assets/agent-os-icon.svg`, потому что
-установленный plugin archive не должен ссылаться на файлы за своими пределами.
-Поля `interface.composerIcon`, `interface.logo` и `interface.logoDark` указывают
-на эту bundled-копию, а `interface.websiteURL` — на публичный репозиторий.
-`node test/plugin_packages_test.mjs` проверяет и иконку, и ссылку.
+`apps/agent-os/Resources/AppIcon.svg` is the canonical Agent OS mark. The unified plugin stores an archived copy at `assets/agent-os-icon.svg` because an installed plugin archive cannot reference files outside itself. `interface.composerIcon`, `interface.logo`, and `interface.logoDark` point to the bundled copy, while `interface.websiteURL` points to the public repository. `node test/plugin_packages_test.mjs` verifies both the icon and repository link.
 
 ## Bundled runtime
 
-`plugins/agent-os/runtime` — generated package payload, а не второй источник
-истины. Канонические runtime-файлы перечислены узким allowlist в
-`tools/sync-plugin-runtime`. После изменения любого из них:
+`plugins/agent-os/runtime` is generated package payload, not a second source of truth. `tools/sync-plugin-runtime` owns a narrow allowlist of canonical runtime files. After changing any of them:
 
-1. обновите plugin cachebuster только системным helper из `plugin-creator`;
-2. выполните `tools/sync-plugin-runtime --apply`;
-3. выполните `tools/sync-plugin-runtime --check`;
-4. запустите plugin package tests и Swift package/release tests.
+1. update the plugin cachebuster only with the system `plugin-creator` helper;
+2. run `tools/sync-plugin-runtime --apply`;
+3. run `tools/sync-plugin-runtime --check`;
+4. run plugin package tests and Swift package and release tests.
 
-Native packager копирует этот же payload в
-`Contents/Resources/AgentOSRuntime`. Не добавляйте в runtime docs, tests,
-private state, Git metadata или project source. Новый bundled-файл должен быть
-нужен для clean-home bootstrap, onboarding или выполнения канонических MCP/app
-operations и обязан иметь изолированный тест.
+The native packager copies the same payload to `Contents/Resources/AgentOSRuntime`. Do not add product documentation, tests, private state, Git metadata, or project source to the runtime. A new bundled file must be required for clean-home bootstrap, onboarding, or canonical MCP or app operations and must have an isolated test.
 
-## Новый tool
+## New tool
 
-Tool должен иметь:
+A tool requires:
 
-- узкую операцию и стабильный input contract;
-- `--help` или ясный usage;
-- validation до любой записи;
-- preview/dry-run для потенциально опасных изменений;
-- атомарную запись structured state, если это применимо;
-- понятные exit codes;
-- проверку на временной fixture или безопасном test target.
+- a narrow operation and stable input contract;
+- `--help` or clear usage;
+- validation before every write;
+- preview or dry-run behavior for potentially dangerous changes;
+- atomic structured-state writes where applicable;
+- clear exit codes;
+- tests against a temporary fixture or safe target.
 
-Не создавайте placeholder tools без рабочего сценария.
+Do not create placeholder tools without a working scenario.
 
-## Новая интеграция или automation
+## New integration or automation
 
-До включения зафиксируйте:
+Before enabling an integration, define:
 
-- внешний source of truth;
-- минимальные permissions;
-- read/write authority;
-- idempotency key или de-duplication identity;
-- retry и partial-failure semantics;
-- что хранится локально и что запрещено хранить;
+- the external source of truth;
+- minimum permissions;
+- read and write authority;
+- an idempotency key or de-duplication identity;
+- retry and partial-failure semantics;
+- what is stored locally and what must never be stored;
 - human approval points;
-- способ отключения и восстановления.
+- disable and recovery procedures.
 
-Первый pilot должен быть read-only или draft-only. Автоматические внешние изменения включаются отдельно.
+The first pilot should be read-only or draft-only. Automatic external writes are enabled separately.

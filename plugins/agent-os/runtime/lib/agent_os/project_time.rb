@@ -149,7 +149,7 @@ module AgentOS
 
     def current_project_paths(project)
       repository_paths = Array(project["repositories"]).map { |repository| repository["path"] }.compact
-      ([project["wrapper"]] + repository_paths).compact.map do |path|
+      ([project.fetch("root")] + repository_paths).compact.map do |path|
         File.expand_path(path)
       end.uniq
     end

@@ -1,21 +1,21 @@
 # Review intake
 
-Review intake остаётся read-only до отдельного пользовательского запроса. Slack даёт context, GitHub должен подтвердить canonical PR, author, state и head SHA.
+Review intake remains read-only until a separate user request authorizes a mutation. Slack may provide context, but GitHub must confirm the canonical PR, author, state, and head SHA.
 
-## Пользователь — reviewer
+## User is the reviewer
 
-1. Найти или создать `kind=review` task.
-2. Attach canonical PR и Slack review root.
-3. Подготовить отдельный analysis-only Codex handoff в соответствующий saved project.
-4. Передать repository, head SHA, PR URL, task ID и exact Slack root.
-5. Сохранить findings локально; не публиковать review и не менять код автоматически.
+1. Find or create a `kind=review` outcome.
+2. Attach the canonical PR and Slack review root.
+3. Prepare a separate analysis-only Codex handoff in the registered project path.
+4. Include the repository, head SHA, PR URL, Task Board ID, and exact Slack root.
+5. Save findings locally; do not publish a review or change code automatically.
 
-## Пользователь — author
+## User is the author
 
-1. Найти исходную delivery/research task по canonical PR.
-2. Attach review root и классифицировать verified feedback.
-3. Actionable changes возвращают task в `active`; approval обычно оставляет `review` до merge.
-4. Verified merge может завершить task, если обязательных follow-up больше нет.
-5. Не писать автоматически в user-owned implementation task; обновить Task Board snapshot.
+1. Find the original delivery or research outcome by canonical PR.
+2. Attach the review root and classify verified feedback.
+3. Actionable changes return the outcome to `active`; approval normally leaves it in `review` until merge.
+4. A verified merge may complete the outcome when no required follow-up remains.
+5. Do not write automatically to a user-owned implementation task; update the Task Board snapshot.
 
-При конфликте ролей author behavior безопаснее. Неоднозначность требует решения пользователя, а не догадки.
+When roles conflict, author behavior is safer. Ambiguity requires a user decision rather than a guess.

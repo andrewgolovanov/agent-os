@@ -13,6 +13,18 @@ final class AgentOSTests: XCTestCase {
             AgentOSDeepLink.destination(for: try XCTUnwrap(URL(string: "agent-os://focus"))),
             .focus
         )
+        XCTAssertEqual(
+            AgentOSDeepLink.destination(for: try XCTUnwrap(URL(string: "agent-os://done"))),
+            .done
+        )
+        XCTAssertEqual(
+            AgentOSDeepLink.destination(for: try XCTUnwrap(URL(string: "agent-os://time"))),
+            .done
+        )
+        XCTAssertEqual(
+            AgentOSDeepLink.destination(for: try XCTUnwrap(URL(string: "agent-os://history"))),
+            .done
+        )
         XCTAssertNil(AgentOSDeepLink.destination(for: try XCTUnwrap(URL(string: "https://example.com/board"))))
         XCTAssertNil(AgentOSDeepLink.destination(for: try XCTUnwrap(URL(string: "agent-os://unknown"))))
     }
@@ -38,7 +50,14 @@ final class AgentOSTests: XCTestCase {
             "other": []
           },
           "codex_threads": [],
-          "activity": {"total_seconds": 90, "turns": []},
+          "activity": {
+            "total_seconds": 90,
+            "turns": [{
+              "started_at": "2026-08-14T00:00:00Z",
+              "stopped_at": "2026-08-14T00:01:30Z",
+              "duration_seconds": 90
+            }]
+          },
           "created_at": "2026-08-14T00:00:00Z",
           "updated_at": "2026-08-14T00:01:00Z"
         }
@@ -49,6 +68,8 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(task.status, .active)
         XCTAssertEqual(task.nextAction, "Run verification")
         XCTAssertEqual(task.activity.totalSeconds, 90)
+        XCTAssertEqual(task.activity.turns.count, 1)
+        XCTAssertEqual(task.activity.turns.first?.durationSeconds, 90)
         XCTAssertTrue(task.status.isUnfinished)
     }
 
@@ -81,6 +102,45 @@ final class AgentOSTests: XCTestCase {
         let task = try JSONDecoder().decode(AgentOSTask.self, from: data)
 
         XCTAssertEqual(task.activity.totalSeconds, 0)
+        XCTAssertEqual(task.completionFollowUpStatus, .notRequired)
+    }
+
+    func testDoneTaskDecodesCompletionFollowUp() throws {
+        let data = Data(#"""
+        {
+          "id": "20260816-complete",
+          "title": "Completed task",
+          "projects": ["example-site"],
+          "kind": "delivery",
+          "status": "done",
+          "goal": "Preserve the delivery record",
+          "summary": "Shipped",
+          "constraints": [],
+          "next_action": "Notify the source thread",
+          "waiting_on": null,
+          "sources": {
+            "slack_threads": [{"identity":"slack:C123:1723723200.000000","url":"https://workspace.example.invalid/archives/C123/p1723723200000000"}],
+            "pull_requests": [],
+            "figma": [],
+            "deployments": [],
+            "other": []
+          },
+          "codex_threads": [],
+          "activity": {"total_seconds": 0, "turns": []},
+          "completion": {
+            "completed_at": "2026-08-16T12:00:00Z",
+            "follow_up_status": "pending",
+            "follow_up_sent_at": null
+          },
+          "created_at": "2026-08-16T11:00:00Z",
+          "updated_at": "2026-08-16T12:00:00Z"
+        }
+        """#.utf8)
+
+        let task = try JSONDecoder().decode(AgentOSTask.self, from: data)
+
+        XCTAssertEqual(task.completedAt, "2026-08-16T12:00:00Z")
+        XCTAssertEqual(task.completionFollowUpStatus, .pending)
     }
 
     func testConfigurationHonorsSeparateSourceAndHomeOverrides() {
@@ -157,6 +217,40 @@ final class AgentOSTests: XCTestCase {
         XCTAssertFalse(String(decoding: output.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 
+    @MainActor
+    func testFileWatcherDeliversBackgroundFileEventsOnMainActor() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("agent-os-file-watcher-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let change = expectation(description: "file watcher change")
+        let watcher = try AgentOSFileWatcher(directory: directory) {
+            XCTAssertTrue(Thread.isMainThread)
+            change.fulfill()
+        }
+        let directoryPath = directory.path
+
+        try await Task.detached {
+            let file = URL(fileURLWithPath: directoryPath).appendingPathComponent("event.txt")
+            try Data("changed".utf8).write(to: file)
+        }.value
+
+        await fulfillment(of: [change], timeout: 3)
+        withExtendedLifetime(watcher) {}
+    }
+
+    func testCodexOpenCompletionResumesFromBackgroundQueue() async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let completion = CodexHandoffService.makeOpenCompletion(continuation: continuation)
+            DispatchQueue.global(qos: .utility).async(
+                execute: DispatchWorkItem {
+                    completion(nil, nil)
+                }
+            )
+        }
+    }
+
     func testUpdateStatusDecodesCoreAndPluginContract() throws {
         let data = Data(#"""
         {
@@ -198,6 +292,29 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(AgentOSTimeFormatter.compact(seconds: 14), "<1 min")
         XCTAssertEqual(AgentOSTimeFormatter.compact(seconds: 1_740), "29 min")
         XCTAssertEqual(AgentOSTimeFormatter.compact(seconds: 3_900), "1 hr 5 min")
+    }
+
+    func testDonePeriodFiltersByCompletionDate() throws {
+        let calendar = Calendar.current
+        let now = try XCTUnwrap(calendar.date(byAdding: .hour, value: 12, to: calendar.startOfDay(for: Date())))
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        XCTAssertTrue(
+            AgentOSDateMath.contains(
+                formatter.string(from: now.addingTimeInterval(-3 * 24 * 60 * 60)),
+                in: .sevenDays,
+                relativeTo: now
+            )
+        )
+        XCTAssertFalse(
+            AgentOSDateMath.contains(
+                formatter.string(from: now.addingTimeInterval(-10 * 24 * 60 * 60)),
+                in: .sevenDays,
+                relativeTo: now
+            )
+        )
+        XCTAssertTrue(AgentOSDateMath.contains("invalid", in: .all, relativeTo: now))
     }
 
     func testStatusTintsCommunicateActiveWaitingAndReviewRoles() {

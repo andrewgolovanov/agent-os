@@ -1,6 +1,6 @@
 {
   "name": "agent-os",
-  "version": "0.2.1+codex.20260816005117",
+  "version": "0.3.0+codex.20260816121342",
   "description": "Bootstrap Agent OS locally, onboard repositories from any folder, manage its canonical Task Board, and preserve durable Context Loop work from Codex.",
   "author": {
     "name": "Andrew Golovanov"

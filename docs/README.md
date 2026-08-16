@@ -1,45 +1,44 @@
-# Документация Agent OS
+# Agent OS documentation
 
-Эта папка отвечает на три вопроса: как система устроена, как в ней работать и почему были приняты важные решения.
+This directory explains how Agent OS is designed, how to operate it, and why its important decisions were made.
 
-## Карта
+## Documentation map
 
-| Документ | Владеет информацией |
+| Document | Owns |
 | --- | --- |
-| [architecture.md](architecture.md) | слои, границы и источник истины для каждого типа данных |
-| [workflows.md](workflows.md) | подключение проекта, выполнение и передача задач |
-| [task-board.md](task-board.md) | structured outcomes, source identity и Codex memberships |
-| [task-bridge.md](task-bridge.md) | автоматическая project-chat correlation, checkpoints и time evidence |
-| [project-time.md](project-time.md) | общий учёт Codex-времени по всем тредам проекта и месяцам |
-| [agent-os-app.md](agent-os-app.md) | approved boundary, UX proposal и implementation notes для native macOS app |
+| [architecture.md](architecture.md) | layers, boundaries, and the source of truth for each data type |
+| [workflows.md](workflows.md) | project onboarding, execution, and task handoff |
+| [task-board.md](task-board.md) | structured outcomes, source identity, and Codex memberships |
+| [task-bridge.md](task-bridge.md) | automatic project-task correlation, checkpoints, and time evidence |
+| [project-time.md](project-time.md) | all-thread Codex time by project and month |
+| [agent-os-app.md](agent-os-app.md) | native macOS app boundary, UX, and implementation notes |
 | [installation.md](installation.md) | reproducible core, Codex plugin, and macOS app installation |
-| [optional-integrations.md](optional-integrations.md) | opt-in Slack monitor, Codex Scheduled, and plugin hook setup |
-| [agent-os.md](agent-os.md) | portable product boundary, local/private split и publication gates |
-| [slack-monitor.md](slack-monitor.md) | read-only Slack intake, cursor и watched-root contract |
-| [review-intake.md](review-intake.md) | безопасная маршрутизация PR review для reviewer/author |
-| [chat-model.md](chat-model.md) | Codex task topology, ownership и handoff |
-| [harness-comparison.md](harness-comparison.md) | gap analysis относительно PixelPoint example и принятый scope |
-| [extending.md](extending.md) | критерии для новых docs, skills, tools и интеграций |
-| [state.md](state.md) | только проверенное текущее состояние и ограничения |
-| [roadmap.md](roadmap.md) | ближайшие outcomes, а не список возможных функций |
-| [changelog.md](changelog.md) | датированные существенные изменения |
-| [decisions/](decisions/README.md) | решения и rationale, которые нельзя потерять |
+| [optional-integrations.md](optional-integrations.md) | opt-in Slack monitoring, Codex Scheduled, and plugin hooks |
+| [agent-os.md](agent-os.md) | portable product boundary, local/private split, and publication gates |
+| [slack-monitor.md](slack-monitor.md) | read-only Slack intake, cursors, and watched roots |
+| [review-intake.md](review-intake.md) | safe PR review routing for reviewers and authors |
+| [chat-model.md](chat-model.md) | Codex task topology, ownership, and handoff |
+| [harness-comparison.md](harness-comparison.md) | reference gap analysis and accepted scope |
+| [extending.md](extending.md) | criteria for new docs, skills, tools, and integrations |
+| [state.md](state.md) | verified current state and known limitations |
+| [roadmap.md](roadmap.md) | near-term outcomes rather than a feature wish list |
+| [changelog.md](changelog.md) | dated material changes |
+| [decisions/](decisions/README.md) | durable architectural decisions and rationale |
 
-## Правило обновления
+## Maintenance contract
 
-Материальное изменение Agent OS обновляет:
+A material Agent OS change updates:
 
-1. ближайший `AGENTS.md`, если изменились agent-команды, проверки, пути или ownership;
-2. релевантный README, если изменились установка, использование или другое пользовательское поведение;
-3. документ-владелец;
-4. `state.md`, если изменилось фактическое состояние;
-5. `roadmap.md`, если изменился следующий outcome;
+1. the nearest `AGENTS.md` when agent commands, required checks, paths, routing, or ownership change;
+2. the relevant README when installation, usage, contribution, or other user-visible behavior changes;
+3. the owning document;
+4. `state.md` when verified current state changes;
+5. `roadmap.md` when the next outcome changes;
 6. `changelog.md`;
-7. новый decision record, если решение неочевидно или отменяет старое.
+7. a new decision record when the rationale is non-obvious or supersedes an earlier decision.
 
-Обновляйте только документы, утверждения которых действительно изменились; не
-нужно механически редактировать каждый README или `AGENTS.md`. Перед handoff
-ищите удалённые или переименованные команды, пути и названия и выполняйте все
-затронутые документированные команды проверки.
+Update only documents whose claims changed. Before handoff, search for removed or renamed commands, paths, and product names, then run every affected documented validation command.
 
-Не копируйте структурированные project facts из `config/projects.yaml` в эти документы. Здесь описывается модель и способ использования реестра.
+Repository documentation, READMEs, agent instructions, examples, and release notes are written in English. Private user-authored project and task content may use the user's preferred language.
+
+Do not copy structured project facts from private `AGENT_OS_HOME/config/projects.yaml` into these documents. This directory describes the model and how to use the registry; the registry owns each installation's project data.

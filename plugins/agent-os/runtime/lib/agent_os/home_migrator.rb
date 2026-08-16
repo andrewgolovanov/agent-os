@@ -3,6 +3,7 @@
 require "fileutils"
 require "find"
 require "json"
+require "pathname"
 require "tempfile"
 require "tmpdir"
 require "yaml"
@@ -20,8 +21,8 @@ module AgentOS
 
     def migrate(apply: false)
       registry = validated_registry
-      wrappers = wrapper_moves(registry)
-      validate_preconditions!(wrappers)
+      legacy_projects = legacy_project_moves(registry)
+      validate_preconditions!(legacy_projects)
 
       result = {
         schema_version: 1,
@@ -34,13 +35,13 @@ module AgentOS
           next unless File.exist?(source_path)
 
           items << { from: source_path, to: File.join(@home, name) }
-        end + wrappers,
+        end + legacy_projects,
         pointer: { path: @active_home_pointer, from: @from, to: @home },
         rollback: "The previous home is preserved at #{@from}; reactivate it explicitly if rollback is needed."
       }
       return result unless apply
 
-      apply_migration(registry, wrappers)
+      apply_migration(registry, legacy_projects)
       result
     end
 
@@ -60,7 +61,7 @@ module AgentOS
       raise ArgumentError, "invalid project registry: #{error.message.lines.first.strip}"
     end
 
-    def validate_preconditions!(wrappers)
+    def validate_preconditions!(legacy_projects)
       raise ArgumentError, "source and destination homes must differ" if @from == @home
       raise ArgumentError, "destination home already exists: #{@home}" if File.exist?(@home)
       raise ArgumentError, "missing source home: #{@from}" unless File.directory?(@from)
@@ -80,24 +81,26 @@ module AgentOS
       raise ArgumentError, "source home is incomplete: #{missing.join(", ")}" unless missing.empty?
 
       inspected = COPY_DIRECTORIES.map { |name| File.join(@from, name) }.select { |path| File.exist?(path) }
-      inspected.concat(wrappers.map { |item| item.fetch(:from) })
+      inspected.concat(legacy_projects.map { |item| item.fetch(:from) })
       inspected.each { |path| reject_symlinks!(path) }
     end
 
-    def wrapper_moves(registry)
-      registry.fetch("projects").each_with_object([]) do |(_key, project), items|
+    def legacy_project_moves(registry)
+      registry.fetch("projects").each_with_object([]) do |(key, project), items|
         next unless project.is_a?(Hash) && project["layout"] == "wrapper"
 
         wrapper = File.expand_path(project.fetch("wrapper"))
         next unless inside_home?(wrapper)
         raise ArgumentError, "missing registered wrapper: #{wrapper}" unless File.directory?(wrapper)
 
-        relative = wrapper.delete_prefix("#{@from}/")
-        items << { from: wrapper, to: File.join(@home, relative) }
+        items << {
+          from: wrapper,
+          to: File.join(@home, ".runtime", "legacy-project-backups", key)
+        }
       end
     end
 
-    def apply_migration(registry, wrappers)
+    def apply_migration(registry, legacy_projects)
       parent = File.dirname(@home)
       FileUtils.mkdir_p(parent)
       stage = Dir.mktmpdir(".#{File.basename(@home)}-migration-", parent)
@@ -108,8 +111,7 @@ module AgentOS
 
           FileUtils.cp_r(source_path, File.join(stage, name), preserve: true)
         end
-        FileUtils.mkdir_p(File.join(stage, "projects"))
-        wrappers.each do |item|
+        legacy_projects.each do |item|
           relative = item.fetch(:to).delete_prefix("#{@home}/")
           destination = File.join(stage, relative)
           FileUtils.mkdir_p(File.dirname(destination))
@@ -136,13 +138,17 @@ module AgentOS
       agent_os["root"] = @home if agent_os.is_a?(Hash) && File.expand_path(agent_os["root"].to_s) == @from
 
       migrated.fetch("projects").each_value do |project|
-        next unless project.is_a?(Hash) && project["layout"] == "wrapper"
+        next unless project.is_a?(Hash)
 
-        wrapper = File.expand_path(project["wrapper"].to_s)
-        next unless inside_home?(wrapper)
+        repositories = Array(project["repositories"])
+        root = project["root"]
+        root ||= repositories.find { |entry| entry.is_a?(Hash) && entry["role"] == "primary" }&.dig("path")
+        root ||= repositories.find { |entry| entry.is_a?(Hash) }&.dig("path")
+        raise ArgumentError, "migrated project is missing a repository root" if root.to_s.empty?
 
-        relative = wrapper.delete_prefix("#{@from}/")
-        project["wrapper"] = File.join(@home, relative)
+        project.delete("layout")
+        project.delete("wrapper")
+        project["root"] = File.expand_path(root)
       end
 
       path = File.join(stage, "config", "projects.yaml")
@@ -207,13 +213,11 @@ module AgentOS
       raise ArgumentError, "migrated project registry is invalid" unless migrated.is_a?(Hash) && migrated["schema_version"] == 1
 
       migrated.fetch("projects").each_value do |project|
-        next unless project.is_a?(Hash) && project["layout"] == "wrapper"
+        next unless project.is_a?(Hash)
 
-        wrapper = File.expand_path(project.fetch("wrapper"))
-        next unless wrapper.start_with?("#{@home}/")
-
-        relative = wrapper.delete_prefix("#{@home}/")
-        raise ArgumentError, "migrated wrapper is missing: #{wrapper}" unless File.directory?(File.join(stage, relative))
+        raise ArgumentError, "legacy project metadata remained after migration" if project.key?("layout") || project.key?("wrapper")
+        root = project["root"]
+        raise ArgumentError, "migrated project root must be absolute" unless Pathname.new(root.to_s).absolute?
       end
     rescue JSON::ParserError, Psych::SyntaxError, KeyError => error
       raise ArgumentError, "migrated home validation failed: #{error.message}"

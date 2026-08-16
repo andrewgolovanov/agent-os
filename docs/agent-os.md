@@ -40,8 +40,10 @@ bootstrap.
   prerequisite for packaged users.
 - Core, the Agent OS macOS app, and one Agent OS plugin live in one monorepo;
   Context Loop is a focused skill inside that plugin.
-- Existing standalone app/plugin directories remain untouched as recoverable
-  local backups until the monorepo is published and adopted.
+- The obsolete standalone Context Loop plugin is no longer a product package;
+  Context Loop is distributed as a skill inside the single Agent OS plugin.
+  Any external recovery copies are local migration artifacts, not product
+  source or part of the installation contract.
 - Real configs, outcomes, reports, runtime pointers, and project paths are
   private local state and are ignored by the product repository. Project
   repositories remain in their existing locations.
@@ -56,9 +58,12 @@ bootstrap.
 - App and plugin bootstrap select their bundled runtime, create missing private
   state, and preserve a valid selected development source.
 - MCP project onboarding previews and registers any existing Git repository by
-  absolute path without moving or modifying it.
+  absolute path without moving or modifying it; the private registry is the
+  only Agent OS owner of project routing metadata.
+- MCP and CLI registry upgrade remove obsolete layout metadata and retain an
+  old managed project folder in a private recovery backup.
 - MCP and CLI relinking verify repository identity and update only private
-  registry/wrapper paths after the user has physically moved a repository.
+  registry paths after the user has physically moved a repository.
 - `bin/agent-os init` previews exact targets and preserves every existing file.
 - `activate` records the selected home in the standard user config directory so
   app/plugin processes do not need a hard-coded path or shell environment.
@@ -86,7 +91,7 @@ bootstrap.
 - `audit-publication` blocks known private-state patterns before release work.
 - `agent-os update` checks semantic release tags and can only fast-forward a
   clean checkout; the plugin refresh follows its manifest version.
-- the native app embeds Sparkle, checks a GitHub Release appcast, and verifies
+- The native app embeds Sparkle, checks a GitHub Release appcast, and verifies
   every archive with the dedicated Agent OS Ed25519 public key.
 
 ## Remaining gates

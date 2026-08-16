@@ -338,7 +338,7 @@ module AgentOS
       repository_paths = Array(project["repositories"]).each_with_object([]) do |repository, values|
         values << repository["path"] if repository.is_a?(Hash) && repository["path"]
       end
-      [project["wrapper"], *repository_paths].compact.uniq
+      [project.fetch("root"), *repository_paths].compact.uniq
     end
 
     def canonical_path(path)

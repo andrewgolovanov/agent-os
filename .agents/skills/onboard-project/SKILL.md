@@ -13,7 +13,6 @@ Obtain or derive only from verified local evidence:
 
 - lowercase kebab-case project key;
 - display name and useful aliases;
-- layout derived by Agent OS as `wrapper` or `direct-repository`;
 - absolute existing Git root from any local folder;
 - absolute paths to existing repositories;
 - repository role, source of truth, primary branch, and publication target when known;
@@ -24,14 +23,17 @@ Use `unknown` for missing optional facts. Stop the affected mutation if an unkno
 ## Workflow
 
 1. Prefer the installed MCP workflow: list current projects, then call `agent_os_onboard_project` with `apply: false`. From a source checkout, the equivalent preview is `bin/agent-os onboard-project --repository /absolute/repository --json`.
-2. Review the returned repository root, remote, current branch, `HEAD`, worktree state, proposed key, selected layout, exact files, and unchanged repository path.
+2. Review the returned repository root, remote, current branch, `HEAD`, worktree state, proposed key, exact files, and unchanged repository path.
 3. Apply only after the user approves that exact preview. Use the same MCP arguments with `apply: true`, or add `--apply` to the reviewed CLI command.
 4. If an already registered repository was moved separately by the user, preview
    `agent_os_relink_project` (or `bin/agent-os relink-project`) instead of
    onboarding a duplicate. Verify the same Git root and origin identity, then
    apply only the reviewed private metadata change.
-5. List projects again and read the registered project root `AGENTS.md` before substantive work.
-6. Run `ruby tools/validate-agent-os` only when working from a full Agent OS source checkout; packaged runtime users validate the resulting MCP response and registry listing.
+5. If the registry contains obsolete `layout` or `wrapper` fields, preview
+   `agent_os_upgrade_project_registry`. Apply the one-way migration only after
+   reviewing every new root and recovery-backup path.
+6. List projects again and read the registered project root `AGENTS.md` before substantive work.
+7. Run `ruby tools/validate-agent-os` only when working from a full Agent OS source checkout; packaged runtime users validate the resulting MCP response and registry listing.
 
 ## Registry entry
 
@@ -41,9 +43,8 @@ Use this shape and omit empty optional collections only when the schema permits:
 project-key:
   display_name: Project Name
   status: active
-  layout: wrapper
   aliases: []
-  wrapper: /absolute/agent-os-home/projects/project-key
+  root: /absolute/path/to/repository
   repositories:
     - id: repository-id
       path: /absolute/path/to/repository
@@ -52,11 +53,10 @@ project-key:
       primary_branch: unknown
 ```
 
-For `wrapper`, mirror the project key and repository list in
-`AGENT_OS_HOME/projects/<key>/project.yaml`. For `direct-repository`, omit
-`project.yaml`; the registry is the only Agent OS metadata owner and the
-validator requires its single repository path to equal `wrapper`. Relink may
-preserve that equality in an external absolute folder after a separate move.
+The registry is the only Agent OS metadata owner. A single-repository project's
+`root` equals its registered Git root. Relink preserves that equality after a
+separate user-controlled move. Multi-repository entries list every repository
+in the same registry; Agent OS does not create a project container folder.
 
 ## Boundaries
 

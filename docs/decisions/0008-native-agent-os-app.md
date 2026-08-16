@@ -2,7 +2,7 @@
 
 Date: 2026-08-14
 
-Status: accepted
+Status: accepted; implementation gate completed
 
 ## Context
 
@@ -25,8 +25,8 @@ provides thread and event APIs.
 
 - Build toward a thin native macOS Agent OS app, not a standalone second
   service.
-- Keep `config/projects.yaml`, Task Board, Project Time, Task Bridge, and Slack
-  Monitor as the canonical control plane.
+- Keep `AGENT_OS_HOME/config/projects.yaml`, Task Board, Project Time, Task
+  Bridge, and Slack Monitor as the canonical control plane.
 - Give the native app no independent task database. All mutations go through
   existing deterministic Agent OS tools.
 - Use a regular SwiftUI main window with a native sidebar/detail model; keep the
@@ -37,8 +37,9 @@ provides thread and event APIs.
   surface. Do not make experimental WebSocket transport, private deep links, or
   UI automation core dependencies.
 - Keep Slack/provider integration read-only in the MVP.
-- Require product-spec approval and a bounded integration spike before app or
-  plugin scaffolding.
+- The completed product-spec review and bounded integration spike authorized
+  the current app and unified plugin implementation; further boundary changes
+  still require a new decision.
 
 ## Consequences
 

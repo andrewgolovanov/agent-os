@@ -3,6 +3,8 @@ import Foundation
 
 @MainActor
 enum CodexHandoffService {
+    typealias OpenCompletion = @Sendable (NSRunningApplication?, (any Error)?) -> Void
+
     enum HandoffError: LocalizedError {
         case applicationMissing
         case invalidThreadID
@@ -41,16 +43,24 @@ enum CodexHandoffService {
         configuration.activates = true
         configuration.createsNewApplicationInstance = false
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            let completion = makeOpenCompletion(continuation: continuation)
             systemWorkspace.open(
                 [url],
                 withApplicationAt: applicationURL,
-                configuration: configuration
-            ) { _, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: ())
-                }
+                configuration: configuration,
+                completionHandler: completion
+            )
+        }
+    }
+
+    nonisolated static func makeOpenCompletion(
+        continuation: CheckedContinuation<Void, Error>
+    ) -> OpenCompletion {
+        { _, error in
+            if let error {
+                continuation.resume(throwing: error)
+            } else {
+                continuation.resume(returning: ())
             }
         }
     }

@@ -23,7 +23,7 @@ Done when:
   and Task Bridge hooks;
 - the packaged app reads the same project and task immediately afterward.
 
-### Validate the first public release with a second Mac
+### Validate packaged installation and updates on a second Mac
 
 Stage 1 source/home separation, monorepo consolidation, clean initialization,
 doctor, validation, app build, MCP isolation, and plugin smoke tests are complete.
@@ -41,8 +41,8 @@ Completed publication checks:
 - an anonymous HTTPS clone of that exact commit passes clean private-home
   initialization, doctor, validation, Ruby/plugin checks, Swift build/tests,
   and the publication audit — verified;
-- the monorepo Agent OS plugin is installed; its MCP reads the active home in a
-  standalone installed-snapshot smoke and Context Loop passes its isolated
+- the monorepo Agent OS plugin is installed; its MCP reads the active home in an
+  installed-snapshot smoke and Context Loop passes its isolated
   lifecycle/hook smoke — verified;
 - fresh Codex tasks load the installed Agent OS skill and invoke its MCP tools;
   the vetted Task Bridge hook bundle also executes against an isolated private
@@ -77,7 +77,7 @@ Completed publication checks:
 
 Remaining release checks:
 
-- a second Mac completes an approved first install and a genuine `v0.2.0` to
+- a second Mac completes an approved clean install and a genuine `v0.2.0` to
   `v0.2.1` update.
 
 ### Complete the local Agent OS app pilot
@@ -87,8 +87,13 @@ Continue real use before investing in distribution infrastructure.
 
 Done when:
 
-- Focus, Board, inspector, refresh, one lifecycle mutation, and exact Codex
+- Focus, Board, independently scrolling columns, Done, inspector,
+  refresh, lifecycle and completion-follow-up mutations, and exact Codex
   handoff remain reliable during the pilot;
+- completed and cancelled outcomes retain their context in Done; completed
+  Slack-backed work makes unsent follow-up visible without sending externally,
+  and project/period filters summarize only exact-linked outcome time; broader
+  Project Time remains an explicit CLI/private-report workflow;
 - the official shadcn Neutral dark semantic system and dashboard-01 control
   geometry, prominent tracked time, and
   on-demand resizable detail split remain legible and predictable across Focus,

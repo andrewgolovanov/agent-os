@@ -75,7 +75,7 @@ function listProjects() {
         key: key,
         display_name: value.fetch("display_name"),
         status: value.fetch("status"),
-        wrapper: value.fetch("wrapper"),
+        root: value.fetch("root"),
         repositories: value.fetch("repositories").map { |repository| repository.slice("id", "path", "role", "source_of_truth", "primary_branch") }
       }
     end
@@ -119,7 +119,20 @@ const tools = [
         repositoryPath: { type: "string", description: "Absolute path to a Git repository or a directory inside it." },
         key: { type: "string", description: "Optional lowercase kebab-case project key." },
         displayName: { type: "string", description: "Optional human-readable project name." },
-        apply: { type: "boolean", description: "False previews; true applies the reviewed registry and wrapper change." },
+        apply: { type: "boolean", description: "False previews; true applies the reviewed registry-only entry." },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+  },
+  {
+    name: "agent_os_upgrade_project_registry",
+    title: "Upgrade the Agent OS project registry",
+    description: "Preview or remove obsolete layout metadata. Managed legacy project folders are preserved in a private recovery backup.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        apply: { type: "boolean", description: "False previews; true applies the reviewed one-way registry migration." },
       },
       additionalProperties: false,
     },
@@ -136,7 +149,7 @@ const tools = [
         key: { type: "string", description: "Existing lowercase kebab-case project key." },
         repositoryPath: { type: "string", description: "Absolute new path to the same Git repository." },
         repositoryId: { type: "string", description: "Repository id when the project registers multiple repositories." },
-        apply: { type: "boolean", description: "False previews; true applies only the reviewed registry and wrapper metadata path changes." },
+        apply: { type: "boolean", description: "False previews; true applies only the reviewed registry path changes." },
       },
       additionalProperties: false,
     },
@@ -176,6 +189,11 @@ const tools = [
         nextAction: { type: "string", minLength: 1 },
         waitingOn: { type: "string", minLength: 1 },
         clearWaiting: { type: "boolean" },
+        completionFollowUp: {
+          type: "string",
+          enum: ["pending", "sent", "not_required"],
+          description: "Completion communication state for a done outcome.",
+        },
       },
       anyOf: [
         { required: ["status"] },
@@ -183,6 +201,7 @@ const tools = [
         { required: ["nextAction"] },
         { required: ["waitingOn"] },
         { required: ["clearWaiting"] },
+        { required: ["completionFollowUp"] },
       ],
       additionalProperties: false,
     },
@@ -226,6 +245,17 @@ function callTool(name, args = {}) {
       return textResult(JSON.parse(runAgentOS(command)));
     }
 
+    if (name === "agent_os_upgrade_project_registry") {
+      const command = [
+        "upgrade-project-registry",
+        "--source", sourceRoot,
+        "--home", homeRoot,
+        "--json",
+      ];
+      if (args.apply === true) command.push("--apply");
+      return textResult(JSON.parse(runAgentOS(command)));
+    }
+
     if (name === "agent_os_relink_project") {
       const command = [
         "relink-project",
@@ -260,6 +290,29 @@ function callTool(name, args = {}) {
       taskFile(taskId, "task.json");
       if (args.waitingOn && args.clearWaiting) {
         throw new Error("waitingOn and clearWaiting are mutually exclusive");
+      }
+      const lifecycleFields = [args.status, args.summary, args.nextAction, args.waitingOn, args.clearWaiting]
+        .filter((value) => value !== undefined && value !== false);
+      if (args.completionFollowUp && lifecycleFields.length > 0) {
+        throw new Error("completionFollowUp must be updated separately from lifecycle fields");
+      }
+      if (args.completionFollowUp) {
+        const beforeEventCount = eventCount(taskId);
+        const task = JSON.parse(runTaskBoard([
+          "completion", taskId,
+          "--follow-up-status", args.completionFollowUp,
+        ]));
+        const afterEventCount = eventCount(taskId);
+        return textResult({
+          task: {
+            id: task.id,
+            status: task.status,
+            completion: task.completion,
+          },
+          beforeEventCount,
+          afterEventCount,
+          eventDelta: afterEventCount - beforeEventCount,
+        });
       }
       const command = ["update", taskId];
       if (args.status) command.push("--status", args.status);

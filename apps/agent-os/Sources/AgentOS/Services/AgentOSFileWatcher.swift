@@ -17,12 +17,10 @@ final class AgentOSFileWatcher {
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: descriptor,
             eventMask: [.write, .rename, .extend, .attrib],
-            queue: .global(qos: .utility)
+            queue: .main
         )
         source.setEventHandler { [weak self] in
-            Task { @MainActor [weak self] in
-                self?.scheduleRefresh()
-            }
+            self?.scheduleRefresh()
         }
         source.setCancelHandler {
             close(descriptor)

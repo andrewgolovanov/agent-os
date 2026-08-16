@@ -109,6 +109,57 @@ class TaskBoardTest < Minitest::Test
     assert_equal 1, summary.dig("unfinished_by_status", "inbox")
   end
 
+  def test_done_task_keeps_completion_and_requires_slack_follow_up
+    create_task
+    @board.attach_source(
+      "task_test",
+      kind: "slack_threads",
+      value: "https://example.slack.com/archives/C0EXAMPLE01/p1786232231519149"
+    )
+
+    task = @board.update("task_test", "status" => "done")
+
+    refute_nil task.dig("completion", "completed_at")
+    assert_equal "pending", task.dig("completion", "follow_up_status")
+    assert_nil task.dig("completion", "follow_up_sent_at")
+    assert_empty @board.validate!
+  end
+
+  def test_completion_follow_up_can_be_confirmed_and_reopened_task_resets_it
+    create_task
+    @board.attach_source(
+      "task_test",
+      kind: "slack_threads",
+      value: "https://example.slack.com/archives/C0EXAMPLE01/p1786232231519149"
+    )
+    @board.update("task_test", "status" => "done")
+
+    task = @board.update_completion("task_test", follow_up_status: "sent")
+    assert_equal "sent", task.dig("completion", "follow_up_status")
+    refute_nil task.dig("completion", "follow_up_sent_at")
+
+    task = @board.update("task_test", "status" => "active")
+    assert_nil task.dig("completion", "completed_at")
+    assert_equal "not_required", task.dig("completion", "follow_up_status")
+    assert_nil task.dig("completion", "follow_up_sent_at")
+    assert_empty @board.validate!
+  end
+
+  def test_slack_source_attached_after_completion_reopens_follow_up
+    create_task
+    task = @board.update("task_test", "status" => "done")
+    assert_equal "not_required", task.dig("completion", "follow_up_status")
+
+    task = @board.attach_source(
+      "task_test",
+      kind: "slack_threads",
+      value: "https://example.slack.com/archives/C0EXAMPLE01/p1786232231519149"
+    )
+
+    assert_equal "pending", task.dig("completion", "follow_up_status")
+    assert_empty @board.validate!
+  end
+
   def test_human_board_is_rebuilt_after_task_mutations
     create_task
     board_path = File.join(@temporary, "BOARD.md")

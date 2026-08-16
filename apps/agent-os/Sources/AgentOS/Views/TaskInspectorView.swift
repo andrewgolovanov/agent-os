@@ -7,6 +7,8 @@ struct TaskInspectorView: View {
     let loadingSourceIDs: Set<String>
     let onClose: () -> Void
     let onStatusChange: (TaskStatus) -> Void
+    let onCompletionFollowUpChange: (AgentOSCompletionFollowUpStatus) -> Void
+    let onCopyCompletionUpdate: () -> Void
     let onOpenNewCodex: () -> Void
     let onOpenCodex: (String) -> Void
     @State private var isCloseHovering = false
@@ -137,6 +139,39 @@ struct TaskInspectorView: View {
                 onSelect: onStatusChange
             )
 
+            if task.status == .done {
+                AgentOSSelect(
+                    label: "Completion follow-up",
+                    systemImage: followUpImage(task.completionFollowUpStatus),
+                    iconColor: followUpColor(task.completionFollowUpStatus),
+                    selectedID: task.completionFollowUpStatus,
+                    selectedTitle: task.completionFollowUpStatus.displayName,
+                    selectedColor: followUpColor(task.completionFollowUpStatus),
+                    options: AgentOSCompletionFollowUpStatus.allCases.map {
+                        AgentOSSelectOption(
+                            id: $0,
+                            title: $0.displayName,
+                            systemImage: followUpImage($0),
+                            tint: followUpColor($0)
+                        )
+                    },
+                    isDisabled: isBusy,
+                    onSelect: onCompletionFollowUpChange
+                )
+
+                InspectorActionRow(
+                    title: "Copy completion update",
+                    detail: "Summary and pull request links",
+                    systemImage: "doc.on.doc",
+                    trailingSystemImage: "doc.on.doc",
+                    action: onCopyCompletionUpdate
+                )
+
+                Text("Paste the update into the relevant Slack thread, then mark follow-up as Sent. Agent OS does not send messages automatically.")
+                    .font(.caption)
+                    .foregroundStyle(AgentOSTheme.textTertiary)
+            }
+
             PrimaryInspectorButton(
                 title: "Open new Codex task",
                 systemImage: "arrow.up.forward.app",
@@ -234,6 +269,22 @@ struct TaskInspectorView: View {
             .tracking(0.45)
     }
 
+    private func followUpImage(_ status: AgentOSCompletionFollowUpStatus) -> String {
+        switch status {
+        case .pending: "bubble.left.and.exclamationmark.bubble.right"
+        case .sent: "paperplane"
+        case .notRequired: "minus.circle"
+        }
+    }
+
+    private func followUpColor(_ status: AgentOSCompletionFollowUpStatus) -> Color {
+        switch status {
+        case .pending: AgentOSTheme.warning
+        case .sent: TaskStatus.active.tint
+        case .notRequired: AgentOSTheme.textSecondary
+        }
+    }
+
 }
 
 private struct PrimaryInspectorButton: View {
@@ -280,6 +331,7 @@ private struct InspectorActionRow: View {
     let title: String
     let detail: String
     let systemImage: String
+    var trailingSystemImage = "arrow.up.forward.app"
     let action: () -> Void
 
     @State private var isHovering = false
@@ -300,7 +352,7 @@ private struct InspectorActionRow: View {
                         .foregroundStyle(AgentOSTheme.textTertiary)
                 }
                 Spacer()
-                Image(systemName: "arrow.up.forward.app")
+                Image(systemName: trailingSystemImage)
                     .font(.caption)
                     .foregroundStyle(AgentOSTheme.textSecondary)
             }
