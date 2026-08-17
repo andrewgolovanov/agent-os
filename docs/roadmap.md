@@ -84,11 +84,16 @@ Completed publication checks:
   metadata, embedded runtime version, strict bundle signature, archive length,
   and Sparkle Ed25519 signature pass independent post-publication verification
   — verified.
+- `v0.3.2` published Slack-only labels and short Slack source titles from
+  commit `91b209ae02af854ccb52dee28037bc876298da73` in successful workflow run
+  `32059910788`; its exact public archive, checksum, metadata, runtime, strict
+  bundle signature, appcast, and Sparkle Ed25519 signature passed independent
+  post-publication verification — verified.
 
 Remaining release checks:
 
-- a second Mac completes an approved clean install and a genuine `v0.2.1` to
-  `v0.3.0` update.
+- a second Mac completes an approved clean install and a genuine `v0.3.0` to
+  `v0.3.2` update.
 
 ### Complete the local Agent OS app pilot
 

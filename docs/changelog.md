@@ -2,6 +2,15 @@
 
 ## 2026-08-17
 
+- Published `v0.3.2` from
+  `91b209ae02af854ccb52dee28037bc876298da73` in successful workflow run
+  `32059910788`. The public archive, checksum, exact app/runtime/plugin version,
+  Apple Silicon/macOS metadata, strict bundle signature, appcast URL and length,
+  and Sparkle Ed25519 signature passed independent post-publication checks.
+- Added concise versioned GitHub release notes with `✨ Features` and `🐛 Fixes`
+  sections. Future release tags fail validation without those sections, and the
+  generated Full Changelog now starts at the previous published release rather
+  than an unpublished intermediate tag.
 - Replaced the generic native `Slack thread` source-card heading with an
   optional normalized 96-character excerpt from the Slack root message while
   preserving the exact permalink as correlation identity and retaining the

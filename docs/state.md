@@ -22,13 +22,13 @@ Verified: 2026-08-17
 - The first public release, `v0.1.0`, is published from commit
   `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f` at
   `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.1.0`.
-- The current public release, `v0.3.0`, is published from commit
-  `e9cdf0ab0434a7ad99b36c8b5d1cbe6023d9026a` at
-  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.3.0`.
-- The immutable `v0.3.1` tag contains the Slack-only label candidate, but no
-  GitHub Release was created because GitHub returned HTTP 503 during its
-  service incident. The candidate is superseded by `v0.3.2`, which adds short
-  Slack source titles before the next public release.
+- The current public release, `v0.3.2`, is published from commit
+  `91b209ae02af854ccb52dee28037bc876298da73` at
+  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.3.2`.
+- The immutable `v0.3.1` tag contains the earlier Slack-only label candidate,
+  but no GitHub Release was created because GitHub returned HTTP 503 during its
+  service incident. It remains an unpublished historical tag and was not moved
+  or reused.
 - Documentation maintenance is part of the repository completion contract:
   affected agent instructions, human README guidance, and owning product docs
   are updated in the same change; public repository Markdown is written in
@@ -278,6 +278,15 @@ Verified: 2026-08-17
   version `0.3.0`, macOS 14 minimum, Apple Silicon executable, embedded runtime
   version, appcast archive length and URL, stable latest feed, and Sparkle
   Ed25519 archive signature all passed verification.
+- The tag-triggered GitHub Release workflow completed successfully for
+  `v0.3.2`: the exact tag checkout passed 68 Ruby tests/556 assertions, 23 Swift
+  tests, plugin package validation, runtime synchronization, publication audit,
+  signed packaging, and release creation in run `32059910788`.
+- The public `v0.3.2` archive, checksum, and appcast were downloaded
+  independently after publication. The checksum, strict bundle signature,
+  version `0.3.2`, macOS 14 minimum, Apple Silicon executable, exact 22-file
+  embedded runtime version, appcast archive length and URL, and Sparkle Ed25519
+  signature all passed verification.
 
 ## Not configured
 

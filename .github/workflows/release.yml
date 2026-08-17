@@ -20,6 +20,10 @@ jobs:
       - name: Validate release candidate
         run: |
           set -euo pipefail
+          notes_file="docs/releases/${GITHUB_REF_NAME}.md"
+          [[ -f "$notes_file" ]]
+          grep -Fxq "## ✨ Features" "$notes_file"
+          grep -Fxq "## 🐛 Fixes" "$notes_file"
           release_home="${RUNNER_TEMP}/agent-os-home"
           ./bin/agent-os init --source "$GITHUB_WORKSPACE" --home "$release_home" --apply
           ./bin/agent-os validate --source "$GITHUB_WORKSPACE" --home "$release_home"
@@ -55,10 +59,25 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
+          notes_file="docs/releases/${GITHUB_REF_NAME}.md"
+          previous_tag="$(gh release list --exclude-drafts --exclude-pre-releases --limit 1 --json tagName --jq '.[0].tagName')"
+          [[ "$previous_tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          release_body="$(mktemp "${RUNNER_TEMP}/agent-os-release-notes.XXXXXX")"
+          [[ -n "$release_body" && "$release_body" == "${RUNNER_TEMP}/agent-os-release-notes."* ]]
+          cleanup() {
+            if [[ -n "${release_body:-}" && "$release_body" == "${RUNNER_TEMP}/agent-os-release-notes."* && -f "$release_body" && ! -L "$release_body" ]]; then
+              /bin/rm -f -- "$release_body"
+            fi
+          }
+          trap cleanup EXIT
+          {
+            cat "$notes_file"
+            printf '\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n' "$GITHUB_REPOSITORY" "$previous_tag" "$GITHUB_REF_NAME"
+          } > "$release_body"
           gh release create "$GITHUB_REF_NAME" \
             "apps/agent-os/dist/release/AgentOS-${version}-macOS.zip" \
             "apps/agent-os/dist/release/AgentOS-${version}-macOS.zip.sha256" \
             "apps/agent-os/dist/release/appcast.xml" \
             --verify-tag \
-            --generate-notes \
+            --notes-file "$release_body" \
             --title "Agent OS ${version}"

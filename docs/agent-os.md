@@ -97,14 +97,14 @@ bootstrap.
 ## Remaining gates
 
 The Sparkle private key has an independently verified encrypted recovery copy,
-the matching GitHub Actions secret is configured, and `v0.3.0` is published.
+the matching GitHub Actions secret is configured, and `v0.3.2` is published.
 Its public zip, checksum, latest appcast, bundle metadata, architecture,
 embedded runtime, and Ed25519 signature passed independent post-publication
 verification. A fresh anonymous clone of the tag also initialized and validated
 against a separate private home without relying on the development checkout.
 
 1. Complete a user-approved install on a second Mac, then prove a genuine
-   `v0.2.1` to `v0.3.0` update.
+   `v0.3.0` to `v0.3.2` update.
 
 Public source does not authorize copying private local state, changing unrelated
 remotes, or publishing an unsigned release.

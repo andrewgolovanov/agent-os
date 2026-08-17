@@ -212,6 +212,12 @@ To create the distributable zip and checksum:
 ./script/package_release.sh
 ```
 
+Before pushing `vN.N.N`, add `docs/releases/vN.N.N.md` with concise
+`## ✨ Features` and `## 🐛 Fixes` sections. The release workflow rejects a tag
+without both sections, publishes that human-readable summary, and appends a
+Full Changelog link starting from the previous published release. Unpublished
+intermediate tags therefore do not shorten the public change summary.
+
 The script bundles Sparkle, ad-hoc signs the complete app and its updater
 helpers, signs the update archive with the Agent OS Ed25519 key, and verifies
 the archive signature before returning. It creates:
