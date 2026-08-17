@@ -5,6 +5,8 @@ struct ContentView: View {
     @SceneStorage("agent-os.scope") private var scope = "focus"
     @State private var selectedTaskID: String?
     @State private var showsTaskInspector = false
+    @State private var inspectorWidth = AgentOSMetrics.inspectorIdealWidth
+    @State private var inspectorResizeStartWidth: CGFloat?
     @State private var sidebarWidth: CGFloat = AgentOSMetrics.sidebarWidth
     @State private var searchText = ""
     @State private var showsNewTask = false
@@ -82,57 +84,7 @@ struct ContentView: View {
                     max: AgentOSMetrics.sidebarWidth
                 )
         } detail: {
-            HSplitView {
-                ZStack {
-                    scopedContent
-                        .allowsHitTesting(!showsTaskInspector)
-                        .accessibilityHidden(showsTaskInspector)
-
-                    if showsTaskInspector {
-                        AgentOSTheme.inspectorBackdrop
-                            .contentShape(Rectangle())
-                            .onTapGesture(perform: closeInspector)
-                            .accessibilityHidden(true)
-                    }
-                }
-                .frame(minWidth: 560, maxWidth: .infinity, maxHeight: .infinity)
-
-                if showsTaskInspector, let selectedTask {
-                    TaskInspectorView(
-                        task: selectedTask,
-                        isBusy: store.busyTaskID == selectedTask.id,
-                        sourceMetadata: store.sourceMetadata,
-                        loadingSourceIDs: store.loadingSourceIDs,
-                        onClose: closeInspector,
-                        onStatusChange: { status in
-                            Task { await store.updateStatus(taskID: selectedTask.id, status: status) }
-                        },
-                        onCompletionFollowUpChange: { status in
-                            Task { await store.updateCompletionFollowUp(taskID: selectedTask.id, status: status) }
-                        },
-                        onCopyCompletionUpdate: {
-                            store.copyCompletionUpdate(taskID: selectedTask.id)
-                        },
-                        onOpenNewCodex: {
-                            Task { await store.openNewCodexTask(taskID: selectedTask.id) }
-                        },
-                        onOpenCodex: { threadID in
-                            Task { await store.openCodexTask(threadID: threadID) }
-                        }
-                    )
-                    .frame(
-                        minWidth: AgentOSMetrics.inspectorMinWidth,
-                        idealWidth: AgentOSMetrics.inspectorIdealWidth,
-                        maxWidth: AgentOSMetrics.inspectorMaxWidth,
-                        maxHeight: .infinity
-                    )
-                    .task(id: "\(selectedTask.id):\(selectedTask.updatedAt)") {
-                        await store.loadSourceMetadata(for: selectedTask)
-                    }
-                }
-            }
-            .background(AgentOSTheme.canvas)
-            .animation(nil, value: showsTaskInspector)
+            detailPane
         }
         .onPreferenceChange(SidebarWidthPreferenceKey.self) { sidebarWidth = $0 }
         .background {
@@ -229,7 +181,103 @@ struct ContentView: View {
         withoutAnimation {
             showsTaskInspector = false
             selectedTaskID = nil
+            inspectorResizeStartWidth = nil
         }
+    }
+
+    private var detailPane: some View {
+        ZStack(alignment: .trailing) {
+            scopedContent
+                .allowsHitTesting(!showsTaskInspector)
+                .accessibilityHidden(showsTaskInspector)
+
+            if showsTaskInspector {
+                AgentOSTheme.inspectorBackdrop
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: closeInspector)
+                    .accessibilityHidden(true)
+            }
+
+            if showsTaskInspector, let selectedTask {
+                taskInspector(for: selectedTask)
+                    .frame(width: inspectorWidth)
+                    .frame(maxHeight: .infinity)
+                    .overlay(alignment: .leading) {
+                        inspectorResizeHandle
+                    }
+                    .zIndex(1)
+            }
+        }
+        .frame(minWidth: 560, maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+        .background(AgentOSTheme.canvas)
+        .animation(nil, value: showsTaskInspector)
+    }
+
+    private func taskInspector(for selectedTask: AgentOSTask) -> some View {
+        TaskInspectorView(
+            task: selectedTask,
+            isBusy: store.busyTaskID == selectedTask.id,
+            sourceMetadata: store.sourceMetadata,
+            loadingSourceIDs: store.loadingSourceIDs,
+            onClose: closeInspector,
+            onStatusChange: { status in
+                Task { await store.updateStatus(taskID: selectedTask.id, status: status) }
+            },
+            onCompletionFollowUpChange: { status in
+                Task { await store.updateCompletionFollowUp(taskID: selectedTask.id, status: status) }
+            },
+            onCopyCompletionUpdate: {
+                store.copyCompletionUpdate(taskID: selectedTask.id)
+            },
+            onOpenNewCodex: {
+                Task { await store.openNewCodexTask(taskID: selectedTask.id) }
+            },
+            onOpenCodex: { threadID in
+                Task { await store.openCodexTask(threadID: threadID) }
+            }
+        )
+        .overlay(alignment: .leading) {
+            Rectangle()
+                .fill(AgentOSTheme.border)
+                .frame(width: 1)
+                .accessibilityHidden(true)
+        }
+        .task(id: "\(selectedTask.id):\(selectedTask.updatedAt)") {
+            await store.loadSourceMetadata(for: selectedTask)
+        }
+    }
+
+    private var inspectorResizeHandle: some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(width: AgentOSMetrics.inspectorResizeHandleWidth)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        if inspectorResizeStartWidth == nil {
+                            inspectorResizeStartWidth = inspectorWidth
+                        }
+                        let startWidth = inspectorResizeStartWidth ?? inspectorWidth
+                        inspectorWidth = AgentOSMetrics.clampedInspectorWidth(
+                            startWidth - value.translation.width
+                        )
+                    }
+                    .onEnded { _ in
+                        inspectorResizeStartWidth = nil
+                    }
+            )
+            .horizontalResizeCursor()
+            .accessibilityElement()
+            .accessibilityLabel("Task detail width")
+            .accessibilityValue("\(Int(inspectorWidth)) points")
+            .accessibilityAdjustableAction { direction in
+                let delta: CGFloat = direction == .increment
+                    ? AgentOSMetrics.inspectorResizeStep
+                    : -AgentOSMetrics.inspectorResizeStep
+                inspectorWidth = AgentOSMetrics.clampedInspectorWidth(inspectorWidth + delta)
+            }
     }
 
     @ViewBuilder

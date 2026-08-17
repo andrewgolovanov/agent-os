@@ -14,8 +14,25 @@ private struct PointingHandCursorModifier: ViewModifier {
     }
 }
 
+private struct HorizontalResizeCursorModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content.onContinuousHover { phase in
+            switch phase {
+            case .active:
+                NSCursor.resizeLeftRight.set()
+            case .ended:
+                NSCursor.arrow.set()
+            }
+        }
+    }
+}
+
 extension View {
     func pointingHandCursor() -> some View {
         modifier(PointingHandCursorModifier())
+    }
+
+    func horizontalResizeCursor() -> some View {
+        modifier(HorizontalResizeCursorModifier())
     }
 }

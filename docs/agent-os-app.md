@@ -91,9 +91,14 @@ may call it on its own queue without entering main-actor-isolated code.
   user-resizable;
 - selected outcome details with goal, summary, next action, blocker, sources,
   Codex memberships, and tracked outcome time in the header;
-- registered project display names directly in Focus rows for mixed-project
-  scanning without opening task details, plus the shared semantic hover surface
-  and pointing-hand feedback that make every selectable row visibly interactive;
+- readable Focus rows with 14-point semibold titles, 13-point action text,
+  added leading, a 6-point vertical flow, and a bounded text measure;
+  local-calendar Today, Yesterday, This Week, Last Week, and Earlier sections
+  group outcomes by their last update, omit empty periods, and use lightweight
+  non-sticky headings without a separate backing surface;
+  registered project context sits above each task title while lifecycle status
+  remains the only trailing signal; full-width semantic separators, the shared
+  hover surface, and pointing-hand feedback make every selectable row clear;
 - display-only Slack channel labels on outcomes, with an unmapped Labels sidebar
   section that filters non-code work without enabling repository actions;
 - tracked outcome time at the top of every Board card for immediate scanning;

@@ -20,6 +20,15 @@ data.
 
 Board keeps unfinished outcomes in independently scrollable lifecycle columns
 while hiding their persistent vertical scroll indicators.
+Focus uses a compact reading hierarchy rather than card geometry: 14-point
+semibold titles, 13-point action text with added leading, a 6-point content
+flow, and a bounded text measure keep long mixed-project work readable. Outcomes
+are grouped by their last update into local-calendar Today, Yesterday, This
+Week, Last Week, and Earlier sections; empty sections are omitted and lightweight
+headings scroll with the list without a separate backing surface. Project and
+label context sits above each task title, while status remains the only trailing
+signal. Semantic separators span the full row width instead of inheriting the
+variable native list inset.
 Unassigned outcomes may carry display-only Slack channel labels. The app shows
 those labels in Focus, Board, Done, and the inspector. Unmapped channels remain
 available as a separate sidebar filter; a channel explicitly mapped to a

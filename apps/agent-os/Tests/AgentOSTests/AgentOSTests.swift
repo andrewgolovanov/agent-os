@@ -203,6 +203,62 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(AgentOSMetrics.inspectorMaxWidth, 680)
         XCTAssertLessThan(AgentOSMetrics.inspectorMinWidth, AgentOSMetrics.inspectorIdealWidth)
         XCTAssertLessThan(AgentOSMetrics.inspectorIdealWidth, AgentOSMetrics.inspectorMaxWidth)
+        XCTAssertEqual(AgentOSMetrics.clampedInspectorWidth(200), 420)
+        XCTAssertEqual(AgentOSMetrics.clampedInspectorWidth(560), 560)
+        XCTAssertEqual(AgentOSMetrics.clampedInspectorWidth(900), 680)
+    }
+
+    func testFocusListUsesReadableTypographyRhythmAndBoundedMeasure() {
+        XCTAssertEqual(AgentOSTypography.listTitleSize, 14)
+        XCTAssertEqual(AgentOSTypography.listBodySize, 13)
+        XCTAssertEqual(AgentOSTypography.listSectionTitleSize, 12)
+        XCTAssertEqual(AgentOSTypography.listBodyLineSpacing, 2)
+        XCTAssertEqual(AgentOSTypography.listFlow, 6)
+        XCTAssertEqual(AgentOSMetrics.focusContentTopPadding, 16)
+        XCTAssertEqual(AgentOSMetrics.focusRowHorizontalPadding, 16)
+        XCTAssertEqual(AgentOSMetrics.focusRowVerticalPadding, 10)
+        XCTAssertEqual(AgentOSMetrics.focusSectionHeaderTopPadding, 10)
+        XCTAssertEqual(AgentOSMetrics.focusSectionHeaderBottomPadding, 6)
+        XCTAssertEqual(AgentOSMetrics.focusTextMeasure, 880)
+    }
+
+    func testFocusDateSectionsUseLocalCalendarBoundaries() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 2 * 60 * 60))
+        calendar.firstWeekday = 2
+        calendar.minimumDaysInFirstWeek = 4
+        let now = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 8, day: 20, hour: 12))
+        )
+
+        XCTAssertEqual(
+            FocusDateSections.bucket(for: "2026-08-20T08:00:00Z", relativeTo: now, calendar: calendar),
+            .today
+        )
+        XCTAssertEqual(
+            FocusDateSections.bucket(for: "2026-08-19T12:00:00Z", relativeTo: now, calendar: calendar),
+            .yesterday
+        )
+        XCTAssertEqual(
+            FocusDateSections.bucket(for: "2026-08-18T12:00:00.123Z", relativeTo: now, calendar: calendar),
+            .thisWeek
+        )
+        XCTAssertEqual(
+            FocusDateSections.bucket(for: "2026-08-12T12:00:00Z", relativeTo: now, calendar: calendar),
+            .lastWeek
+        )
+        XCTAssertEqual(
+            FocusDateSections.bucket(for: "2026-08-01T12:00:00Z", relativeTo: now, calendar: calendar),
+            .earlier
+        )
+        XCTAssertEqual(
+            FocusDateSections.bucket(for: "not-a-date", relativeTo: now, calendar: calendar),
+            .earlier
+        )
+        XCTAssertEqual(
+            FocusDateBucket.allCases.map(\.title),
+            ["Today", "Yesterday", "This Week", "Last Week", "Earlier"]
+        )
     }
 
     func testDoneTaskDecodesCompletionFollowUp() throws {

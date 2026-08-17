@@ -80,9 +80,17 @@ enum AgentOSMetrics {
     static let inspectorMinWidth: CGFloat = 420
     static let inspectorIdealWidth: CGFloat = 520
     static let inspectorMaxWidth: CGFloat = 680
+    static let inspectorResizeHandleWidth: CGFloat = 8
+    static let inspectorResizeStep: CGFloat = 40
     static let contentPadding: CGFloat = 24
     static let sectionSpacing: CGFloat = 24
     static let itemSpacing: CGFloat = 16
+    static let focusTextMeasure: CGFloat = 880
+    static let focusContentTopPadding: CGFloat = 16
+    static let focusRowHorizontalPadding: CGFloat = 16
+    static let focusRowVerticalPadding: CGFloat = 10
+    static let focusSectionHeaderTopPadding: CGFloat = 10
+    static let focusSectionHeaderBottomPadding: CGFloat = 6
     static let controlHeight: CGFloat = 36
     static let compactControlHeight: CGFloat = 32
     static let iconSize: CGFloat = 16
@@ -92,6 +100,24 @@ enum AgentOSMetrics {
     static let radiusMedium: CGFloat = 8
     static let radiusLarge: CGFloat = 10
     static let radiusExtraLarge: CGFloat = 14
+
+    static func clampedInspectorWidth(_ proposedWidth: CGFloat) -> CGFloat {
+        min(max(proposedWidth, inspectorMinWidth), inspectorMaxWidth)
+    }
+}
+
+enum AgentOSTypography {
+    // Keep dense application lists on one shared rhythm. These values adapt the
+    // shadcn/typeset size, leading, and flow controls to native SwiftUI points.
+    static let listTitleSize: CGFloat = 14
+    static let listBodySize: CGFloat = 13
+    static let listSectionTitleSize: CGFloat = 12
+    static let listBodyLineSpacing: CGFloat = 2
+    static let listFlow: CGFloat = 6
+
+    static let listTitle = Font.system(size: listTitleSize, weight: .semibold)
+    static let listBody = Font.system(size: listBodySize, weight: .regular)
+    static let listSectionTitle = Font.system(size: listSectionTitleSize, weight: .semibold)
 }
 
 struct AgentOSPanel: ViewModifier {

@@ -119,9 +119,10 @@ Done when:
   and project/period filters summarize only exact-linked outcome time; broader
   Project Time remains an explicit CLI/private-report workflow;
 - the official shadcn Neutral light/dark semantic system, saved toolbar toggle,
-  dashboard-01 control geometry, prominent tracked time, and
-  on-demand resizable detail split remain legible and predictable across Focus,
-  Board, and narrow window layouts;
+  dashboard-01 control geometry, prominent tracked time, readable Focus
+  typography with local-calendar recency sections and full-width row
+  separators, and the on-demand resizable detail split remain legible and
+  predictable across Focus, Board, and narrow window layouts;
 - contextual source rows remain useful without provider authentication and
   enhance GitHub PR state read-only when an authenticated `gh` is available;
 - a fresh task loads the new monorepo plugin rather than an older cached build;

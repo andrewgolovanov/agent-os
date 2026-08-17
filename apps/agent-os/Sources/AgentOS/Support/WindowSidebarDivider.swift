@@ -30,11 +30,14 @@ struct WindowSidebarDivider: NSViewRepresentable {
         private weak var installedWindow: NSWindow?
         private weak var titlebarFill: NSView?
         private weak var contentTitlebarFill: NSView?
+        private weak var contentTitlebarBorder: NSView?
         private weak var divider: NSView?
         private var titlebarWidthConstraint: NSLayoutConstraint?
         private var titlebarHeightConstraint: NSLayoutConstraint?
         private var contentTitlebarHeightConstraint: NSLayoutConstraint?
         private var contentTitlebarLeadingConstraint: NSLayoutConstraint?
+        private var contentTitlebarBorderTopConstraint: NSLayoutConstraint?
+        private var contentTitlebarBorderLeadingConstraint: NSLayoutConstraint?
         private var dividerLeadingConstraint: NSLayoutConstraint?
 
         func install(in window: NSWindow?, sidebarWidth: CGFloat) {
@@ -50,6 +53,7 @@ struct WindowSidebarDivider: NSViewRepresentable {
             if installedWindow !== window
                 || titlebarFill?.superview !== contentView
                 || contentTitlebarFill?.superview !== contentView
+                || contentTitlebarBorder?.superview !== contentView
                 || divider?.superview !== contentView
             {
                 removeDivider()
@@ -57,20 +61,32 @@ struct WindowSidebarDivider: NSViewRepresentable {
                 let titlebarFill = PassthroughDividerView()
                 titlebarFill.wantsLayer = true
                 titlebarFill.layer?.backgroundColor = NSColor(AgentOSTheme.sidebar).cgColor
+                titlebarFill.layer?.isOpaque = true
+                titlebarFill.layer?.zPosition = 1_000
                 titlebarFill.translatesAutoresizingMaskIntoConstraints = false
                 contentView.addSubview(titlebarFill, positioned: .above, relativeTo: nil)
 
                 let contentTitlebarFill = PassthroughDividerView()
                 contentTitlebarFill.wantsLayer = true
                 contentTitlebarFill.layer?.backgroundColor = NSColor(AgentOSTheme.canvas).cgColor
+                contentTitlebarFill.layer?.isOpaque = true
+                contentTitlebarFill.layer?.zPosition = 1_000
                 contentTitlebarFill.translatesAutoresizingMaskIntoConstraints = false
                 contentView.addSubview(contentTitlebarFill, positioned: .above, relativeTo: titlebarFill)
+
+                let contentTitlebarBorder = PassthroughDividerView()
+                contentTitlebarBorder.wantsLayer = true
+                contentTitlebarBorder.layer?.backgroundColor = NSColor(AgentOSTheme.border).cgColor
+                contentTitlebarBorder.layer?.zPosition = 1_001
+                contentTitlebarBorder.translatesAutoresizingMaskIntoConstraints = false
+                contentView.addSubview(contentTitlebarBorder, positioned: .above, relativeTo: contentTitlebarFill)
 
                 let divider = PassthroughDividerView()
                 divider.wantsLayer = true
                 divider.layer?.backgroundColor = NSColor(AgentOSTheme.sidebarBorder).cgColor
+                divider.layer?.zPosition = 1_002
                 divider.translatesAutoresizingMaskIntoConstraints = false
-                contentView.addSubview(divider, positioned: .above, relativeTo: contentTitlebarFill)
+                contentView.addSubview(divider, positioned: .above, relativeTo: contentTitlebarBorder)
 
                 let titlebarWidthConstraint = titlebarFill.widthAnchor.constraint(equalToConstant: sidebarWidth)
                 let titlebarHeightConstraint = titlebarFill.heightAnchor.constraint(
@@ -80,6 +96,14 @@ struct WindowSidebarDivider: NSViewRepresentable {
                     equalToConstant: titlebarHeight(in: window, contentView: contentView)
                 )
                 let contentTitlebarLeadingConstraint = contentTitlebarFill.leadingAnchor.constraint(
+                    equalTo: contentView.leadingAnchor,
+                    constant: sidebarWidth
+                )
+                let contentTitlebarBorderTopConstraint = contentTitlebarBorder.topAnchor.constraint(
+                    equalTo: contentView.topAnchor,
+                    constant: titlebarHeight(in: window, contentView: contentView) - 1
+                )
+                let contentTitlebarBorderLeadingConstraint = contentTitlebarBorder.leadingAnchor.constraint(
                     equalTo: contentView.leadingAnchor,
                     constant: sidebarWidth
                 )
@@ -97,6 +121,10 @@ struct WindowSidebarDivider: NSViewRepresentable {
                     contentTitlebarFill.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
                     contentTitlebarFill.topAnchor.constraint(equalTo: contentView.topAnchor),
                     contentTitlebarHeightConstraint,
+                    contentTitlebarBorderTopConstraint,
+                    contentTitlebarBorderLeadingConstraint,
+                    contentTitlebarBorder.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+                    contentTitlebarBorder.heightAnchor.constraint(equalToConstant: 1),
                     dividerLeadingConstraint,
                     divider.topAnchor.constraint(equalTo: contentView.topAnchor),
                     divider.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
@@ -106,23 +134,29 @@ struct WindowSidebarDivider: NSViewRepresentable {
                 installedWindow = window
                 self.titlebarFill = titlebarFill
                 self.contentTitlebarFill = contentTitlebarFill
+                self.contentTitlebarBorder = contentTitlebarBorder
                 self.divider = divider
                 self.titlebarWidthConstraint = titlebarWidthConstraint
                 self.titlebarHeightConstraint = titlebarHeightConstraint
                 self.contentTitlebarHeightConstraint = contentTitlebarHeightConstraint
                 self.contentTitlebarLeadingConstraint = contentTitlebarLeadingConstraint
+                self.contentTitlebarBorderTopConstraint = contentTitlebarBorderTopConstraint
+                self.contentTitlebarBorderLeadingConstraint = contentTitlebarBorderLeadingConstraint
                 self.dividerLeadingConstraint = dividerLeadingConstraint
             } else {
                 titlebarWidthConstraint?.constant = sidebarWidth
                 titlebarHeightConstraint?.constant = titlebarHeight(in: window, contentView: contentView)
                 contentTitlebarHeightConstraint?.constant = titlebarHeight(in: window, contentView: contentView)
                 contentTitlebarLeadingConstraint?.constant = sidebarWidth
+                contentTitlebarBorderTopConstraint?.constant = titlebarHeight(in: window, contentView: contentView) - 1
+                contentTitlebarBorderLeadingConstraint?.constant = sidebarWidth
                 dividerLeadingConstraint?.constant = sidebarWidth
             }
 
             window.effectiveAppearance.performAsCurrentDrawingAppearance {
                 titlebarFill?.layer?.backgroundColor = NSColor(AgentOSTheme.sidebar).cgColor
                 contentTitlebarFill?.layer?.backgroundColor = NSColor(AgentOSTheme.canvas).cgColor
+                contentTitlebarBorder?.layer?.backgroundColor = NSColor(AgentOSTheme.border).cgColor
                 divider?.layer?.backgroundColor = NSColor(AgentOSTheme.sidebarBorder).cgColor
             }
         }
@@ -132,12 +166,16 @@ struct WindowSidebarDivider: NSViewRepresentable {
             titlebarHeightConstraint = nil
             contentTitlebarHeightConstraint = nil
             contentTitlebarLeadingConstraint = nil
+            contentTitlebarBorderTopConstraint = nil
+            contentTitlebarBorderLeadingConstraint = nil
             dividerLeadingConstraint = nil
             titlebarFill?.removeFromSuperview()
             contentTitlebarFill?.removeFromSuperview()
+            contentTitlebarBorder?.removeFromSuperview()
             divider?.removeFromSuperview()
             titlebarFill = nil
             contentTitlebarFill = nil
+            contentTitlebarBorder = nil
             divider = nil
             installedWindow = nil
         }

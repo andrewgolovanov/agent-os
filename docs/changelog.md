@@ -2,6 +2,16 @@
 
 ## 2026-08-18
 
+- Grouped the native Focus list by each outcome's last update using
+  local-calendar Today, Yesterday, This Week, Last Week, and Earlier sections;
+  periods with no matching outcomes remain hidden, and the lightweight text
+  headings scroll with the list without a sticky backing surface.
+- Reworked the native Focus list into a readable table rhythm with 14-point
+  semibold titles, 13-point action text, added line spacing, a 6-point content
+  flow, and a bounded reading measure derived from the shadcn Typeset model.
+- Moved project context above each Focus task title while keeping lifecycle
+  status as the only trailing signal; increased row padding and full-width
+  semantic separators keep dense outcomes scannable at wide window sizes.
 - Published `v0.4.0` from
   `f6417fcaac6c9176d3bebdd43394a30782d3adc5` in successful workflow run
   `32075412237`. The public archive, checksum, exact app/runtime/plugin version,

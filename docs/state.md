@@ -92,7 +92,7 @@ Verified: 2026-08-18
   identity-checked repository relinking, preview-first Slack channel mapping,
   safe unfinished-outcome reconciliation, completion follow-up, and Project
   Time reporting contracts.
-- Agent OS app builds and its 27 Swift tests pass; bundle launch verification
+- Agent OS app builds and its 29 Swift tests pass; bundle launch verification
   succeeds with both the active home and a fresh empty private home.
 - Task Board and the Agent OS MCP now support idempotent display-only Slack
   channel labels keyed by `slack:<channel_id>`. The native app keeps every
@@ -146,9 +146,14 @@ Verified: 2026-08-18
   toolbar/default/compact sizing and the shadcn radius scale. Status badges
   retain text and distinct light/dark contrast while Active is green, Waiting
   amber, Review blue, Planned violet, Inbox neutral, Done emerald, and Cancelled
-  red. Focus rows also expose the registered project display name in a compact
-  folder badge and use the shared semantic hover surface with pointer feedback
-  for task selection.
+  red. Focus rows use a readable 14-point title and 13-point action hierarchy,
+  added leading, a 6-point content flow, and a bounded text measure. Project
+  context sits above each task title while lifecycle status remains the only
+  trailing signal. Local-calendar Today, Yesterday, This Week, Last Week, and
+  Earlier sections group outcomes by their last update and omit empty periods.
+  Their lightweight text headings scroll with the list without a separate
+  backing surface; a custom semantic separator spans every row edge-to-edge, and
+  the shared hover surface retains pointer feedback for task selection.
 - The task detail is no longer a permanent empty third column or animated
   inspector sheet. Real-window accessibility and screenshot QA verified a
   closed-at-launch, open-on-selection, resizable native split with explicit
