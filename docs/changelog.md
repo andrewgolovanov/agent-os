@@ -2,6 +2,12 @@
 
 ## 2026-08-18
 
+- Published `v0.4.0` from
+  `f6417fcaac6c9176d3bebdd43394a30782d3adc5` in successful workflow run
+  `32075412237`. The public archive, checksum, exact app/runtime/plugin version,
+  Apple Silicon/macOS metadata, 22-file runtime, strict bundle signature,
+  stable appcast URL and length, and Sparkle Ed25519 signature passed
+  independent post-publication checks.
 - Added a persistent Light/Dark appearance switch to the native app toolbar,
   following the shadcn theme-provider and sun/moon toggle model while retaining
   Dark as the existing-user default.

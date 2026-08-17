@@ -92,11 +92,17 @@ Completed publication checks:
   `32059910788`; its exact public archive, checksum, metadata, runtime, strict
   bundle signature, appcast, and Sparkle Ed25519 signature passed independent
   post-publication verification — verified.
+- `v0.4.0` published reviewed Slack channel-to-project reconciliation, the
+  saved Light/Dark appearance, cleaner Board scrolling, and the wider inspector
+  from commit `f6417fcaac6c9176d3bebdd43394a30782d3adc5` in successful workflow
+  run `32075412237`; its public checksum, Apple Silicon/macOS metadata, exact
+  22-file runtime, strict bundle signature, stable appcast, and Sparkle Ed25519
+  signature passed independent post-publication verification — verified.
 
 Remaining release checks:
 
-- a second Mac completes an approved clean install and a genuine `v0.3.0` to
-  `v0.3.2` update.
+- a second Mac completes an approved clean install and a genuine `v0.3.2` to
+  `v0.4.0` update.
 
 ### Complete the local Agent OS app pilot
 
