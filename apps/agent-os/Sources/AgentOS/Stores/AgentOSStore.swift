@@ -145,13 +145,15 @@ final class AgentOSStore {
             return "- \(metadata.title)\(status): \(item.link.url)"
         }
         let project = task.projects.isEmpty ? "Unassigned" : task.projects.joined(separator: ", ")
+        let labels = task.labels.map(\.name).joined(separator: ", ")
+        let labelsLine = labels.isEmpty ? "" : "\nLabels: \(labels)"
         let pullRequestSection = pullRequests.isEmpty
             ? ""
             : "\n\nPull requests:\n\(pullRequests.joined(separator: "\n"))"
         let update = """
         ✅ \(task.title)
 
-        Project: \(project)
+        Project: \(project)\(labelsLine)
 
         \(task.summary)\(pullRequestSection)
         """

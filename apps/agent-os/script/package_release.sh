@@ -63,6 +63,21 @@ RUNTIME_DESTINATION="$APP_RESOURCES/AgentOSRuntime"
 ZIP_PATH="$RELEASE_DIR/$PRODUCT_NAME-$VERSION-macOS.zip"
 CHECKSUM_PATH="$ZIP_PATH.sha256"
 APPCAST_PATH="$RELEASE_DIR/appcast.xml"
+APPCAST_INPUT_DIR=""
+
+cleanup_appcast_input() {
+  if [[ -z "$APPCAST_INPUT_DIR" ]]; then
+    return
+  fi
+  case "$APPCAST_INPUT_DIR" in
+    "$RELEASE_DIR/.appcast-input."*) ;;
+    *) echo "refusing unexpected appcast input cleanup path: $APPCAST_INPUT_DIR" >&2; return 1 ;;
+  esac
+  if [[ -d "$APPCAST_INPUT_DIR" && ! -L "$APPCAST_INPUT_DIR" ]]; then
+    /bin/rm -rf -- "$APPCAST_INPUT_DIR"
+  fi
+}
+trap cleanup_appcast_input EXIT
 
 case "$APP_BUNDLE" in
   "$ROOT_DIR/dist/release/Agent OS.app") ;;
@@ -144,6 +159,15 @@ SPARKLE_VERSION="$APP_FRAMEWORKS/Sparkle.framework/Versions/B"
   /usr/bin/shasum -a 256 "$(basename "$ZIP_PATH")" > "$(basename "$CHECKSUM_PATH")"
 )
 
+APPCAST_INPUT_DIR="$(mktemp -d "$RELEASE_DIR/.appcast-input.XXXXXX")"
+case "$APPCAST_INPUT_DIR" in
+  "$RELEASE_DIR/.appcast-input."*) ;;
+  *) echo "refusing unexpected appcast input path: $APPCAST_INPUT_DIR" >&2; exit 2 ;;
+esac
+[[ -d "$APPCAST_INPUT_DIR" && ! -L "$APPCAST_INPUT_DIR" ]] || {
+  echo "invalid appcast input directory: $APPCAST_INPUT_DIR" >&2
+  exit 2
+}
 APPCAST_ARGUMENTS=(
   --account "$SPARKLE_KEY_ACCOUNT"
   --download-url-prefix "$SPARKLE_DOWNLOAD_URL_ROOT/v$VERSION/"
@@ -151,12 +175,18 @@ APPCAST_ARGUMENTS=(
   --versions "$VERSION"
   --maximum-versions 3
   --maximum-deltas 0
-  -o "$APPCAST_PATH"
+  -o "$APPCAST_INPUT_DIR/appcast.xml"
 )
 if [[ -n "$PRIVATE_KEY_FILE" ]]; then
   APPCAST_ARGUMENTS+=(--ed-key-file "$PRIVATE_KEY_FILE")
 fi
-"$GENERATE_APPCAST" "${APPCAST_ARGUMENTS[@]}" "$RELEASE_DIR"
+cp "$ZIP_PATH" "$APPCAST_INPUT_DIR/$(basename "$ZIP_PATH")"
+"$GENERATE_APPCAST" "${APPCAST_ARGUMENTS[@]}" "$APPCAST_INPUT_DIR"
+[[ -f "$APPCAST_INPUT_DIR/appcast.xml" && ! -L "$APPCAST_INPUT_DIR/appcast.xml" ]] || {
+  echo "missing generated appcast" >&2
+  exit 1
+}
+mv -f "$APPCAST_INPUT_DIR/appcast.xml" "$APPCAST_PATH"
 
 ARCHIVE_SIGNATURE="$(/usr/bin/ruby -rrexml/document -e '
   document = REXML::Document.new(File.read(ARGV.fetch(0)))

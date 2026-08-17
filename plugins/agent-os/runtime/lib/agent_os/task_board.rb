@@ -12,6 +12,7 @@ module AgentOS
     STATUSES = %w[inbox planned active waiting review done cancelled].freeze
     KINDS = %w[delivery review research maintenance coordination other].freeze
     SOURCE_KINDS = %w[slack_threads pull_requests figma deployments other].freeze
+    LABEL_KINDS = %w[slack_channel].freeze
     THREAD_ROLES = %w[coordination research implementation review follow_up other].freeze
     THREAD_STATUSES = %w[active idle done archived].freeze
     THREAD_ORIGINS = %w[new fork routed automation].freeze
@@ -41,6 +42,7 @@ module AgentOS
           "id" => attributes.fetch("id", generate_id),
           "title" => attributes.fetch("title"),
           "projects" => Array(attributes["projects"]),
+          "labels" => [],
           "kind" => attributes.fetch("kind", "other"),
           "status" => attributes.fetch("status", "inbox"),
           "goal" => attributes.fetch("goal"),
@@ -139,6 +141,30 @@ module AgentOS
           append_event!(id, "source_attached", source.merge("kind" => kind), task.fetch("updated_at"))
           rebuild_board!
         end
+        task
+      end
+    end
+
+    def upsert_label(id, key:, name:, kind:)
+      normalized = {
+        "key" => key.to_s.strip,
+        "name" => name.to_s.strip,
+        "kind" => kind
+      }
+      validate_label!(normalized)
+
+      with_lock do
+        task = read_task(id)
+        labels = task["labels"] ||= []
+        existing = labels.find { |label| label["key"] == normalized.fetch("key") }
+        return task if existing == normalized
+
+        existing ? existing.replace(normalized) : labels << normalized
+        task["updated_at"] = timestamp
+        validate_task!(task)
+        write_task!(task)
+        append_event!(id, "label_upserted", normalized, task.fetch("updated_at"))
+        rebuild_board!
         task
       end
     end
@@ -533,6 +559,13 @@ module AgentOS
       unless task["projects"].is_a?(Array) && task["projects"].all? { |value| !value.to_s.empty? }
         raise ArgumentError, "projects must be an array of non-empty keys"
       end
+      labels = task.fetch("labels", [])
+      raise ArgumentError, "labels must be an array" unless labels.is_a?(Array)
+      labels.each do |label|
+        validate_label!(label)
+      end
+      label_keys = labels.map { |label| label.fetch("key") }
+      raise ArgumentError, "label keys must be unique" unless label_keys.uniq.length == label_keys.length
       raise ArgumentError, "invalid kind: #{task["kind"]}" unless KINDS.include?(task["kind"])
       raise ArgumentError, "invalid status: #{task["status"]}" unless STATUSES.include?(task["status"])
       %w[goal summary next_action created_at updated_at].each do |field|
@@ -615,6 +648,19 @@ module AgentOS
       true
     end
 
+    def validate_label!(label)
+      raise ArgumentError, "label must be a mapping" unless label.is_a?(Hash)
+      raise ArgumentError, "label key is required" if label["key"].to_s.strip.empty?
+      raise ArgumentError, "label name is required" if label["name"].to_s.strip.empty?
+      raise ArgumentError, "invalid label kind: #{label["kind"]}" unless LABEL_KINDS.include?(label["kind"])
+
+      if label["kind"] == "slack_channel"
+        raise ArgumentError, "invalid Slack channel label key" unless label["key"].match?(/\Aslack:[A-Z0-9]+\z/)
+        raise ArgumentError, "invalid Slack channel label name" unless label["name"].match?(/\A#[a-z0-9][a-z0-9_-]*\z/i)
+      end
+      true
+    end
+
     def write_task!(task)
       atomic_write(task_path(task.fetch("id")), JSON.pretty_generate(task) + "\n")
       atomic_write(status_path(task.fetch("id")), render_status(task))
@@ -644,6 +690,7 @@ module AgentOS
             "id" => task.fetch("id"),
             "title" => task.fetch("title"),
             "projects" => task.fetch("projects"),
+            "labels" => task.fetch("labels", []),
             "kind" => task.fetch("kind"),
             "status" => task.fetch("status"),
             "next_action" => task.fetch("next_action"),
@@ -698,6 +745,7 @@ module AgentOS
 
         cards = matching.map do |task|
           projects = task.fetch("projects").empty? ? "не назначен" : task.fetch("projects").map { |project| "`#{project}`" }.join(", ")
+          labels = task.fetch("labels", []).map { |label| "`#{label.fetch("name")}`" }.join(", ")
           activity = task.fetch("activity", empty_activity)
           active_turns = activity.fetch("turns").count { |turn| turn["stopped_at"].nil? }
           linked_threads = task.fetch("codex_threads")
@@ -715,6 +763,7 @@ module AgentOS
             "",
             "`#{task.fetch("id")}` · проект: #{projects} · тип: `#{task.fetch("kind")}`",
             "",
+            labels.empty? ? nil : "- Метки: #{labels}",
             "- Состояние: #{task.fetch("summary")}",
             "- Следующий шаг: #{task.fetch("next_action")}",
             blocker_line,
@@ -757,6 +806,7 @@ module AgentOS
       activity = task.fetch("activity", empty_activity)
       active_turns = activity.fetch("turns").count { |turn| turn["stopped_at"].nil? }
       constraint_lines = task.fetch("constraints").map { |constraint| "- #{constraint}" }
+      labels = task.fetch("labels", []).map { |label| "`#{label.fetch("name")}`" }.join(", ")
       completion = task["completion"] || empty_completion
       completion_lines = if task.fetch("status") == "done"
                            [
@@ -775,6 +825,8 @@ module AgentOS
         Status: `#{task.fetch("status")}`
 
         Projects: #{task.fetch("projects").empty? ? "Unassigned" : task.fetch("projects").map { |project| "`#{project}`" }.join(", ")}
+
+        Labels: #{labels.empty? ? "None." : labels}
 
         ## Goal
 

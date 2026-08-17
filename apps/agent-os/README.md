@@ -19,6 +19,10 @@ destination refreshes canonical private state; none imports or duplicates task
 data.
 
 Board keeps unfinished outcomes in independently scrollable lifecycle columns.
+Unassigned outcomes may carry display-only Slack channel labels. The app shows
+those labels in Focus, Board, Done, and the inspector, and exposes them as a
+separate sidebar filter without treating them as registered projects or
+enabling `Open new Codex task`.
 Done is the operational completion journal: it retains `done` and `cancelled`
 outcomes with their complete inspector, sources, pull-request state, linked
 Codex activity, and completion follow-up state. Its project, completion-period,

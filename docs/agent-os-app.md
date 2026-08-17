@@ -58,7 +58,7 @@ may call it on its own queue without entering main-actor-isolated code.
 ## UI scope
 
 - regular SwiftUI window with Focus, Board, and Done views;
-- project/outcome filtering and search;
+- project, Slack channel label, outcome filtering, and search;
 - independently vertically scrollable Board columns inside the horizontal
   workflow canvas, keeping every card reachable without moving column headers;
 - a Done view for durable `done` and `cancelled` outcomes, with project,
@@ -86,6 +86,8 @@ may call it on its own queue without entering main-actor-isolated code.
 - registered project display names directly in Focus rows for mixed-project
   scanning without opening task details, plus the shared semantic hover surface
   and pointing-hand feedback that make every selectable row visibly interactive;
+- display-only Slack channel labels on unassigned outcomes, with a Labels sidebar
+  section that filters non-code work without enabling repository actions;
 - tracked outcome time at the top of every Board card for immediate scanning;
 - compact status-only markers in Done use a fixed 24-point circular
   surface instead of retaining the horizontal padding of a text badge;

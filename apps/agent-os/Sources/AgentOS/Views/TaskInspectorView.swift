@@ -89,6 +89,13 @@ struct TaskInspectorView: View {
                         .help(task.projects.joined(separator: ", "))
                 }
 
+                if !task.labels.isEmpty {
+                    let labelNames = task.labels.map(\.name).joined(separator: ", ")
+                    Label(labelNames, systemImage: "bubble.left.and.bubble.right")
+                        .lineLimit(1)
+                        .help(labelNames)
+                }
+
                 Spacer(minLength: 8)
 
                 Label(AgentOSTimeFormatter.compact(seconds: task.activity.totalSeconds), systemImage: "clock")

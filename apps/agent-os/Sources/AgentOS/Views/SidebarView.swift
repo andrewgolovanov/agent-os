@@ -46,6 +46,22 @@ struct SidebarView: View {
                         )
                     }
                 }
+
+                if !labels.isEmpty {
+                    sidebarSection("Labels") {
+                        ForEach(labels) { label in
+                            sidebarRow(
+                                key: "label:\(label.key)",
+                                title: label.name,
+                                detail: "Slack channel",
+                                image: "bubble.left.and.bubble.right",
+                                count: tasks.filter { task in
+                                    task.labels.contains { $0.key == label.key } && task.status.isUnfinished
+                                }.count
+                            )
+                        }
+                    }
+                }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 8)
@@ -60,6 +76,14 @@ struct SidebarView: View {
             }
         }
         .navigationTitle("Agent OS")
+    }
+
+    private var labels: [AgentOSLabel] {
+        var seen = Set<String>()
+        return tasks
+            .flatMap(\.labels)
+            .filter { seen.insert($0.key).inserted }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     private func sidebarSection<Content: View>(

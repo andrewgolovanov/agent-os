@@ -82,6 +82,56 @@ class TaskBoardTest < Minitest::Test
     assert_empty @board.validate!
   end
 
+  def test_slack_channel_label_is_idempotent_and_tracks_channel_rename
+    create_task
+
+    @board.upsert_label(
+      "task_test",
+      key: "slack:C0EXAMPLE01",
+      name: "#client-checks",
+      kind: "slack_channel"
+    )
+    @board.upsert_label(
+      "task_test",
+      key: "slack:C0EXAMPLE01",
+      name: "#client-checks",
+      kind: "slack_channel"
+    )
+    task = @board.upsert_label(
+      "task_test",
+      key: "slack:C0EXAMPLE01",
+      name: "#client-operations",
+      kind: "slack_channel"
+    )
+
+    assert_equal [
+      {
+        "key" => "slack:C0EXAMPLE01",
+        "name" => "#client-operations",
+        "kind" => "slack_channel"
+      }
+    ], task.fetch("labels")
+    assert_equal task.fetch("labels"), JSON.parse(File.read(File.join(@temporary, "board.json"))).dig("tasks", 0, "labels")
+    assert_includes File.read(File.join(@temporary, "BOARD.md")), "Метки: `#client-operations`"
+    assert_empty @board.validate!
+  end
+
+  def test_slack_channel_label_rejects_message_text_as_a_name
+    create_task
+
+    error = assert_raises(ArgumentError) do
+      @board.upsert_label(
+        "task_test",
+        key: "slack:C0EXAMPLE01",
+        name: "Please review the client request",
+        kind: "slack_channel"
+      )
+    end
+
+    assert_match(/invalid Slack channel label name/, error.message)
+    assert_empty @board.read_task("task_test").fetch("labels")
+  end
+
   def test_pull_request_cannot_belong_to_two_tasks
     create_task
     create_task(id: "task_other")

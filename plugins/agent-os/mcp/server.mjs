@@ -173,6 +173,23 @@ const tools = [
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
   },
   {
+    name: "agent_os_label_task",
+    title: "Label an Agent OS outcome",
+    description: "Add or refresh one display-only label without treating it as a registered project or routing target.",
+    inputSchema: {
+      type: "object",
+      required: ["taskId", "key", "name", "kind"],
+      properties: {
+        taskId: { type: "string", description: "Exact canonical task ID." },
+        key: { type: "string", minLength: 1, description: "Stable namespaced label key, for example slack:C123." },
+        name: { type: "string", minLength: 1, description: "Current user-facing label, for example #client-checks." },
+        kind: { type: "string", enum: ["slack_channel"] },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+  },
+  {
     name: "agent_os_update_task",
     title: "Update an Agent OS outcome",
     description: "Apply one validated Task Board update by exact task ID.",
@@ -222,6 +239,7 @@ function callTool(name, args = {}) {
           id: task.id,
           title: task.title,
           projects: task.projects,
+          labels: task.labels || [],
           status: task.status,
           summary: task.summary,
           nextAction: task.next_action,
@@ -283,6 +301,29 @@ function callTool(name, args = {}) {
       if (args.project) command.push("--project", args.project);
       const task = JSON.parse(runTaskBoard(command));
       return textResult({ task: { id: task.id, status: task.status, nextAction: task.next_action } });
+    }
+
+    if (name === "agent_os_label_task") {
+      const taskId = assertTaskId(args.taskId);
+      taskFile(taskId, "task.json");
+      const beforeEventCount = eventCount(taskId);
+      const task = JSON.parse(runTaskBoard([
+        "label", taskId,
+        "--key", args.key,
+        "--name", args.name,
+        "--kind", args.kind,
+      ]));
+      const afterEventCount = eventCount(taskId);
+      return textResult({
+        task: {
+          id: task.id,
+          status: task.status,
+          labels: task.labels || [],
+        },
+        beforeEventCount,
+        afterEventCount,
+        eventDelta: afterEventCount - beforeEventCount,
+      });
     }
 
     if (name === "agent_os_update_task") {

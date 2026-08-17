@@ -17,7 +17,7 @@ struct FocusView: View {
                                 .foregroundStyle(AgentOSTheme.textPrimary)
                                 .lineLimit(1)
 
-                            projectBadge(for: task)
+                            attributionBadge(for: task)
                         }
 
                         Text(task.nextAction)
@@ -63,10 +63,10 @@ struct FocusView: View {
         .navigationTitle("Focus")
     }
 
-    private func projectBadge(for task: AgentOSTask) -> some View {
-        let label = projectLabel(for: task)
+    private func attributionBadge(for task: AgentOSTask) -> some View {
+        let attribution = attributionLabel(for: task)
 
-        return Label(label, systemImage: "folder")
+        return Label(attribution.label, systemImage: attribution.image)
             .font(.caption)
             .foregroundStyle(AgentOSTheme.textSecondary)
             .lineLimit(1)
@@ -74,16 +74,20 @@ struct FocusView: View {
             .padding(.vertical, 2)
             .background(AgentOSTheme.muted, in: Capsule())
             .fixedSize()
-            .help(label)
-            .accessibilityLabel("Project: \(label)")
+            .help(attribution.label)
+            .accessibilityLabel("Work context: \(attribution.label)")
     }
 
-    private func projectLabel(for task: AgentOSTask) -> String {
-        guard !task.projects.isEmpty else { return "Unassigned" }
+    private func attributionLabel(for task: AgentOSTask) -> (label: String, image: String) {
+        if task.projects.isEmpty, let label = task.labels.first {
+            return (label.name, "bubble.left.and.bubble.right")
+        }
+        guard !task.projects.isEmpty else { return ("Unassigned", "tray") }
 
-        return task.projects.map { key in
+        let label = task.projects.map { key in
             projects.first { $0.key == key }?.displayName ?? key
         }
         .joined(separator: ", ")
+        return (label, "folder")
     }
 }

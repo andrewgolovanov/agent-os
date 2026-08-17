@@ -78,6 +78,24 @@ begin
 
     task = AgentOS::TaskBoard.new(options.fetch(:root)).attach_source(id, kind: options.fetch(:kind), value: options.fetch(:value))
     puts JSON.pretty_generate(task)
+  when "label"
+    id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options, = common_options(ARGV) do |opts, values|
+      opts.on("--key KEY") { |value| values[:key] = value }
+      opts.on("--name NAME") { |value| values[:name] = value }
+      opts.on("--kind KIND") { |value| values[:kind] = value }
+    end
+    %i[key name kind].each do |key|
+      raise OptionParser::MissingArgument, key.to_s unless options[key]
+    end
+
+    task = AgentOS::TaskBoard.new(options.fetch(:root)).upsert_label(
+      id,
+      key: options.fetch(:key),
+      name: options.fetch(:name),
+      kind: options.fetch(:kind)
+    )
+    puts JSON.pretty_generate(task)
   when "completion"
     id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
     options, = common_options(ARGV) do |opts, values|
@@ -205,6 +223,7 @@ begin
         create --title TITLE [--project KEY] --goal TEXT --next-action TEXT
         update TASK_ID [fields]
         source TASK_ID --kind KIND --value URL_OR_ID
+        label TASK_ID --key KEY --name NAME --kind slack_channel
         completion TASK_ID --follow-up-status pending|sent|not_required
         codex TASK_ID --thread-id ID --role ROLE [fields]
         activity-start TASK_ID --session-id ID --turn-id ID [--at TIMESTAMP]

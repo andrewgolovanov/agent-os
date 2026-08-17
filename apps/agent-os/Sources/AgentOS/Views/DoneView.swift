@@ -219,7 +219,7 @@ struct DoneView: View {
                         .foregroundStyle(AgentOSTheme.textSecondary)
                         .lineLimit(2)
                     HStack(spacing: 12) {
-                        Label(projectLabel(for: task), systemImage: "folder")
+                        Label(attributionLabel(for: task), systemImage: attributionImage(for: task))
                         if !task.sources.pullRequests.isEmpty {
                             Label("\(task.sources.pullRequests.count) PR", systemImage: "arrow.triangle.pull")
                         }
@@ -275,9 +275,15 @@ struct DoneView: View {
         }
     }
 
-    private func projectLabel(for task: AgentOSTask) -> String {
+    private func attributionLabel(for task: AgentOSTask) -> String {
+        if task.projects.isEmpty, let label = task.labels.first { return label.name }
         guard !task.projects.isEmpty else { return "Unassigned" }
         return task.projects.map { key in projects.first { $0.key == key }?.displayName ?? key }.joined(separator: ", ")
+    }
+
+    private func attributionImage(for task: AgentOSTask) -> String {
+        if task.projects.isEmpty, !task.labels.isEmpty { return "bubble.left.and.bubble.right" }
+        return task.projects.isEmpty ? "tray" : "folder"
     }
 
     private func formattedDate(_ value: String) -> String {

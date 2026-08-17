@@ -2,6 +2,8 @@
 
 Task Board connects one real outcome to any number of external threads, Codex tasks, PRs, designs, and deployment sources. Its files live only under private `AGENT_OS_HOME`; the product checkout contains implementation and this contract, never user task data.
 
+An outcome may also carry display-only labels. A Slack channel label groups non-code work without pretending that the channel is a registered project or repository routing target.
+
 ## Storage
 
 ```text
@@ -49,6 +51,11 @@ tools/task-board source TASK_ID \
   --kind slack_threads \
   --value "https://slack.example/thread/ROOT_ID"
 
+tools/task-board label TASK_ID \
+  --key "slack:C123" \
+  --name "#client-checks" \
+  --kind slack_channel
+
 tools/task-board codex TASK_ID \
   --thread-id THREAD_ID \
   --role implementation \
@@ -80,6 +87,8 @@ Tests use `--root PATH` or `AGENT_OS_TASK_ROOT` to isolate private state.
 
 `--project` may be omitted for a new Slack or DM signal whose owner is unknown. The outcome stays unassigned in `inbox` until attribution is verified, and no route is created for it.
 
+Slack channel labels use stable `slack:<channel_id>` keys and the current human-readable `#channel-name`. Reprocessing the same key is idempotent; a channel rename refreshes the display name. Labels never authorize project routing, repository access, Codex task creation, or source correlation. Direct messages remain unlabelled unless a separate non-personal work label is explicitly available; participant names are not persisted as labels.
+
 ## Natural-language lifecycle control
 
 Users do not need to invoke the CLI manually. In a Codex task, identify the outcome or ID and state what changed:
@@ -106,6 +115,8 @@ Correlation starts with stable external identity:
 - Codex membership -> exact `thread_id` and `codex://threads/<id>`.
 
 Only exact identity permits verified continuity. Semantic similarity alone never authorizes automatic merging. One canonical GitHub PR cannot belong to two outcomes.
+
+Labels are presentation and filtering metadata, not identity. Two similarly named channels remain distinct because their label keys contain different channel IDs, while Slack source correlation continues to use the exact thread identity.
 
 ## Codex membership and routing
 

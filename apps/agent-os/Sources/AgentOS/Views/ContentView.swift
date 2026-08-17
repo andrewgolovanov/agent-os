@@ -17,6 +17,10 @@ struct ContentView: View {
             scoped = store.completedTasks
         } else if let project = scopeProject {
             scoped = store.unfinishedTasks.filter { $0.projects.contains(project) }
+        } else if let label = scopeLabel {
+            scoped = store.unfinishedTasks.filter { task in
+                task.labels.contains { $0.key == label }
+            }
         } else {
             scoped = store.unfinishedTasks
         }
@@ -29,6 +33,7 @@ struct ContentView: View {
                 || $0.goal.localizedCaseInsensitiveContains(query)
                 || $0.nextAction.localizedCaseInsensitiveContains(query)
                 || $0.projects.contains { $0.localizedCaseInsensitiveContains(query) }
+                || $0.labels.contains { $0.name.localizedCaseInsensitiveContains(query) }
                 || $0.sources.all.contains { $0.url.localizedCaseInsensitiveContains(query) }
         }
     }
@@ -36,6 +41,11 @@ struct ContentView: View {
     private var scopeProject: String? {
         guard scope.hasPrefix("project:") else { return nil }
         return String(scope.dropFirst("project:".count))
+    }
+
+    private var scopeLabel: String? {
+        guard scope.hasPrefix("label:") else { return nil }
+        return String(scope.dropFirst("label:".count))
     }
 
     private var selectedTask: AgentOSTask? {

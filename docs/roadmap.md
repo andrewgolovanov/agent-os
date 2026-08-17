@@ -125,7 +125,9 @@ Capture every undocumented assumption, then repair the packages/docs without
 copying that user's private state into the source tree. If that user opts into
 Slack monitoring, verify the documented sequence end to end: minimal connected-
 Slack read, reviewed `/hooks`, fresh-task Task Bridge pickup, one manual bounded
-monitor pass, and the first two Codex Scheduled executions.
+monitor pass, and the first two Codex Scheduled executions. Include a
+zero-repository case that runs from the active Agent OS home and creates one
+named-channel inbox outcome with a label but no project route.
 
 ### Complete uninstall contract
 

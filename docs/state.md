@@ -1,6 +1,6 @@
 # Current state
 
-Verified: 2026-08-16
+Verified: 2026-08-17
 
 ## Product source
 
@@ -79,12 +79,21 @@ Verified: 2026-08-16
 - `agent-os doctor` passes for the current instance and for a fresh temporary
   home.
 - The full Agent OS validator passes against both homes.
-- The current Ruby suite passes 62 tests and 520 assertions, including active
+- The current Ruby suite passes 65 tests and 539 assertions, including active
   private-home resolution, safe home migration, monitor-path rewriting,
   identity-checked repository relinking, completion follow-up, and Project Time
   reporting contracts.
 - Agent OS app builds and its 22 Swift tests pass; bundle launch verification
   succeeds with both the active home and a fresh empty private home.
+- Task Board and the Agent OS MCP now support idempotent display-only Slack
+  channel labels keyed by `slack:<channel_id>`. The native app presents and
+  filters those labels separately from registered projects, so label-only
+  outcomes never enable repository routing or Codex project handoff.
+- Optional integration guidance now supports a user with no repositories by
+  using the active Agent OS home as a non-version-controlled local Scheduled
+  project. A bounded connected-Slack smoke verified one named-channel outcome
+  with no registered projects; a real product-owned Scheduled execution remains
+  unverified.
 - The two recurrent native crash signatures are covered at their executor
   boundaries: Task Board filesystem events enter the main-actor watcher on the
   main queue, and the LaunchServices Codex-open callback is a nonisolated
@@ -267,8 +276,10 @@ Verified: 2026-08-16
   `v0.3.0`.
 - End-user hook trust remains a per-install Codex choice; the release source
   cannot pre-approve it for another user.
-- A connected Slack integration and Codex Scheduled task for a clean user; the
-  local CLI intentionally cannot inspect or create either product-owned state.
+- A product-owned Codex Scheduled task for a clean user; the local CLI
+  intentionally cannot inspect or create that state. The connected-Slack and
+  zero-repository label path is verified, but its first Scheduled execution is
+  still a separate live gate.
 - Automated secret scanning on future pull requests and tags; the initial
   candidate received a one-off dedicated scan.
 - A release support policy.

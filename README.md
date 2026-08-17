@@ -20,6 +20,11 @@ Agent OS does not replace your project repositories, GitHub, Slack, or Codex.
 It gives those systems a small, deterministic continuity layer without copying
 transcripts or introducing another hosted task database.
 
+Repositories are optional for Slack-only coordination. An actionable request
+from a named Slack channel can become an unassigned inbox outcome with a
+display-only channel label, so managers and client-facing users can organize
+work without creating fake Git projects.
+
 ![Agent OS demo showing Focus, Board, task details, pull request status, and sources](docs/assets/agent-os-demo.gif)
 
 ## Installation
@@ -29,7 +34,7 @@ downloadable macOS app supports Apple Silicon (`arm64`) on macOS 14 or newer;
 an Intel or universal binary is not included yet.
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.3.0
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.3.1
 codex plugin add agent-os@agent-os
 ```
 
@@ -92,6 +97,9 @@ opt-ins; see [Optional integrations](docs/optional-integrations.md).
 The local Slack monitor configuration remains preview-first. Ask the plugin to
 set up optional integrations; it resolves the packaged runtime and shows every
 local mutation before applying it.
+When no repository is registered, the Scheduled monitor can use the active
+Agent OS home as a non-version-controlled local project. Slack channel labels
+remain separate from repository-backed project routing.
 
 Plugin updates come from versioned marketplace snapshots. The native app uses
 signed Sparkle release archives. A development checkout keeps the older

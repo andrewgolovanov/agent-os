@@ -29,8 +29,16 @@ struct TaskCardView: View {
             }
 
             HStack(spacing: 8) {
-                ForEach(task.projects.prefix(2), id: \.self) { project in
+                ForEach(task.projects.prefix(task.labels.isEmpty ? 2 : 1), id: \.self) { project in
                     Text(project)
+                        .font(.caption)
+                        .foregroundStyle(AgentOSTheme.textSecondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(AgentOSTheme.muted, in: Capsule())
+                }
+                ForEach(task.labels.prefix(task.projects.isEmpty ? 2 : 1)) { label in
+                    Text(label.name)
                         .font(.caption)
                         .foregroundStyle(AgentOSTheme.textSecondary)
                         .padding(.horizontal, 8)

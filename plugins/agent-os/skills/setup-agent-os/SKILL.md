@@ -31,6 +31,7 @@ Keep reusable configuration in the active Agent OS runtime, private configuratio
 8. Create or update the Codex Scheduled task only when the user asked for scheduling and the host exposes its automation capability:
    - inspect existing automations first and update the exact `Agent OS Slack Monitor` task instead of creating a duplicate;
    - attach it to the current Agent OS setup task and use the configured timezone/days/times;
+   - use a registered project path when available; otherwise use the resolved active Agent OS home as a non-version-controlled local project and do not create a fake Git repository;
    - use the canonical prompt from `docs/optional-integrations.md` without copying policy into a second variant;
    - keep notification preferences out of the prompt and preserve read-only authority.
 9. If automation tools are unavailable, explain that Scheduled tasks are managed in Codex desktop or web, then give the exact name, schedule, working directory, and canonical prompt from `docs/optional-integrations.md`. Do not claim the CLI created it.

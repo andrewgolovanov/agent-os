@@ -1,5 +1,24 @@
 # Changelog
 
+## 2026-08-17
+
+- Added display-only Task Board labels for Slack-only work. Named channels use
+  stable `slack:<channel_id>` keys and current `#channel-name` labels without
+  becoming registered projects, repository routes, or Codex handoff targets.
+- Added idempotent Task Board CLI and Agent OS MCP label mutations, generated
+  index/status output, and Ruby/MCP coverage including channel rename behavior.
+- Added native app label display across Focus, Board, Done, and the task
+  inspector, plus search and a separate sidebar filter for unfinished outcomes,
+  while preserving registered-project requirements for repository actions.
+- Documented a zero-repository Scheduled setup: use the active Agent OS home as
+  a non-version-controlled local project instead of creating a fake Git
+  repository.
+- Verified the release path with a bounded connected-Slack read and an isolated
+  zero-project home: the new MCP created an unassigned outcome, attached its
+  exact Slack source, added the stable channel label, and left routing empty.
+- Isolated Sparkle appcast generation to the current release archive so stale
+  local artifacts cannot inherit the new tag URL or enter the published feed.
+
 ## 2026-08-16
 
 - Published `v0.3.0` from

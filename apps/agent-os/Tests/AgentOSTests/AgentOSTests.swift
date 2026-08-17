@@ -35,6 +35,7 @@ final class AgentOSTests: XCTestCase {
           "id": "20260814-example",
           "title": "Example",
           "projects": ["example-site"],
+          "labels": [{"key":"slack:C123","name":"#client-checks","kind":"slack_channel"}],
           "kind": "delivery",
           "status": "active",
           "goal": "Ship a useful result",
@@ -66,6 +67,8 @@ final class AgentOSTests: XCTestCase {
         let task = try JSONDecoder().decode(AgentOSTask.self, from: data)
 
         XCTAssertEqual(task.status, .active)
+        XCTAssertEqual(task.labels.first?.key, "slack:C123")
+        XCTAssertEqual(task.labels.first?.name, "#client-checks")
         XCTAssertEqual(task.nextAction, "Run verification")
         XCTAssertEqual(task.activity.totalSeconds, 90)
         XCTAssertEqual(task.activity.turns.count, 1)
@@ -102,6 +105,7 @@ final class AgentOSTests: XCTestCase {
         let task = try JSONDecoder().decode(AgentOSTask.self, from: data)
 
         XCTAssertEqual(task.activity.totalSeconds, 0)
+        XCTAssertTrue(task.labels.isEmpty)
         XCTAssertEqual(task.completionFollowUpStatus, .notRequired)
     }
 

@@ -141,10 +141,19 @@ struct AgentOSCompletion: Codable, Hashable, Sendable {
     }
 }
 
+struct AgentOSLabel: Codable, Hashable, Identifiable, Sendable {
+    let key: String
+    let name: String
+    let kind: String
+
+    var id: String { key }
+}
+
 struct AgentOSTask: Codable, Hashable, Identifiable, Sendable {
     let id: String
     let title: String
     let projects: [String]
+    let labels: [AgentOSLabel]
     let kind: String
     let status: TaskStatus
     let goal: String
@@ -163,6 +172,7 @@ struct AgentOSTask: Codable, Hashable, Identifiable, Sendable {
         case id
         case title
         case projects
+        case labels
         case kind
         case status
         case goal
@@ -183,6 +193,7 @@ struct AgentOSTask: Codable, Hashable, Identifiable, Sendable {
         id = try container.decode(String.self, forKey: .id)
         title = try container.decode(String.self, forKey: .title)
         projects = try container.decode([String].self, forKey: .projects)
+        labels = try container.decodeIfPresent([AgentOSLabel].self, forKey: .labels) ?? []
         kind = try container.decode(String.self, forKey: .kind)
         status = try container.decode(TaskStatus.self, forKey: .status)
         goal = try container.decode(String.self, forKey: .goal)

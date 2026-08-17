@@ -31,10 +31,11 @@ class AgentOSMCPTest < Minitest::Test
       assert_equal "agent-os", initialize_result.dig("result", "serverInfo", "name")
 
       tool_list = request(stdin, stdout, 2, "tools/list")
-      assert_equal 7, tool_list.dig("result", "tools").length
+      assert_equal 8, tool_list.dig("result", "tools").length
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_onboard_project" }
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_upgrade_project_registry" }
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_relink_project" }
+      assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_label_task" }
 
       tasks = request(
         stdin,
@@ -244,6 +245,69 @@ class AgentOSMCPTest < Minitest::Test
         /must be updated separately/,
         invalid_combination.dig("result", "structuredContent", "error")
       )
+
+      stdin.close
+      assert wait_thread.value.success?, stderr.read
+    end
+  end
+
+  def test_server_labels_an_unassigned_task_without_project_routing
+    with_server("AGENT_OS_SOURCE_ROOT" => @source, "AGENT_OS_HOME" => @home) do |stdin, stdout, stderr, wait_thread|
+      created = request(
+        stdin,
+        stdout,
+        1,
+        "tools/call",
+        {
+          "name" => "agent_os_create_task",
+          "arguments" => {
+            "title" => "Review a client request",
+            "goal" => "Keep Slack-only work visible",
+            "nextAction" => "Review the source thread"
+          }
+        }
+      )
+      task_id = created.dig("result", "structuredContent", "task", "id")
+
+      labeled = request(
+        stdin,
+        stdout,
+        2,
+        "tools/call",
+        {
+          "name" => "agent_os_label_task",
+          "arguments" => {
+            "taskId" => task_id,
+            "key" => "slack:C0CLIENT01",
+            "name" => "#client-checks",
+            "kind" => "slack_channel"
+          }
+        }
+      )
+      assert_equal "#client-checks", labeled.dig("result", "structuredContent", "task", "labels", 0, "name")
+      assert_equal 1, labeled.dig("result", "structuredContent", "eventDelta")
+
+      repeated = request(
+        stdin,
+        stdout,
+        3,
+        "tools/call",
+        {
+          "name" => "agent_os_label_task",
+          "arguments" => {
+            "taskId" => task_id,
+            "key" => "slack:C0CLIENT01",
+            "name" => "#client-checks",
+            "kind" => "slack_channel"
+          }
+        }
+      )
+      assert_equal 0, repeated.dig("result", "structuredContent", "eventDelta")
+
+      tasks = request(stdin, stdout, 4, "tools/call", { "name" => "agent_os_list_tasks", "arguments" => {} })
+      listed = tasks.dig("result", "structuredContent", "tasks").find { |task| task.fetch("id") == task_id }
+      assert_empty listed.fetch("projects")
+      assert_equal "slack:C0CLIENT01", listed.dig("labels", 0, "key")
 
       stdin.close
       assert wait_thread.value.success?, stderr.read
