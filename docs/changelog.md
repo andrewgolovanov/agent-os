@@ -2,6 +2,13 @@
 
 ## 2026-08-18
 
+- Published `v0.4.1` from
+  `e847fd9465d5b9e9128f1eb7f16b3a2048e662f5` in successful workflow run
+  `32080926193`. The public archive SHA-256 is
+  `bd6ea00291e0d83692dde73a99f9b14f1195226f326df7a90154ca4d42e75ad3`;
+  its checksum, exact app/runtime/plugin version, Apple Silicon/macOS metadata,
+  22-file runtime, strict bundle signature, stable appcast URL and length, and
+  Sparkle Ed25519 signature passed independent post-publication checks.
 - Grouped the native Focus list by each outcome's last update using
   local-calendar Today, Yesterday, This Week, Last Week, and Earlier sections;
   periods with no matching outcomes remain hidden, and the lightweight text

@@ -98,11 +98,18 @@ Completed publication checks:
   run `32075412237`; its public checksum, Apple Silicon/macOS metadata, exact
   22-file runtime, strict bundle signature, stable appcast, and Sparkle Ed25519
   signature passed independent post-publication verification — verified.
+- `v0.4.1` published local-calendar Focus recency sections, project context
+  above task titles, cleaner row hierarchy, bounded inspector resizing, and
+  consistent titlebar separation from commit
+  `e847fd9465d5b9e9128f1eb7f16b3a2048e662f5` in successful workflow run
+  `32080926193`; its public checksum, Apple Silicon/macOS metadata, exact
+  22-file runtime, strict bundle signature, stable appcast, and Sparkle Ed25519
+  signature passed independent post-publication verification — verified.
 
 Remaining release checks:
 
-- a second Mac completes an approved clean install and a genuine `v0.3.2` to
-  `v0.4.0` update.
+- a second Mac completes an approved clean install and a genuine `v0.4.0` to
+  `v0.4.1` update.
 
 ### Complete the local Agent OS app pilot
 
