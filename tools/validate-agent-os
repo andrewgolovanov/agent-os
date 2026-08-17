@@ -143,6 +143,7 @@ if registry
     if projects.is_a?(Hash)
       project_keys = projects.keys.map(&:to_s)
       aliases = {}
+      slack_channel_owners = {}
 
       projects.each do |key, project|
         key = key.to_s
@@ -160,6 +161,26 @@ if registry
             aliases[normalized] = key
           end
         end
+
+        slack_channels = Array(project["slack_channels"])
+        channel_ids = []
+        slack_channels.each do |channel|
+          unless channel.is_a?(Hash)
+            error("project #{key} Slack channel must be a mapping")
+            next
+          end
+          channel_id = channel["id"].to_s
+          channel_name = channel["name"].to_s
+          error("project #{key} has invalid Slack channel ID: #{channel_id.inspect}") unless channel_id.match?(/\A[CG][A-Z0-9]+\z/)
+          error("project #{key} has invalid Slack channel name: #{channel_name.inspect}") unless channel_name.match?(/\A#[a-z0-9][a-z0-9_-]*\z/i)
+          if slack_channel_owners.key?(channel_id) && slack_channel_owners[channel_id] != key
+            error("Slack channel #{channel_id} belongs to both #{slack_channel_owners[channel_id]} and #{key}")
+          else
+            slack_channel_owners[channel_id] = key
+          end
+          channel_ids << channel_id
+        end
+        error("project #{key} Slack channels contain duplicate IDs") unless channel_ids.uniq.length == channel_ids.length
 
         activity = project["activity"]
         if activity

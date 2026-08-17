@@ -27,7 +27,7 @@ Each layer has one purpose. The root `AGENTS.md` routes work without duplicating
 
 | Data | Canonical owner |
 | --- | --- |
-| Private home, timezone, project keys, aliases, roots, and repository paths | `AGENT_OS_HOME/config/projects.yaml` |
+| Private home, timezone, project keys, aliases, roots, repository paths, and reviewed Slack channel mappings | `AGENT_OS_HOME/config/projects.yaml` |
 | System model and boundaries | `docs/architecture.md` |
 | Verified current readiness | `docs/state.md` |
 | Architectural rationale | `docs/decisions/` |
@@ -47,9 +47,9 @@ Each layer has one purpose. The root `AGENTS.md` routes work without duplicating
 
 ## Project registry
 
-Every project exists only as an entry in private `AGENT_OS_HOME/config/projects.yaml`. `root` defines the working project root, while `repositories` stores verified Git roots and roles. For a normal single-repository project, `root` is the Git root. A repository may live in any user-selected folder.
+Every project exists only as an entry in private `AGENT_OS_HOME/config/projects.yaml`. `root` defines the working project root, `repositories` stores verified Git roots and roles, and optional `slack_channels` records reviewed stable channel IDs that belong to the project. For a normal single-repository project, `root` is the Git root. A repository may live in any user-selected folder.
 
-Project onboarding accepts an existing absolute Git root, verifies its identity, previews the change, and writes only private registry metadata. It does not create `AGENT_OS_HOME/projects`, write Agent OS metadata into the product repository, or move source code. Existing repository `AGENTS.md`, READMEs, and documentation continue to own project-local rules and context.
+Project onboarding accepts an existing absolute Git root, verifies its identity, and previews the registry change. A conservative channel-name comparison may suggest existing unfinished Slack-only work, but it never selects a channel automatically. After a second preview with exact reviewed channel IDs, apply records those mappings and may assign only unfinished outcomes that currently have no project; existing attribution and card labels are preserved. Onboarding never creates `AGENT_OS_HOME/projects`, writes Agent OS metadata into the product repository, moves source code, or merges outcomes by similar text. Existing repository `AGENTS.md`, READMEs, and documentation continue to own project-local rules and context.
 
 A multi-repository project uses the same model: one registry entry contains multiple `repositories`, and `root` points to the primary repository. It does not need an Agent OS-owned container.
 
@@ -58,7 +58,7 @@ If a user moves a repository, identity-checked relink updates only `root` and th
 ## Security and authority
 
 - Discovery and reads are allowed only inside the selected Agent OS installation and registered paths.
-- Project onboarding does not move, clone, or modify repositories.
+- Project onboarding does not move, clone, or modify repositories. Its optional Task Board reconciliation is preview-first, limited to selected stable Slack channel IDs, and never overwrites an existing project attribution.
 - External provider tools are read-only by default.
 - Commits, pushes, PRs, deployments, messages, and external task mutations require explicit user intent.
 - Agent OS does not store secrets, full conversations, or complete build logs.
@@ -66,7 +66,7 @@ If a user moves a repository, identity-checked relink updates only `root` and th
 
 ## Continuity layer
 
-Task Board stores structured outcomes, stable source identities, optional short source-display titles, display-only work labels, Codex memberships, and retryable `routing_pending` records. File locking, atomic replacement, and a generated index provide local reliability without SQLite. A Slack source title is a normalized 96-character excerpt from the root message and never replaces its exact permalink identity. A label such as a Slack channel name helps a non-code user group work but is not project identity, source identity, or routing authority. Runtime Slack state is separate from durable task correlation: it retains no message text, and a seen event is not replayed merely because Codex routing temporarily failed.
+Task Board stores structured outcomes, stable source identities, optional short source-display titles, display-only work labels, Codex memberships, and retryable `routing_pending` records. File locking, atomic replacement, and a generated index provide local reliability without SQLite. A Slack source title is a normalized 96-character excerpt from the root message and never replaces its exact permalink identity. A Slack channel label remains presentation metadata on the task card even when its reviewed channel ID is mapped to a registered project. The mapping supplies exact project attribution; it does not replace the label or source identity. Runtime Slack state is separate from durable task correlation: it retains no message text, and a seen event is not replayed merely because Codex routing temporarily failed.
 
 The user-level Task Bridge handles chats inside registered project paths and already-linked Codex tasks. It creates membership automatically only for one exact task or source match, totals `UserPromptSubmit` to `Stop` turns, and requires a durable checkpoint after material changes. A project path limits the candidate set but never selects an outcome; title and semantic similarity only suggest candidates.
 

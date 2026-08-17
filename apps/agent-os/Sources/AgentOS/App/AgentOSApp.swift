@@ -13,12 +13,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct AgentOSApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var store = AgentOSStore()
+    @AppStorage(AgentOSAppearance.storageKey) private var storedAppearance = AgentOSAppearance.dark.rawValue
     private let updater = AgentOSUpdaterController()
 
     private var appColorScheme: ColorScheme {
-        let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains("--force-light-appearance") { return .light }
-        return .dark
+        AgentOSAppearance.resolved(
+            arguments: ProcessInfo.processInfo.arguments,
+            storedValue: storedAppearance
+        ).colorScheme
     }
 
     var body: some Scene {

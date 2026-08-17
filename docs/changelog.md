@@ -1,7 +1,32 @@
 # Changelog
 
+## 2026-08-18
+
+- Added a persistent Light/Dark appearance switch to the native app toolbar,
+  following the shadcn theme-provider and sun/moon toggle model while retaining
+  Dark as the existing-user default.
+- Mapped the official shadcn default Neutral light tokens into the same SwiftUI
+  semantic roles already used by Dark, including canvas, card, sidebar, muted,
+  accent, border, input, ring, and foreground colors. Status colors and the
+  AppKit-backed titlebar divider now adapt for readable contrast in both modes.
+- Preserved `--force-light-appearance` and added `--force-dark-appearance` for
+  deterministic contrast QA without overwriting the saved user preference.
+
 ## 2026-08-17
 
+- Added preview-first Slack channel reconciliation to project onboarding.
+  Conservative name normalization produces suggestions only; exact selected
+  channel IDs require a second preview before apply stores a project mapping or
+  assigns unfinished outcomes that currently have no project. Existing project
+  attribution, exact sources, card labels, and separate outcomes are preserved.
+- Kept Slack channel labels visible on Board cards while removing explicitly
+  mapped channels from the duplicate top-level Labels sidebar. Unmapped
+  Slack-only work remains filterable for users without repositories.
+- Hid persistent vertical scroll indicators inside Board lifecycle columns
+  while preserving independent scrolling and fixed column headers.
+- Widened the resizable task inspector from `360 / 420 / 520` points to
+  `420 / 520 / 680` points so long titles, pull-request metadata, and outcome
+  text wrap less aggressively when desktop space is available.
 - Published `v0.3.2` from
   `91b209ae02af854ccb52dee28037bc876298da73` in successful workflow run
   `32059910788`. The public archive, checksum, exact app/runtime/plugin version,

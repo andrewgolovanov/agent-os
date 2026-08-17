@@ -183,6 +183,112 @@ class AgentOSMCPTest < Minitest::Test
     end
   end
 
+  def test_server_onboarding_reconciles_only_reviewed_slack_channel_ids
+    repository = File.join(@temporary, "example-product-next")
+    system("git", "init", "-b", "main", repository, out: File::NULL, err: File::NULL) or flunk "repo init failed"
+    git(repository, "config", "user.name", "Agent OS Test")
+    git(repository, "config", "user.email", "agent-os@example.invalid")
+    File.write(File.join(repository, "README.md"), "# Example Product\n")
+    git(repository, "add", "README.md")
+    git(repository, "commit", "-m", "Initial commit")
+    git(repository, "remote", "add", "origin", "https://example.invalid/example-product-next.git")
+
+    with_server("AGENT_OS_SOURCE_ROOT" => @source, "AGENT_OS_HOME" => @home) do |stdin, stdout, stderr, wait_thread|
+      created = request(
+        stdin,
+        stdout,
+        1,
+        "tools/call",
+        {
+          "name" => "agent_os_create_task",
+          "arguments" => {
+            "title" => "Cover example product handoff",
+            "goal" => "Keep the Slack work visible",
+            "nextAction" => "Confirm ownership"
+          }
+        }
+      )
+      task_id = created.dig("result", "structuredContent", "task", "id")
+      request(
+        stdin,
+        stdout,
+        2,
+        "tools/call",
+        {
+          "name" => "agent_os_label_task",
+          "arguments" => {
+            "taskId" => task_id,
+            "key" => "slack:CEXAMPLE",
+            "name" => "#project-example-product-int",
+            "kind" => "slack_channel"
+          }
+        }
+      )
+
+      preview = request(
+        stdin,
+        stdout,
+        3,
+        "tools/call",
+        {
+          "name" => "agent_os_onboard_project",
+          "arguments" => { "repositoryPath" => repository }
+        }
+      )
+      assert_equal "CEXAMPLE", preview.dig(
+        "result", "structuredContent", "reconciliation", "suggested_channels", 0, "id"
+      )
+      assert_empty preview.dig("result", "structuredContent", "reconciliation", "selected_channels")
+
+      selected_preview = request(
+        stdin,
+        stdout,
+        4,
+        "tools/call",
+        {
+          "name" => "agent_os_onboard_project",
+          "arguments" => {
+            "repositoryPath" => repository,
+            "slackChannelIds" => ["CEXAMPLE"]
+          }
+        }
+      )
+      assert_equal [task_id], selected_preview.dig(
+        "result", "structuredContent", "reconciliation", "task_assignments"
+      ).map { |assignment| assignment.fetch("task_id") }
+
+      applied = request(
+        stdin,
+        stdout,
+        5,
+        "tools/call",
+        {
+          "name" => "agent_os_onboard_project",
+          "arguments" => {
+            "repositoryPath" => repository,
+            "slackChannelIds" => ["CEXAMPLE"],
+            "apply" => true
+          }
+        }
+      )
+      assert_equal "created", applied.dig("result", "structuredContent", "action")
+
+      projects = request(stdin, stdout, 6, "tools/call", { "name" => "agent_os_list_projects", "arguments" => {} })
+      example_product = projects.dig("result", "structuredContent", "projects").find do |project|
+        project.fetch("key") == "example-product-next"
+      end
+      assert_equal "CEXAMPLE", example_product.dig("slack_channels", 0, "id")
+
+      tasks = request(stdin, stdout, 7, "tools/call", { "name" => "agent_os_list_tasks", "arguments" => {} })
+      task = tasks.dig("result", "structuredContent", "tasks").find { |candidate| candidate.fetch("id") == task_id }
+      assert_equal ["example-product-next"], task.fetch("projects")
+      assert_equal "#project-example-product-int", task.dig("labels", 0, "name")
+
+      stdin.close
+      assert wait_thread.value.success?, stderr.read
+    end
+  end
+
   def test_server_updates_completion_follow_up_separately_from_lifecycle
     with_server("AGENT_OS_SOURCE_ROOT" => @source, "AGENT_OS_HOME" => @home) do |stdin, stdout, stderr, wait_thread|
       created = request(

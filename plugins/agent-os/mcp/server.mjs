@@ -4,7 +4,7 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { ensureAgentOSRuntime } from "./bootstrap.mjs";
 
-const serverVersion = "0.3.2";
+const serverVersion = "0.4.0";
 const { homeRoot, sourceRoot } = ensureAgentOSRuntime();
 if (homeRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_HOME");
 if (sourceRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_SOURCE_ROOT");
@@ -76,6 +76,7 @@ function listProjects() {
         display_name: value.fetch("display_name"),
         status: value.fetch("status"),
         root: value.fetch("root"),
+        slack_channels: Array(value["slack_channels"]).map { |channel| channel.slice("id", "name") },
         repositories: value.fetch("repositories").map { |repository| repository.slice("id", "path", "role", "source_of_truth", "primary_branch") }
       }
     end
@@ -111,7 +112,7 @@ const tools = [
   {
     name: "agent_os_onboard_project",
     title: "Onboard an Agent OS project",
-    description: "Preview or register an existing local Git repository without moving it or changing Git state.",
+    description: "Preview or register an existing local Git repository and explicitly selected Slack channel reconciliation without moving it or changing Git state.",
     inputSchema: {
       type: "object",
       required: ["repositoryPath"],
@@ -119,7 +120,13 @@ const tools = [
         repositoryPath: { type: "string", description: "Absolute path to a Git repository or a directory inside it." },
         key: { type: "string", description: "Optional lowercase kebab-case project key." },
         displayName: { type: "string", description: "Optional human-readable project name." },
-        apply: { type: "boolean", description: "False previews; true applies the reviewed registry-only entry." },
+        slackChannelIds: {
+          type: "array",
+          items: { type: "string", minLength: 1 },
+          uniqueItems: true,
+          description: "Exact Slack channel IDs selected from a reviewed onboarding preview.",
+        },
+        apply: { type: "boolean", description: "False previews; true applies the reviewed project and selected Slack reconciliation." },
       },
       additionalProperties: false,
     },
@@ -283,6 +290,7 @@ function callTool(name, args = {}) {
       ];
       if (args.key) command.push("--key", args.key);
       if (args.displayName) command.push("--display-name", args.displayName);
+      for (const channelId of args.slackChannelIds || []) command.push("--slack-channel", channelId);
       if (args.apply === true) command.push("--apply");
       return textResult(JSON.parse(runAgentOS(command)));
     }

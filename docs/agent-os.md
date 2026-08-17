@@ -60,6 +60,10 @@ bootstrap.
 - MCP project onboarding previews and registers any existing Git repository by
   absolute path without moving or modifying it; the private registry is the
   only Agent OS owner of project routing metadata.
+- Onboarding may suggest conservative Slack channel matches, then requires a
+  second preview with exact selected channel IDs before it stores mappings or
+  assigns unfinished outcomes that have no project. Existing attribution and
+  task-card labels are preserved.
 - MCP and CLI registry upgrade remove obsolete layout metadata and retain an
   old managed project folder in a private recovery backup.
 - MCP and CLI relinking verify repository identity and update only private

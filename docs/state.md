@@ -1,6 +1,6 @@
 # Current state
 
-Verified: 2026-08-17
+Verified: 2026-08-18
 
 ## Product source
 
@@ -51,6 +51,10 @@ Verified: 2026-08-17
   valid explicitly selected development checkout remains authoritative.
 - MCP and CLI onboarding can preview and register an existing Git repository
   from any absolute location without moving, cloning, renaming, or modifying it.
+- Onboarding can conservatively suggest matching Slack channels, then requires
+  a second preview with exact selected channel IDs before it records mappings
+  or assigns unfinished outcomes that have no current project. Existing project
+  attribution and Slack labels are preserved.
 - Project onboarding now has one registry-only topology: every project records
   `root + repositories` and creates no generated folder under
   `AGENT_OS_HOME/projects`, including multi-repository registrations.
@@ -83,16 +87,19 @@ Verified: 2026-08-17
 - `agent-os doctor` passes for the current instance and for a fresh temporary
   home.
 - The full Agent OS validator passes against both homes.
-- The current Ruby suite passes 68 tests and 556 assertions, including active
+- The current Ruby suite passes 73 tests and 647 assertions, including active
   private-home resolution, safe home migration, monitor-path rewriting,
-  identity-checked repository relinking, completion follow-up, and Project Time
-  reporting contracts.
-- Agent OS app builds and its 23 Swift tests pass; bundle launch verification
+  identity-checked repository relinking, preview-first Slack channel mapping,
+  safe unfinished-outcome reconciliation, completion follow-up, and Project
+  Time reporting contracts.
+- Agent OS app builds and its 27 Swift tests pass; bundle launch verification
   succeeds with both the active home and a fresh empty private home.
 - Task Board and the Agent OS MCP now support idempotent display-only Slack
-  channel labels keyed by `slack:<channel_id>`. The native app presents and
-  filters those labels separately from registered projects, so label-only
-  outcomes never enable repository routing or Codex project handoff.
+  channel labels keyed by `slack:<channel_id>`. The native app keeps every
+  channel label on its task card, filters unmapped labels separately from
+  registered projects, and omits mapped labels only from the duplicate
+  top-level sidebar section. Label-only outcomes never enable repository
+  routing or Codex project handoff.
 - Task Board and the Agent OS MCP accept one optional Slack root-message title,
   normalize Slack markup and whitespace, cap it at 96 characters, and refresh
   it idempotently without changing exact source identity. The native app uses
@@ -111,7 +118,12 @@ Verified: 2026-08-17
   pre-fix baseline.
 - Real-window accessibility and screenshot QA verified that Board lifecycle
   columns scroll vertically and independently inside the horizontal workflow
-  canvas, keeping their headers fixed while lower cards remain reachable.
+  canvas, keeping their headers fixed while lower cards remain reachable. The
+  persistent vertical indicators are now hidden without disabling scrolling.
+- The resizable task inspector now uses a `420 / 520 / 680` point
+  minimum/ideal/maximum range, giving long titles, pull-request context, and
+  outcome text more horizontal space without turning the pane into a fixed
+  column.
 - The native Done view retains all `done` and `cancelled` outcomes with the
   canonical inspector, source and pull-request context, project/completion-
   period/lifecycle/follow-up filters, and a visible summary of exact-linked task
@@ -124,16 +136,19 @@ Verified: 2026-08-17
 - Status-only rows in Done use fixed 24-point circular markers; full
   lifecycle badges continue to retain their text and capsule geometry where
   the label is part of the interface.
-- The app now maps the official shadcn default Neutral dark tokens directly into
-  SwiftUI: `#0a0a0a` canvas, `#171717` sidebar/cards, `#262626` interactive
-  accents, 10% borders, 15% input borders, and `#a3a3a3` secondary text. Large
-  gray column fills and AppKit's default sidebar selection were removed. The
-  native controls follow the dashboard-01 48/36/32-point toolbar/default/compact
-  sizing and the shadcn radius scale. Status badges retain text and distinct
-  icons while Active is green, Waiting amber, Review blue, Planned violet,
-  Inbox neutral, Done emerald, and Cancelled red. Focus rows also expose the
-  registered project display name in a compact folder badge and use the shared
-  semantic hover surface with pointer feedback for task selection.
+- The app maps the official shadcn default Neutral light and dark tokens into
+  shared SwiftUI semantic roles. Dark retains its `#0a0a0a` canvas, `#171717`
+  sidebar/cards, translucent borders and `#a3a3a3` secondary text; Light uses a
+  white canvas, `#fafafa` sidebar, `#f5f5f5` muted/accent surfaces, `#e5e5e5`
+  borders and `#737373` secondary text. A sun/moon toolbar button switches the
+  saved appearance across the window, menu-bar UI, settings, custom titlebar,
+  and status colors. The native controls follow the dashboard-01 48/36/32-point
+  toolbar/default/compact sizing and the shadcn radius scale. Status badges
+  retain text and distinct light/dark contrast while Active is green, Waiting
+  amber, Review blue, Planned violet, Inbox neutral, Done emerald, and Cancelled
+  red. Focus rows also expose the registered project display name in a compact
+  folder badge and use the shared semantic hover surface with pointer feedback
+  for task selection.
 - The task detail is no longer a permanent empty third column or animated
   inspector sheet. Real-window accessibility and screenshot QA verified a
   closed-at-launch, open-on-selection, resizable native split with explicit

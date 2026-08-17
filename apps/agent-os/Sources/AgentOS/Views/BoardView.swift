@@ -63,7 +63,7 @@ struct BoardView: View {
                     }
                 }
             }
-            .scrollIndicators(.visible)
+            .scrollIndicators(.hidden)
         }
         .padding(AgentOSMetrics.itemSpacing)
         .frame(width: 320)

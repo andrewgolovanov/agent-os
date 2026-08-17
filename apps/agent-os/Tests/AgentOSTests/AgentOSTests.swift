@@ -4,6 +4,44 @@ import XCTest
 @testable import AgentOS
 
 final class AgentOSTests: XCTestCase {
+    func testAppearanceDefaultsToDarkAndSupportsPersistentToggle() {
+        XCTAssertEqual(AgentOSAppearance.resolved(arguments: [], storedValue: "invalid"), .dark)
+        XCTAssertEqual(AgentOSAppearance.resolved(arguments: [], storedValue: "light"), .light)
+        XCTAssertEqual(AgentOSAppearance.dark.toggled, .light)
+        XCTAssertEqual(AgentOSAppearance.light.toggled, .dark)
+        XCTAssertEqual(AgentOSAppearance.dark.toggleLabel, "Use light appearance")
+        XCTAssertEqual(AgentOSAppearance.light.toggleSystemImage, "moon")
+        XCTAssertEqual(
+            AgentOSAppearance.resolved(arguments: ["--force-light-appearance"], storedValue: "dark"),
+            .light
+        )
+        XCTAssertEqual(
+            AgentOSAppearance.resolved(arguments: ["--force-dark-appearance"], storedValue: "light"),
+            .dark
+        )
+    }
+
+    func testShadcnNeutralSemanticTokensAdaptToLightAndDarkSchemes() {
+        var lightEnvironment = EnvironmentValues()
+        lightEnvironment.colorScheme = .light
+        var darkEnvironment = EnvironmentValues()
+        darkEnvironment.colorScheme = .dark
+
+        let lightBackground = AgentOSTheme.background.resolve(in: lightEnvironment)
+        let darkBackground = AgentOSTheme.background.resolve(in: darkEnvironment)
+        let lightForeground = AgentOSTheme.foreground.resolve(in: lightEnvironment)
+        let darkForeground = AgentOSTheme.foreground.resolve(in: darkEnvironment)
+        let lightSidebar = AgentOSTheme.sidebar.resolve(in: lightEnvironment)
+        let darkSidebar = AgentOSTheme.sidebar.resolve(in: darkEnvironment)
+
+        XCTAssertEqual(lightBackground.red, 1, accuracy: 0.001)
+        XCTAssertEqual(darkBackground.red, 10.0 / 255, accuracy: 0.001)
+        XCTAssertEqual(lightForeground.red, 10.0 / 255, accuracy: 0.001)
+        XCTAssertEqual(darkForeground.red, 250.0 / 255, accuracy: 0.001)
+        XCTAssertEqual(lightSidebar.red, 250.0 / 255, accuracy: 0.001)
+        XCTAssertEqual(darkSidebar.red, 23.0 / 255, accuracy: 0.001)
+    }
+
     func testAgentOSDeepLinksResolveSupportedDestinations() throws {
         XCTAssertEqual(
             AgentOSDeepLink.destination(for: try XCTUnwrap(URL(string: "agent-os://board"))),
@@ -107,6 +145,64 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(task.activity.totalSeconds, 0)
         XCTAssertTrue(task.labels.isEmpty)
         XCTAssertEqual(task.completionFollowUpStatus, .notRequired)
+    }
+
+    func testProjectSlackMappingsHideOnlyRedundantSidebarLabels() throws {
+        let mappedProjectData = Data(#"""
+        {
+          "key": "sample-product",
+          "displayName": "Sample Product",
+          "status": "active",
+          "root": "/tmp/sample-product",
+          "slackChannels": [
+            {"id":"CEXAMPLE","name":"#project-sample-product-int"}
+          ],
+          "repositories": [{
+            "id": "site",
+            "path": "/tmp/sample-product",
+            "role": "primary",
+            "sourceOfTruth": "unknown",
+            "primaryBranch": "main"
+          }]
+        }
+        """#.utf8)
+        let legacyProjectData = Data(#"""
+        {
+          "key": "legacy",
+          "displayName": "Legacy",
+          "status": "active",
+          "root": "/tmp/legacy",
+          "repositories": [{
+            "id": "legacy",
+            "path": "/tmp/legacy",
+            "role": "primary",
+            "sourceOfTruth": "unknown",
+            "primaryBranch": "main"
+          }]
+        }
+        """#.utf8)
+        let project = try JSONDecoder().decode(AgentOSProject.self, from: mappedProjectData)
+        let legacyProject = try JSONDecoder().decode(AgentOSProject.self, from: legacyProjectData)
+        let labels = [
+            AgentOSLabel(key: "slack:CEXAMPLE", name: "#project-sample-product-int", kind: "slack_channel"),
+            AgentOSLabel(key: "slack:CUNMAPPED", name: "#general-checks", kind: "slack_channel"),
+        ]
+
+        XCTAssertEqual(project.slackChannels.first?.labelKey, "slack:CEXAMPLE")
+        XCTAssertTrue(legacyProject.slackChannels.isEmpty)
+        XCTAssertEqual(
+            SidebarView.visibleLabels(projects: [project, legacyProject], labels: labels).map(\.key),
+            ["slack:CUNMAPPED"]
+        )
+        XCTAssertEqual(labels.map(\.name), ["#project-sample-product-int", "#general-checks"])
+    }
+
+    func testInspectorUsesComfortableResizableDesktopWidths() {
+        XCTAssertEqual(AgentOSMetrics.inspectorMinWidth, 420)
+        XCTAssertEqual(AgentOSMetrics.inspectorIdealWidth, 520)
+        XCTAssertEqual(AgentOSMetrics.inspectorMaxWidth, 680)
+        XCTAssertLessThan(AgentOSMetrics.inspectorMinWidth, AgentOSMetrics.inspectorIdealWidth)
+        XCTAssertLessThan(AgentOSMetrics.inspectorIdealWidth, AgentOSMetrics.inspectorMaxWidth)
     }
 
     func testDoneTaskDecodesCompletionFollowUp() throws {

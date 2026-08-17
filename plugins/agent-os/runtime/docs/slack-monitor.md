@@ -84,9 +84,9 @@ request, deploy, or manage a user-owned Codex task.
 ### Attribution and task mutation
 
 - Exact source identity has priority.
-- Then use registered Slack channel mapping and explicit repository, pull-request, or project links.
+- Then use registered stable Slack channel ID mapping and explicit repository, pull-request, or project links.
 - If a project is unregistered or ambiguous, keep the outcome unassigned and give it one concrete clarification next action.
-- For an actionable named-channel signal, attach or refresh its Slack channel label even when no project is registered. The label supports display and filtering only; it does not create project routing.
+- For an actionable named-channel signal, attach or refresh its Slack channel label even when no project is registered. The label remains on the outcome after reviewed project attribution. It supports display and filtering only; the separately registered stable channel mapping owns attribution.
 - Do not derive labels from DM participant names, message text, or semantic guesses.
 - Attach or refresh one short source title from the exact thread root. Do not concatenate replies, prepend an author, or use the title for correlation; Task Board normalizes Slack markup and truncates it to 96 characters.
 - If an exact source already belongs to an outcome, update that outcome's current state, next action, blocker, sources, or lifecycle only when the new Slack context materially changes it.

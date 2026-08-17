@@ -2,7 +2,7 @@
 
 Task Board connects one real outcome to any number of external threads, Codex tasks, PRs, designs, and deployment sources. Its files live only under private `AGENT_OS_HOME`; the product checkout contains implementation and this contract, never user task data.
 
-An outcome may also carry display-only labels. A Slack channel label groups non-code work without pretending that the channel is a registered project or repository routing target.
+An outcome may also carry display-only labels. A Slack channel label groups non-code work without pretending that the channel is a registered project or repository routing target. When a reviewed stable channel ID is mapped to a project, the label remains visible on cards while the app omits it from the separate top-level Labels section.
 
 ## Storage
 
@@ -88,7 +88,7 @@ Tests use `--root PATH` or `AGENT_OS_TASK_ROOT` to isolate private state.
 
 `--project` may be omitted for a new Slack or DM signal whose owner is unknown. The outcome stays unassigned in `inbox` until attribution is verified, and no route is created for it.
 
-Slack channel labels use stable `slack:<channel_id>` keys and the current human-readable `#channel-name`. Reprocessing the same key is idempotent; a channel rename refreshes the display name. Labels never authorize project routing, repository access, Codex task creation, or source correlation. Direct messages remain unlabelled unless a separate non-personal work label is explicitly available; participant names are not persisted as labels.
+Slack channel labels use stable `slack:<channel_id>` keys and the current human-readable `#channel-name`. Reprocessing the same key is idempotent; a channel rename refreshes the display name. Labels never authorize project routing, repository access, Codex task creation, or source correlation. A separately reviewed `projects.yaml` channel mapping can attribute unfinished unassigned outcomes during preview-first onboarding, but it does not remove their labels or overwrite existing project attribution. Direct messages remain unlabelled unless a separate non-personal work label is explicitly available; participant names are not persisted as labels.
 
 A Slack source may carry one optional display title derived from its root message. Task Board removes Slack link and formatting markup, collapses whitespace, and limits the result to 96 characters. Reprocessing the same exact source may refresh that title without changing `added_at` or source identity. The title is private presentation metadata, not a transcript, correlation key, project label, or routing signal. Existing sources without a title remain valid and the native app falls back to `Slack thread`.
 
@@ -119,7 +119,7 @@ Correlation starts with stable external identity:
 
 Only exact identity permits verified continuity. Semantic similarity, including a matching source title, never authorizes automatic merging. One canonical GitHub PR cannot belong to two outcomes.
 
-Labels are presentation and filtering metadata, not identity. Two similarly named channels remain distinct because their label keys contain different channel IDs, while Slack source correlation continues to use the exact thread identity.
+Labels are presentation and filtering metadata, not identity. Two similarly named channels remain distinct because their label keys contain different channel IDs, while Slack source correlation continues to use the exact thread identity. Channel-name normalization may suggest a project mapping during onboarding, but only an exact reviewed channel ID can be stored or applied.
 
 ## Codex membership and routing
 

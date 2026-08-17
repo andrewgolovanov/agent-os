@@ -3,13 +3,20 @@ import SwiftUI
 extension TaskStatus {
     var tint: Color {
         switch self {
-        case .inbox: Color(red: 0.631, green: 0.631, blue: 0.667)
-        case .planned: Color(red: 0.655, green: 0.545, blue: 0.980)
-        case .active: Color(red: 0.290, green: 0.871, blue: 0.502)
-        case .waiting: Color(red: 0.984, green: 0.749, blue: 0.141)
-        case .review: Color(red: 0.376, green: 0.647, blue: 0.980)
-        case .done: Color(red: 0.204, green: 0.827, blue: 0.600)
-        case .cancelled: Color(red: 0.984, green: 0.443, blue: 0.522)
+        case .inbox:
+            AgentOSTheme.adaptive(light: AgentOSTheme.rgb(82, 82, 82), dark: AgentOSTheme.rgb(161, 161, 170))
+        case .planned:
+            AgentOSTheme.adaptive(light: AgentOSTheme.rgb(109, 40, 217), dark: AgentOSTheme.rgb(167, 139, 250))
+        case .active:
+            AgentOSTheme.adaptive(light: AgentOSTheme.rgb(21, 128, 61), dark: AgentOSTheme.rgb(74, 222, 128))
+        case .waiting:
+            AgentOSTheme.adaptive(light: AgentOSTheme.rgb(180, 83, 9), dark: AgentOSTheme.rgb(251, 191, 36))
+        case .review:
+            AgentOSTheme.adaptive(light: AgentOSTheme.rgb(37, 99, 235), dark: AgentOSTheme.rgb(96, 165, 250))
+        case .done:
+            AgentOSTheme.adaptive(light: AgentOSTheme.rgb(4, 120, 87), dark: AgentOSTheme.rgb(52, 211, 153))
+        case .cancelled:
+            AgentOSTheme.adaptive(light: AgentOSTheme.rgb(225, 29, 72), dark: AgentOSTheme.rgb(251, 113, 133))
         }
     }
 }

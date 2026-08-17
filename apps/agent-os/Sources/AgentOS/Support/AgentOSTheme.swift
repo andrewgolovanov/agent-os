@@ -1,33 +1,34 @@
+import AppKit
 import SwiftUI
 
 enum AgentOSTheme {
-    // The official shadcn/ui default Neutral dark tokens, translated from the
-    // documented OKLCH values to their sRGB equivalents. Keep component code
-    // on these semantic roles instead of introducing one-off gray surfaces.
-    static let background = neutral950
-    static let foreground = neutral50
-    static let card = neutral900
-    static let cardForeground = neutral50
-    static let popover = neutral900
-    static let popoverForeground = neutral50
-    static let primary = neutral200
-    static let primaryForeground = neutral900
-    static let secondary = neutral800
-    static let secondaryForeground = neutral50
-    static let muted = neutral800
-    static let mutedForeground = neutral400
-    static let interactiveAccent = neutral800
-    static let interactiveAccentForeground = neutral50
-    static let border = Color.white.opacity(0.10)
-    static let input = Color.white.opacity(0.15)
-    static let inputSurface = Color.white.opacity(0.045)
-    static let inputHoverSurface = Color.white.opacity(0.075)
-    static let ring = neutral500
-    static let sidebar = neutral900
-    static let sidebarForeground = neutral50
-    static let sidebarAccent = neutral800
-    static let sidebarAccentForeground = neutral50
-    static let sidebarBorder = Color.white.opacity(0.10)
+    // The official shadcn/ui default Neutral light and dark semantic tokens,
+    // translated from the documented OKLCH values to their sRGB equivalents.
+    // Keep component code on these roles instead of adding per-theme colors.
+    static let background = adaptive(light: neutral0, dark: neutral950)
+    static let foreground = adaptive(light: neutral950, dark: neutral50)
+    static let card = adaptive(light: neutral0, dark: neutral900)
+    static let cardForeground = adaptive(light: neutral950, dark: neutral50)
+    static let popover = adaptive(light: neutral0, dark: neutral900)
+    static let popoverForeground = adaptive(light: neutral950, dark: neutral50)
+    static let primary = adaptive(light: neutral900, dark: neutral200)
+    static let primaryForeground = adaptive(light: neutral50, dark: neutral900)
+    static let secondary = adaptive(light: neutral100, dark: neutral800)
+    static let secondaryForeground = adaptive(light: neutral900, dark: neutral50)
+    static let muted = adaptive(light: neutral100, dark: neutral800)
+    static let mutedForeground = adaptive(light: neutral500, dark: neutral400)
+    static let interactiveAccent = adaptive(light: neutral100, dark: neutral800)
+    static let interactiveAccentForeground = adaptive(light: neutral900, dark: neutral50)
+    static let border = adaptive(light: neutral200, dark: NSColor.white.withAlphaComponent(0.10))
+    static let input = adaptive(light: neutral200, dark: NSColor.white.withAlphaComponent(0.15))
+    static let inputSurface = adaptive(light: neutral50, dark: NSColor.white.withAlphaComponent(0.045))
+    static let inputHoverSurface = adaptive(light: neutral100, dark: NSColor.white.withAlphaComponent(0.075))
+    static let ring = adaptive(light: neutral400, dark: neutral500)
+    static let sidebar = adaptive(light: neutral50, dark: neutral900)
+    static let sidebarForeground = adaptive(light: neutral950, dark: neutral50)
+    static let sidebarAccent = adaptive(light: neutral100, dark: neutral800)
+    static let sidebarAccentForeground = adaptive(light: neutral900, dark: neutral50)
+    static let sidebarBorder = adaptive(light: neutral200, dark: NSColor.white.withAlphaComponent(0.10))
     static let inspectorBackdrop = Color.black.opacity(0.48)
 
     static let canvas = background
@@ -37,25 +38,48 @@ enum AgentOSTheme {
     static let borderStrong = input
     static let textPrimary = foreground
     static let textSecondary = mutedForeground
-    static let textTertiary = neutral500
+    static let textTertiary = adaptive(light: neutral500, dark: neutral500)
     static let accent = primary
     static let accentForeground = primaryForeground
-    static let information = Color(red: 0.376, green: 0.647, blue: 0.980)
-    static let warning = Color(red: 0.984, green: 0.749, blue: 0.141)
+    static let information = adaptive(
+        light: rgb(37, 99, 235),
+        dark: rgb(96, 165, 250)
+    )
+    static let warning = adaptive(
+        light: rgb(180, 83, 9),
+        dark: rgb(251, 191, 36)
+    )
 
-    private static let neutral50 = Color(red: 250 / 255, green: 250 / 255, blue: 250 / 255)
-    private static let neutral200 = Color(red: 229 / 255, green: 229 / 255, blue: 229 / 255)
-    private static let neutral400 = Color(red: 163 / 255, green: 163 / 255, blue: 163 / 255)
-    private static let neutral500 = Color(red: 115 / 255, green: 115 / 255, blue: 115 / 255)
-    private static let neutral800 = Color(red: 38 / 255, green: 38 / 255, blue: 38 / 255)
-    private static let neutral900 = Color(red: 23 / 255, green: 23 / 255, blue: 23 / 255)
-    private static let neutral950 = Color(red: 10 / 255, green: 10 / 255, blue: 10 / 255)
+    static func adaptive(light: NSColor, dark: NSColor) -> Color {
+        Color(
+            nsColor: NSColor(name: nil) { appearance in
+                appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? dark : light
+            }
+        )
+    }
+
+    static func rgb(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat) -> NSColor {
+        NSColor(srgbRed: red / 255, green: green / 255, blue: blue / 255, alpha: 1)
+    }
+
+    private static let neutral0 = rgb(255, 255, 255)
+    private static let neutral50 = rgb(250, 250, 250)
+    private static let neutral100 = rgb(245, 245, 245)
+    private static let neutral200 = rgb(229, 229, 229)
+    private static let neutral400 = rgb(163, 163, 163)
+    private static let neutral500 = rgb(115, 115, 115)
+    private static let neutral800 = rgb(38, 38, 38)
+    private static let neutral900 = rgb(23, 23, 23)
+    private static let neutral950 = rgb(10, 10, 10)
 }
 
 enum AgentOSMetrics {
     static let grid: CGFloat = 4
     static let headerHeight: CGFloat = 48
     static let sidebarWidth: CGFloat = 240
+    static let inspectorMinWidth: CGFloat = 420
+    static let inspectorIdealWidth: CGFloat = 520
+    static let inspectorMaxWidth: CGFloat = 680
     static let contentPadding: CGFloat = 24
     static let sectionSpacing: CGFloat = 24
     static let itemSpacing: CGFloat = 16

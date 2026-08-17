@@ -5,18 +5,25 @@ require "open3"
 require "pathname"
 require "tempfile"
 require "yaml"
+require_relative "task_board"
 
 module AgentOS
   class ProjectRegistry
     KEY_PATTERN = /\A[a-z0-9]+(?:-[a-z0-9]+)*\z/.freeze
+    SLACK_CHANNEL_ID_PATTERN = /\A[CG][A-Z0-9]+\z/.freeze
+    FINISHED_TASK_STATUSES = %w[done cancelled].freeze
+    CHANNEL_NAME_PREFIXES = %w[project].freeze
+    CHANNEL_NAME_SUFFIXES = %w[int internal client external ext team].freeze
+    REPOSITORY_NAME_SUFFIXES = %w[next site website web app frontend backend].freeze
 
     def initialize(source:, home:)
       @source = File.expand_path(source)
       @home = File.expand_path(home)
       @registry_path = File.join(@home, "config", "projects.yaml")
+      @task_board = AgentOS::TaskBoard.new(File.join(@home, "work"))
     end
 
-    def onboard(repository:, key: nil, display_name: nil, apply: false)
+    def onboard(repository:, key: nil, display_name: nil, slack_channel_ids: [], apply: false)
       repository = verified_repository(repository)
       key = normalized_key(key || File.basename(repository.fetch(:path)))
       display_name = normalized_display_name(display_name, key)
@@ -27,10 +34,31 @@ module AgentOS
         if legacy_project?(project)
           raise ArgumentError, "project uses obsolete registry metadata; run upgrade-project-registry first"
         end
+        key = existing.fetch(:key)
+        display_name = project.fetch("display_name")
+        reconciliation = slack_reconciliation_plan(
+          registry,
+          key: key,
+          display_name: display_name,
+          aliases: project["aliases"],
+          selected_channel_ids: slack_channel_ids
+        )
+        registry_changed = reconciliation.fetch(:selected_channels).any? do |channel|
+          current = Array(project["slack_channels"]).find { |entry| entry["id"] == channel.fetch(:id) }
+          current.nil? || current["name"] != channel.fetch(:name)
+        end
+        has_changes = registry_changed || reconciliation.fetch(:task_assignments).any?
+        action = has_changes ? (apply ? "reconciled" : "reconcile") : "preserve"
+        if apply && has_changes
+          update_project_channels(key, reconciliation.fetch(:selected_channels)) if registry_changed
+          assign_reconciled_tasks(key, reconciliation.fetch(:task_assignments))
+        end
         return result(
-          action: "preserve", apply: false, key: existing.fetch(:key),
-          display_name: project.fetch("display_name"), root: project_root(project),
-          repository: repository, files: [], reason: "repository is already registered"
+          action: action, applied: apply && has_changes, key: key,
+          display_name: display_name, root: project_root(project),
+          repository: repository, files: registry_changed ? [@registry_path] : [],
+          reconciliation: reconciliation,
+          reason: has_changes ? "selected Slack channels are linked without changing repository state" : "repository is already registered"
         )
       end
 
@@ -39,20 +67,38 @@ module AgentOS
         raise ArgumentError, "project key #{key.inspect} already belongs to another repository"
       end
 
+      reconciliation = slack_reconciliation_plan(
+        registry,
+        key: key,
+        display_name: display_name,
+        aliases: [],
+        selected_channel_ids: slack_channel_ids
+      )
+
       files = [@registry_path]
       unless apply
         return result(
-          action: "create", apply: false, key: key, display_name: display_name,
+          action: "create", applied: false, key: key, display_name: display_name,
           root: repository.fetch(:path), repository: repository, files: files,
+          reconciliation: reconciliation,
           reason: "preview only"
         )
       end
 
-      update_registry(key, project_entry(display_name: display_name, repository: repository))
+      update_registry(
+        key,
+        project_entry(
+          display_name: display_name,
+          repository: repository,
+          slack_channels: reconciliation.fetch(:selected_channels)
+        )
+      )
+      assign_reconciled_tasks(key, reconciliation.fetch(:task_assignments))
       result(
-        action: "created", apply: true, key: key, display_name: display_name,
+        action: "created", applied: true, key: key, display_name: display_name,
         root: repository.fetch(:path), repository: repository, files: files,
-        reason: "project registered without moving or changing the repository"
+        reconciliation: reconciliation,
+        reason: "project registered and selected Slack channels linked without moving or changing the repository"
       )
     end
 
@@ -280,12 +326,13 @@ module AgentOS
       root.to_s.empty? ? expanded : File.expand_path(root)
     end
 
-    def project_entry(display_name:, repository:)
+    def project_entry(display_name:, repository:, slack_channels: [])
       entry = {
         "display_name" => display_name,
         "status" => "active",
         "aliases" => [],
         "root" => repository.fetch(:path),
+        "slack_channels" => serialized_slack_channels(slack_channels),
         "repositories" => [
           {
             "id" => repository.fetch(:id),
@@ -299,6 +346,167 @@ module AgentOS
       remote = repository[:remote]
       entry.fetch("repositories").first["remotes"] = { "origin" => remote } if remote
       entry
+    end
+
+    def slack_reconciliation_plan(registry, key:, display_name:, aliases:, selected_channel_ids:)
+      suggestions = slack_channel_suggestions(
+        registry,
+        key: key,
+        display_name: display_name,
+        aliases: Array(aliases)
+      )
+      selected_ids = Array(selected_channel_ids).map { |value| normalized_slack_channel_id(value) }.uniq
+      suggestions_by_id = suggestions.to_h { |channel| [channel.fetch(:id), channel] }
+      unknown_ids = selected_ids.reject { |channel_id| suggestions_by_id.key?(channel_id) }
+      unless unknown_ids.empty?
+        raise ArgumentError,
+              "Slack channels are not safe onboarding suggestions: #{unknown_ids.join(", ")}; preview again and select exact suggested IDs"
+      end
+
+      selected_channels = selected_ids.map { |channel_id| suggestions_by_id.fetch(channel_id) }
+      task_assignments = selected_channels.flat_map do |channel|
+        channel.fetch(:assign_task_ids).map do |task_id|
+          { task_id: task_id, channel_id: channel.fetch(:id), label_key: channel.fetch(:key) }
+        end
+      end.uniq { |assignment| assignment.fetch(:task_id) }
+      {
+        suggested_channels: suggestions,
+        selected_channels: selected_channels,
+        task_assignments: task_assignments
+      }
+    end
+
+    def slack_channel_suggestions(registry, key:, display_name:, aliases:)
+      identity_owners = Hash.new { |hash, identity| hash[identity] = [] }
+      registry.fetch("projects").each do |project_key, project|
+        next unless project.is_a?(Hash)
+
+        project_identity_variants(
+          project_key,
+          project.fetch("display_name", project_key),
+          Array(project["aliases"])
+        ).each { |identity| identity_owners[identity] << project_key }
+      end
+      project_identity_variants(key, display_name, aliases).each { |identity| identity_owners[identity] << key }
+      identity_owners.each_value(&:uniq!)
+
+      mapped_owners = Hash.new { |hash, channel_id| hash[channel_id] = [] }
+      registry.fetch("projects").each do |project_key, project|
+        Array(project["slack_channels"]).each do |channel|
+          mapped_owners[channel["id"].to_s.upcase] << project_key if channel.is_a?(Hash)
+        end
+      end
+
+      channels = {}
+      @task_board.tasks.each do |task|
+        next if FINISHED_TASK_STATUSES.include?(task.fetch("status"))
+
+        Array(task["labels"]).each do |label|
+          next unless label.is_a?(Hash) && label["kind"] == "slack_channel"
+
+          channel_id = label.fetch("key").delete_prefix("slack:").upcase
+          entry = channels[channel_id] ||= {
+            id: channel_id,
+            key: "slack:#{channel_id}",
+            name: label.fetch("name"),
+            task_ids: [],
+            assign_task_ids: [],
+            task_projects: []
+          }
+          entry[:name] = label.fetch("name")
+          entry[:task_ids] << task.fetch("id")
+          entry[:task_projects] |= Array(task["projects"])
+          entry[:assign_task_ids] << task.fetch("id") if Array(task["projects"]).empty?
+        end
+      end
+
+      channels.values.each_with_object([]) do |channel, suggestions|
+        stem = normalized_channel_project_name(channel.fetch(:name))
+        next if stem.empty? || identity_owners.fetch(stem, []).uniq != [key]
+        next unless (mapped_owners.fetch(channel.fetch(:id), []).uniq - [key]).empty?
+        next unless (channel.fetch(:task_projects) - [key]).empty?
+
+        suggestion = channel.merge(
+          task_ids: channel.fetch(:task_ids).uniq.sort,
+          assign_task_ids: channel.fetch(:assign_task_ids).uniq.sort,
+          already_mapped: mapped_owners.fetch(channel.fetch(:id), []).include?(key),
+          match: stem
+        )
+        suggestion.delete(:task_projects)
+        suggestions << suggestion
+      end.sort_by { |channel| [channel.fetch(:name).downcase, channel.fetch(:id)] }
+    end
+
+    def project_identity_variants(key, display_name, aliases)
+      [key, display_name, *aliases].flat_map do |value|
+        identity = normalized_comparison_name(value)
+        variants = [identity]
+        parts = identity.split("-")
+        variants << parts[0...-1].join("-") if parts.length > 1 && REPOSITORY_NAME_SUFFIXES.include?(parts.last)
+        variants
+      end.reject(&:empty?).uniq
+    end
+
+    def normalized_channel_project_name(value)
+      parts = normalized_comparison_name(value.to_s.delete_prefix("#")).split("-")
+      parts.shift if CHANNEL_NAME_PREFIXES.include?(parts.first)
+      parts.pop while parts.length > 1 && CHANNEL_NAME_SUFFIXES.include?(parts.last)
+      parts.join("-")
+    end
+
+    def normalized_comparison_name(value)
+      value.to_s.downcase.gsub(/[^a-z0-9]+/, "-").gsub(/\A-+|-+\z/, "")
+    end
+
+    def normalized_slack_channel_id(value)
+      channel_id = value.to_s.delete_prefix("slack:").upcase
+      raise ArgumentError, "invalid Slack channel ID: #{value}" unless channel_id.match?(SLACK_CHANNEL_ID_PATTERN)
+
+      channel_id
+    end
+
+    def serialized_slack_channels(channels)
+      channels.map { |channel| { "id" => channel.fetch(:id), "name" => channel.fetch(:name) } }
+              .uniq { |channel| channel.fetch("id") }
+              .sort_by { |channel| [channel.fetch("name").downcase, channel.fetch("id")] }
+    end
+
+    def update_project_channels(key, channels)
+      lock_path = File.join(@home, ".runtime", "projects.lock")
+      FileUtils.mkdir_p(File.dirname(lock_path))
+      File.open(lock_path, File::RDWR | File::CREAT, 0o600) do |lock|
+        lock.flock(File::LOCK_EX)
+        registry = load_registry
+        project = registry.fetch("projects").fetch(key)
+        channels.each do |channel|
+          owner = registry.fetch("projects").find do |project_key, candidate|
+            project_key != key && Array(candidate["slack_channels"]).any? { |entry| entry["id"] == channel.fetch(:id) }
+          end
+          raise ArgumentError, "Slack channel #{channel.fetch(:id)} is already mapped to #{owner.first}" if owner
+        end
+
+        merged = Array(project["slack_channels"]).map(&:dup)
+        channels.each do |channel|
+          existing = merged.find { |entry| entry["id"] == channel.fetch(:id) }
+          values = { "id" => channel.fetch(:id), "name" => channel.fetch(:name) }
+          existing ? existing.replace(values) : merged << values
+        end
+        project["slack_channels"] = merged
+          .uniq { |channel| channel.fetch("id") }
+          .sort_by { |channel| [channel.fetch("name").downcase, channel.fetch("id")] }
+        atomic_write(@registry_path, YAML.dump(registry), mode: 0o600)
+      end
+    end
+
+    def assign_reconciled_tasks(key, assignments)
+      task_ids = assignments.map { |assignment| assignment.fetch(:task_id) }.uniq
+      tasks = task_ids.map { |task_id| @task_board.read_task(task_id) }
+      tasks.each do |task|
+        raise ArgumentError, "cannot reconcile finished outcome #{task.fetch("id")}" if FINISHED_TASK_STATUSES.include?(task.fetch("status"))
+        raise ArgumentError, "cannot replace existing project attribution for #{task.fetch("id")}" unless Array(task["projects"]).empty?
+      end
+      tasks.each { |task| @task_board.update(task.fetch("id"), "projects" => [key]) }
+      task_ids
     end
 
     def project_root(project)
@@ -414,14 +622,15 @@ module AgentOS
       status.success? ? stdout.strip : nil
     end
 
-    def result(action:, apply:, key:, display_name:, root:, repository:, files:, reason:)
+    def result(action:, applied:, key:, display_name:, root:, repository:, files:, reconciliation:, reason:)
       {
         schema_version: 1,
         action: action,
-        applied: apply && action == "created",
+        applied: applied,
         project: { key: key, display_name: display_name, root: root },
         repository: repository,
         files: files,
+        reconciliation: reconciliation,
         unchanged: [repository.fetch(:path)],
         reason: reason
       }

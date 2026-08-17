@@ -9,6 +9,12 @@ struct AgentOSCLIService: Sendable {
         displayName: value.fetch("display_name"),
         status: value.fetch("status"),
         root: value.fetch("root"),
+        slackChannels: Array(value["slack_channels"]).map do |channel|
+          {
+            id: channel.fetch("id"),
+            name: channel.fetch("name")
+          }
+        end,
         repositories: value.fetch("repositories").map do |repository|
           {
             id: repository.fetch("id"),

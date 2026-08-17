@@ -8,6 +8,11 @@ struct ContentView: View {
     @State private var sidebarWidth: CGFloat = AgentOSMetrics.sidebarWidth
     @State private var searchText = ""
     @State private var showsNewTask = false
+    @AppStorage(AgentOSAppearance.storageKey) private var storedAppearance = AgentOSAppearance.dark.rawValue
+
+    private var appearance: AgentOSAppearance {
+        AgentOSAppearance(rawValue: storedAppearance) ?? .dark
+    }
 
     private var visibleTasks: [AgentOSTask] {
         let scoped: [AgentOSTask]
@@ -115,7 +120,12 @@ struct ContentView: View {
                             Task { await store.openCodexTask(threadID: threadID) }
                         }
                     )
-                    .frame(minWidth: 360, idealWidth: 420, maxWidth: 520, maxHeight: .infinity)
+                    .frame(
+                        minWidth: AgentOSMetrics.inspectorMinWidth,
+                        idealWidth: AgentOSMetrics.inspectorIdealWidth,
+                        maxWidth: AgentOSMetrics.inspectorMaxWidth,
+                        maxHeight: .infinity
+                    )
                     .task(id: "\(selectedTask.id):\(selectedTask.updatedAt)") {
                         await store.loadSourceMetadata(for: selectedTask)
                     }
@@ -151,6 +161,11 @@ struct ContentView: View {
                 .foregroundStyle(AgentOSTheme.textPrimary)
                 .help("Create a new outcome")
                 .keyboardShortcut("n", modifiers: [.command])
+                Button(appearance.toggleLabel, systemImage: appearance.toggleSystemImage) {
+                    storedAppearance = appearance.toggled.rawValue
+                }
+                .foregroundStyle(AgentOSTheme.textPrimary)
+                .help(appearance.toggleLabel)
             }
         }
         .safeAreaInset(edge: .bottom) {

@@ -79,9 +79,14 @@ struct SidebarView: View {
     }
 
     private var labels: [AgentOSLabel] {
+        Self.visibleLabels(projects: projects, labels: tasks.flatMap(\.labels))
+    }
+
+    nonisolated static func visibleLabels(projects: [AgentOSProject], labels: [AgentOSLabel]) -> [AgentOSLabel] {
         var seen = Set<String>()
-        return tasks
-            .flatMap(\.labels)
+        let mappedLabelKeys = Set(projects.flatMap(\.slackChannels).map(\.labelKey))
+        return labels
+            .filter { !mappedLabelKeys.contains($0.key) }
             .filter { seen.insert($0.key).inserted }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }

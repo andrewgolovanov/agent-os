@@ -36,7 +36,7 @@ downloadable macOS app supports Apple Silicon (`arm64`) on macOS 14 or newer;
 an Intel or universal binary is not included yet.
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.3.2
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.4.0
 codex plugin add agent-os@agent-os
 ```
 
@@ -55,7 +55,11 @@ Onboard this repository into Agent OS safely.
 The plugin previews the registry change before applying it. Every project is
 registered at its existing Git root, regardless of where that folder lives.
 Agent OS does not create a second project folder or move, copy, rename, commit,
-or otherwise modify the project repository.
+or otherwise modify the project repository. If unfinished Slack-only work has
+a conservatively matching channel, onboarding may suggest it without selecting
+it. A second preview with exact reviewed channel IDs is required before Agent
+OS stores the mapping or attributes previously unassigned work; channel labels
+remain visible on task cards.
 If the user later moves a registered repository, ask Agent OS to relink that
 project. The plugin verifies repository identity and previews only the private
 path metadata that will change.
@@ -101,7 +105,9 @@ set up optional integrations; it resolves the packaged runtime and shows every
 local mutation before applying it.
 When no repository is registered, the Scheduled monitor can use the active
 Agent OS home as a non-version-controlled local project. Slack channel labels
-remain separate from repository-backed project routing.
+remain separate from repository-backed project routing. Once a channel is
+explicitly mapped to a registered project, its label stays on task cards but no
+longer appears as a duplicate top-level sidebar filter.
 
 Plugin updates come from versioned marketplace snapshots. The native app uses
 signed Sparkle release archives. A development checkout keeps the older

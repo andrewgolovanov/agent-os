@@ -69,6 +69,154 @@ class ProjectRegistryTest < Minitest::Test
     assert_includes error.message, "already belongs to another repository"
   end
 
+  def test_onboarding_previews_and_applies_selected_slack_channel_reconciliation
+    repository = create_repository("example-product-next", "https://example.invalid/example-product-next.git")
+    board = AgentOS::TaskBoard.new(File.join(@home, "work"))
+    board.create(
+      "id" => "task_example_product",
+      "title" => "Cover example product handoff",
+      "goal" => "Keep the client work visible",
+      "summary" => "Waiting for ownership.",
+      "next_action" => "Confirm ownership."
+    )
+    board.upsert_label(
+      "task_example_product",
+      key: "slack:CEXAMPLE",
+      name: "#project-example-product-int",
+      kind: "slack_channel"
+    )
+
+    preview = project_registry.onboard(repository: repository)
+    suggestion = preview.dig(:reconciliation, :suggested_channels, 0)
+
+    assert_equal "create", preview.fetch(:action)
+    assert_equal "CEXAMPLE", suggestion.fetch(:id)
+    assert_equal ["task_example_product"], suggestion.fetch(:assign_task_ids)
+    assert_empty preview.dig(:reconciliation, :selected_channels)
+    assert_equal({}, registry_payload.fetch("projects"))
+    assert_empty board.read_task("task_example_product").fetch("projects")
+
+    selected_preview = project_registry.onboard(
+      repository: repository,
+      slack_channel_ids: ["CEXAMPLE"]
+    )
+    assert_equal ["CEXAMPLE"], selected_preview.dig(:reconciliation, :selected_channels).map { |channel| channel.fetch(:id) }
+    assert_equal ["task_example_product"], selected_preview.dig(:reconciliation, :task_assignments).map { |item| item.fetch(:task_id) }
+    assert_equal({}, registry_payload.fetch("projects"))
+
+    applied = project_registry.onboard(
+      repository: repository,
+      slack_channel_ids: ["CEXAMPLE"],
+      apply: true
+    )
+
+    assert_equal "created", applied.fetch(:action)
+    assert_equal true, applied.fetch(:applied)
+    assert_equal(
+      [{ "id" => "CEXAMPLE", "name" => "#project-example-product-int" }],
+      registry_payload.dig("projects", "example-product-next", "slack_channels")
+    )
+    task = board.read_task("task_example_product")
+    assert_equal ["example-product-next"], task.fetch("projects")
+    assert_equal "#project-example-product-int", task.dig("labels", 0, "name")
+
+    repeated = project_registry.onboard(
+      repository: repository,
+      slack_channel_ids: ["CEXAMPLE"],
+      apply: true
+    )
+    assert_equal "preserve", repeated.fetch(:action)
+    assert_equal false, repeated.fetch(:applied)
+  end
+
+  def test_existing_project_can_reconcile_its_channel_without_rewriting_attributed_tasks
+    project_registry.onboard(repository: @repository, apply: true)
+    board = AgentOS::TaskBoard.new(File.join(@home, "work"))
+    board.create(
+      "id" => "task_sample_project",
+      "title" => "Review Sample Project",
+      "projects" => ["sample-project"],
+      "goal" => "Keep project and channel context",
+      "summary" => "Active.",
+      "next_action" => "Review the thread."
+    )
+    board.upsert_label(
+      "task_sample_project",
+      key: "slack:C0SAMPLE",
+      name: "#project-sample-project-int",
+      kind: "slack_channel"
+    )
+
+    preview = project_registry.onboard(
+      repository: @repository,
+      slack_channel_ids: ["C0SAMPLE"]
+    )
+    assert_equal "reconcile", preview.fetch(:action)
+    assert_empty preview.dig(:reconciliation, :task_assignments)
+
+    applied = project_registry.onboard(
+      repository: @repository,
+      slack_channel_ids: ["C0SAMPLE"],
+      apply: true
+    )
+    assert_equal "reconciled", applied.fetch(:action)
+    assert_equal ["sample-project"], board.read_task("task_sample_project").fetch("projects")
+    assert_equal "C0SAMPLE", registry_payload.dig("projects", "sample-project", "slack_channels", 0, "id")
+  end
+
+  def test_onboarding_does_not_suggest_a_channel_owned_by_another_project_task
+    repository = create_repository("example-product-next", "https://example.invalid/example-product-next.git")
+    board = AgentOS::TaskBoard.new(File.join(@home, "work"))
+    board.create(
+      "id" => "task_conflict",
+      "title" => "Work in another repository",
+      "projects" => ["devhub"],
+      "goal" => "Preserve verified attribution",
+      "summary" => "Already attributed.",
+      "next_action" => "Keep the current owner."
+    )
+    board.upsert_label(
+      "task_conflict",
+      key: "slack:CEXAMPLE",
+      name: "#project-example-product-int",
+      kind: "slack_channel"
+    )
+
+    preview = project_registry.onboard(repository: repository)
+
+    assert_empty preview.dig(:reconciliation, :suggested_channels)
+    error = assert_raises(ArgumentError) do
+      project_registry.onboard(repository: repository, slack_channel_ids: ["CEXAMPLE"], apply: true)
+    end
+    assert_includes error.message, "not safe onboarding suggestions"
+    assert_equal({}, registry_payload.fetch("projects"))
+    assert_equal ["devhub"], board.read_task("task_conflict").fetch("projects")
+  end
+
+  def test_onboarding_never_reconciles_finished_slack_outcomes
+    repository = create_repository("example-product-next", "https://example.invalid/example-product-next.git")
+    board = AgentOS::TaskBoard.new(File.join(@home, "work"))
+    board.create(
+      "id" => "task_finished_example_product",
+      "title" => "Complete example product handoff",
+      "status" => "done",
+      "goal" => "Retain completed history",
+      "summary" => "Complete.",
+      "next_action" => "None."
+    )
+    board.upsert_label(
+      "task_finished_example_product",
+      key: "slack:CEXAMPLE",
+      name: "#project-example-product-int",
+      kind: "slack_channel"
+    )
+
+    preview = project_registry.onboard(repository: repository)
+
+    assert_empty preview.dig(:reconciliation, :suggested_channels)
+    assert_empty board.read_task("task_finished_example_product").fetch("projects")
+  end
+
   def test_onboarding_requires_obsolete_registry_metadata_to_be_upgraded
     write_legacy_project(layout: "direct-repository", wrapper: @repository)
 

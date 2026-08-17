@@ -18,11 +18,14 @@ on the shared Board. `agent-os://focus` opens the Focus view, while
 destination refreshes canonical private state; none imports or duplicates task
 data.
 
-Board keeps unfinished outcomes in independently scrollable lifecycle columns.
+Board keeps unfinished outcomes in independently scrollable lifecycle columns
+while hiding their persistent vertical scroll indicators.
 Unassigned outcomes may carry display-only Slack channel labels. The app shows
-those labels in Focus, Board, Done, and the inspector, and exposes them as a
-separate sidebar filter without treating them as registered projects or
-enabling `Open new Codex task`.
+those labels in Focus, Board, Done, and the inspector. Unmapped channels remain
+available as a separate sidebar filter; a channel explicitly mapped to a
+registered project stays visible on task cards but is omitted from that
+top-level section to avoid duplicating the project. Labels never enable `Open
+new Codex task` on their own.
 Done is the operational completion journal: it retains `done` and `cancelled`
 outcomes with their complete inspector, sources, pull-request state, linked
 Codex activity, and completion follow-up state. Its project, completion-period,
@@ -33,6 +36,10 @@ visible completed outcomes. A completed outcome with a Slack source starts as
 and does not mix broader project-wide time into this task-owned total.
 
 `Open new Codex task` creates a named task in the registered project, records its exact membership, copies a prepared continuation prompt, and opens that task in Codex. The app deliberately does not start a background turn: paste and send the prepared prompt when you are ready to begin work.
+
+The resizable task inspector opens at a wider desktop-friendly width so long
+titles, pull-request metadata, goals, and current-state text wrap less
+aggressively while the Board remains visible.
 
 Task Board filesystem notifications are delivered on the main actor before the
 SwiftUI store is refreshed. The LaunchServices completion used for Codex
@@ -66,11 +73,15 @@ bundled at `Contents/Resources/AgentOSRuntime`. A non-default home selected by
 `WORKSPACE_CONSOLE_ROOT` remains a deprecated compatibility alias for older
 one-directory installations.
 
-The app uses its minimal dark appearance by default. For contrast regression QA,
-the light override remains available without changing the system setting:
+The app uses its minimal dark appearance by default. The sun/moon button in the
+main toolbar switches between the official shadcn Neutral light and dark
+semantic palettes and stores the choice for future launches. For isolated
+contrast regression QA, either appearance can still be forced without changing
+the saved preference:
 
 ```bash
 open -n "dist/Agent OS.app" --args --force-light-appearance
+open -n "dist/Agent OS.app" --args --force-dark-appearance
 ```
 
 The companion plugin is maintained once at `../../plugins/agent-os`.

@@ -335,15 +335,25 @@ module AgentOS
     end
 
     def onboard_project
-      options = common_options(apply: false, json: false, repository: nil, key: nil, display_name: nil)
+      options = common_options(
+        apply: false,
+        json: false,
+        repository: nil,
+        key: nil,
+        display_name: nil,
+        slack_channel_ids: []
+      )
       OptionParser.new do |parser|
-        parser.banner = "Usage: agent-os onboard-project --repository PATH [--key KEY] [--display-name NAME] [--home PATH] [--source PATH] [--json] [--apply]"
+        parser.banner = "Usage: agent-os onboard-project --repository PATH [--key KEY] [--display-name NAME] [--slack-channel ID] [--home PATH] [--source PATH] [--json] [--apply]"
         add_common_options(parser, options)
         parser.on("--repository PATH", "Existing Git repository or a directory inside it") { |value| options[:repository] = value }
         parser.on("--key KEY", "Lowercase kebab-case project key") { |value| options[:key] = value }
         parser.on("--display-name NAME", "Human-readable project name") { |value| options[:display_name] = value }
+        parser.on("--slack-channel ID", "Repeat only for exact channel IDs selected from a reviewed preview") do |value|
+          options[:slack_channel_ids] << value
+        end
         parser.on("--json", "Print machine-readable preview or result") { options[:json] = true }
-        parser.on("--apply", "Create the reviewed registry-only project entry") { options[:apply] = true }
+        parser.on("--apply", "Apply the reviewed project entry and selected Slack reconciliation") { options[:apply] = true }
         parser.parse!(@arguments)
       end
       reject_extra_arguments!
@@ -355,6 +365,7 @@ module AgentOS
         repository: options.fetch(:repository),
         key: options[:key],
         display_name: options[:display_name],
+        slack_channel_ids: options.fetch(:slack_channel_ids),
         apply: options.fetch(:apply)
       )
       if options.fetch(:json)
@@ -368,8 +379,18 @@ module AgentOS
         @out.puts "  repository #{repository.fetch(:path)}"
         @out.puts "  HEAD #{repository.fetch(:head)} on #{repository.fetch(:checked_out_branch) || "detached HEAD"}"
         @out.puts "  remote #{repository.fetch(:remote) || "unknown"}"
+        reconciliation = outcome.fetch(:reconciliation)
+        reconciliation.fetch(:suggested_channels).each do |channel|
+          @out.puts "  suggest    #{channel.fetch(:id)} #{channel.fetch(:name)} -> #{project.fetch(:key)}"
+          channel.fetch(:assign_task_ids).each { |task_id| @out.puts "    assign   #{task_id}" }
+        end
+        reconciliation.fetch(:selected_channels).each do |channel|
+          @out.puts "  selected   #{channel.fetch(:id)} #{channel.fetch(:name)}"
+        end
         outcome.fetch(:files).each { |path| @out.puts "  file #{path}" }
-        @out.puts "Preview only. Re-run with --apply after reviewing the exact topology." unless options.fetch(:apply)
+        unless options.fetch(:apply)
+          @out.puts "Preview only. Add reviewed --slack-channel IDs, preview again, then re-run that exact command with --apply."
+        end
       end
       0
     end

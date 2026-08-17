@@ -6,12 +6,13 @@
 2. Provide a project key, display name, and absolute paths for its repositories.
 3. Verify each repository root, remotes, branch, HEAD, and dirty state.
 4. Register the existing Git root from any folder as project `root`.
-5. Review the registry mutation preview.
-6. Update private `AGENT_OS_HOME/config/projects.yaml` only through Agent OS MCP or CLI operations.
-7. Run `ruby tools/validate-agent-os` and `tools/task-board validate` against the selected private home.
-8. Report verified and unknown facts separately.
+5. Review the registry mutation preview and any conservative Slack channel suggestions. Suggestions are display-only until exact channel IDs are selected.
+6. When a suggested channel really belongs to the project, preview again with those exact channel IDs. Confirm that only unfinished outcomes with no current project would be assigned.
+7. After approval, update private `AGENT_OS_HOME/config/projects.yaml` and the selected Task Board attribution only through Agent OS MCP or CLI operations. Existing project attribution and Slack labels remain unchanged.
+8. Run `ruby tools/validate-agent-os` and `tools/task-board validate` against the selected private home.
+9. Report verified and unknown facts separately.
 
-Onboarding does not authorize clone, move, remote changes, commits, or publication. It writes no wrapper or Agent OS metadata into the product repository.
+Onboarding does not authorize clone, move, remote changes, commits, publication, or semantic outcome merging. It writes no wrapper or Agent OS metadata into the product repository. Re-running onboarding for an existing project may use the same preview-first flow to add reviewed channel mappings and reconcile still-unassigned unfinished work.
 
 If the registry still has legacy `layout` or `wrapper` fields, preview `agent_os_upgrade_project_registry`. Apply performs a one-way migration to `root + repositories` and preserves the former managed directory in a private recovery backup. New onboarding never creates those directories.
 
@@ -60,8 +61,8 @@ Change lifecycle only through `tools/task-board`. Private `task.json` is the str
 3. Direct mentions are searched across accessible public and private channels; DMs and group DMs are read separately.
 4. Exact event identity is checked through `tools/slack-state`.
 5. Correlation uses stable Task Board sources and verified registry attribution, not similar text.
-6. An unknown-project named-channel signal may become an unassigned inbox outcome with a display-only `#channel-name` label keyed by the stable Slack channel ID.
-7. Channel labels support scanning and filtering but never become project keys, repository paths, or routing authority. DMs do not persist participant names as labels.
+6. A registered stable Slack channel mapping provides project attribution. Without one, an unknown-project named-channel signal may become an unassigned inbox outcome with a display-only `#channel-name` label keyed by the stable Slack channel ID.
+7. Channel labels remain visible on task cards after attribution. They support scanning and filtering but never become project keys, repository paths, source identity, or routing authority. DMs do not persist participant names as labels.
 8. The cursor advances only after a complete successful scan.
 9. External messages, ambient full-channel scans, code or Git mutations, deployments, and management of user-owned Codex tasks are prohibited.
 

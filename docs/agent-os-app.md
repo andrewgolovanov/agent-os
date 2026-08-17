@@ -58,9 +58,10 @@ may call it on its own queue without entering main-actor-isolated code.
 ## UI scope
 
 - regular SwiftUI window with Focus, Board, and Done views;
-- project, Slack channel label, outcome filtering, and search;
+- project, unmapped Slack channel label, outcome filtering, and search; mapped channel labels remain visible on task cards without duplicating their project in the sidebar;
 - independently vertically scrollable Board columns inside the horizontal
-  workflow canvas, keeping every card reachable without moving column headers;
+  workflow canvas, keeping every card reachable without moving column headers
+  while hiding the persistent vertical scroll indicators;
 - a Done view for durable `done` and `cancelled` outcomes, with project,
   completion-period, lifecycle, and completion-follow-up filters plus summary
   cards for visible outcomes, exact-linked time, and pending follow-up; grouped
@@ -70,9 +71,13 @@ may call it on its own queue without entering main-actor-isolated code.
 - completion follow-up is separate from lifecycle. Done outcomes with Slack
   sources begin as `pending`; the inspector prepares a copyable completion
   update, but the user sends it and explicitly records `sent` or `not_required`;
-- the official shadcn default Neutral dark tokens mapped into SwiftUI semantic
-  roles: `#0a0a0a` background, `#171717` card/sidebar, `#262626`
-  muted/accent, 10% borders, 15% input borders, and `#a3a3a3` muted text;
+- the official shadcn default Neutral light and dark tokens mapped into SwiftUI
+  semantic roles. Dark retains its `#0a0a0a` background and `#171717`
+  card/sidebar; Light uses a white canvas, `#fafafa` sidebar, `#f5f5f5`
+  muted/accent surfaces, and `#e5e5e5` borders;
+- a sun/moon button in the main toolbar switches Light and Dark immediately and
+  stores the user preference across launches while retaining explicit force
+  flags for isolated contrast QA;
 - dashboard-01 geometry for the native equivalents: a 48-point toolbar rhythm,
   36-point default controls, 32-point compact controls, 16-point icons, a
   4-point spacing grid, and the documented shadcn radius scale;
@@ -81,12 +86,15 @@ may call it on its own queue without entering main-actor-isolated code.
   or Escape without retaining stale selection; while it is open, a translucent
   backdrop dims and disables the Focus or Board pane and closes the detail when
   clicked without covering the inspector, toolbar, or project sidebar;
+- a wider `420 / 520 / 680` point minimum, ideal, and maximum inspector range so
+  long task and pull-request context remains readable while the split stays
+  user-resizable;
 - selected outcome details with goal, summary, next action, blocker, sources,
   Codex memberships, and tracked outcome time in the header;
 - registered project display names directly in Focus rows for mixed-project
   scanning without opening task details, plus the shared semantic hover surface
   and pointing-hand feedback that make every selectable row visibly interactive;
-- display-only Slack channel labels on unassigned outcomes, with a Labels sidebar
+- display-only Slack channel labels on outcomes, with an unmapped Labels sidebar
   section that filters non-code work without enabling repository actions;
 - tracked outcome time at the top of every Board card for immediate scanning;
 - compact status-only markers in Done use a fixed 24-point circular

@@ -19,6 +19,9 @@ Done when:
 - the app initializes the same clean private home when installed first;
 - onboarding previews and registers an arbitrary existing repository without
   changing its Git status, HEAD, remotes, or filesystem location;
+- reviewed Slack channel mappings reconcile only unfinished unassigned outcomes,
+  keep their channel labels on cards, and do not duplicate mapped labels in the
+  top-level sidebar;
 - a fresh Codex task loads the packaged runtime, onboarding skill, MCP tools,
   and Task Bridge hooks;
 - the packaged app reads the same project and task immediately afterward.
@@ -102,15 +105,15 @@ Continue real use before investing in distribution infrastructure.
 
 Done when:
 
-- Focus, Board, independently scrolling columns, Done, inspector,
+- Focus, Board, independently scrolling columns with hidden indicators, Done, inspector,
   refresh, lifecycle and completion-follow-up mutations, and exact Codex
   handoff remain reliable during the pilot;
 - completed and cancelled outcomes retain their context in Done; completed
   Slack-backed work makes unsent follow-up visible without sending externally,
   and project/period filters summarize only exact-linked outcome time; broader
   Project Time remains an explicit CLI/private-report workflow;
-- the official shadcn Neutral dark semantic system and dashboard-01 control
-  geometry, prominent tracked time, and
+- the official shadcn Neutral light/dark semantic system, saved toolbar toggle,
+  dashboard-01 control geometry, prominent tracked time, and
   on-demand resizable detail split remain legible and predictable across Focus,
   Board, and narrow window layouts;
 - contextual source rows remain useful without provider authentication and

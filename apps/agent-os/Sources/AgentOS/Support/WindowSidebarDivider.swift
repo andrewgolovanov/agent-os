@@ -119,6 +119,12 @@ struct WindowSidebarDivider: NSViewRepresentable {
                 contentTitlebarLeadingConstraint?.constant = sidebarWidth
                 dividerLeadingConstraint?.constant = sidebarWidth
             }
+
+            window.effectiveAppearance.performAsCurrentDrawingAppearance {
+                titlebarFill?.layer?.backgroundColor = NSColor(AgentOSTheme.sidebar).cgColor
+                contentTitlebarFill?.layer?.backgroundColor = NSColor(AgentOSTheme.canvas).cgColor
+                divider?.layer?.backgroundColor = NSColor(AgentOSTheme.sidebarBorder).cgColor
+            }
         }
 
         func removeDivider() {

@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "version": "0.3.2",
-  "plugin_version": "0.3.2+codex.20260817190207",
+  "version": "0.4.0",
+  "plugin_version": "0.4.0+codex.20260818001402",
   "files": {
     "LICENSE": {
       "sha256": "56fdec8396b0f0564c3f9795b48fd025ce8bb85535ee9c1abfc0ce9ac4a27f6c",
       "executable": false
     },
     "bin/agent-os": {
-      "sha256": "814b480b307b82ece666b0995a6aa4a5cc895c2f3e9fc64802c85bd6b057c50a",
+      "sha256": "0a46f5056671ea3586f952d3e8b882890c8efb9221515e18ec2df84600c69ca1",
       "executable": true
     },
     "config/examples/monitors.yaml": {
@@ -28,11 +28,11 @@
       "executable": false
     },
     "docs/optional-integrations.md": {
-      "sha256": "0704ac41424acfd92d9e9e1cd67d020bcfb4840673f287ca2f77f7be22dc583a",
+      "sha256": "f3de9aa834e08b7da31c8d2b95a96b54d567199d0b8b54085e85587c4b27c318",
       "executable": false
     },
     "docs/slack-monitor.md": {
-      "sha256": "8eb49f2c4d9aea2c77df11afd2439a07b65206b36173bd14f9e0707fed0a502e",
+      "sha256": "81be20daebea0ecd9e7f70f518f403326548f03e454167e28863dfbff34cea4b",
       "executable": false
     },
     "lib/agent_os/home_migrator.rb": {
@@ -44,7 +44,7 @@
       "executable": false
     },
     "lib/agent_os/project_registry.rb": {
-      "sha256": "60cbbe598739bc892cf69a49359960e0b2a4244cbee3a4bb6765aa74c94d16ff",
+      "sha256": "8dcfeee155076abf01d6d7e9f2cc32d92f56f4143812221827810fcbffef6837",
       "executable": false
     },
     "lib/agent_os/project_time.rb": {
