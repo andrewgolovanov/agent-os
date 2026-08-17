@@ -72,11 +72,17 @@ begin
     options, = common_options(ARGV) do |opts, values|
       opts.on("--kind KIND") { |value| values[:kind] = value }
       opts.on("--value URL_OR_ID") { |value| values[:value] = value }
+      opts.on("--title TEXT", "Optional short Slack root-message title") { |value| values[:title] = value }
     end
     raise OptionParser::MissingArgument, "kind" unless options[:kind]
     raise OptionParser::MissingArgument, "value" unless options[:value]
 
-    task = AgentOS::TaskBoard.new(options.fetch(:root)).attach_source(id, kind: options.fetch(:kind), value: options.fetch(:value))
+    task = AgentOS::TaskBoard.new(options.fetch(:root)).attach_source(
+      id,
+      kind: options.fetch(:kind),
+      value: options.fetch(:value),
+      title: options[:title]
+    )
     puts JSON.pretty_generate(task)
   when "label"
     id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
@@ -222,7 +228,7 @@ begin
         init
         create --title TITLE [--project KEY] --goal TEXT --next-action TEXT
         update TASK_ID [fields]
-        source TASK_ID --kind KIND --value URL_OR_ID
+        source TASK_ID --kind KIND --value URL_OR_ID [--title TEXT]
         label TASK_ID --key KEY --name NAME --kind slack_channel
         completion TASK_ID --follow-up-status pending|sent|not_required
         codex TASK_ID --thread-id ID --role ROLE [fields]

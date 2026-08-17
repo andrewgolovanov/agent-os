@@ -17,7 +17,7 @@ Install the public plugin snapshot, review its hooks, and start a fresh Agent OS
 task:
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.3.1
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.3.2
 codex plugin add agent-os@agent-os
 ```
 
@@ -62,7 +62,7 @@ Use these canonical values:
 - prompt: the block below.
 
 ```text
-Run the Agent OS Slack monitor once. Use the installed Agent OS plugin and its active private home. Read the active private home's config/monitors.yaml entry named agent-os-slack-monitor and the installed Slack monitor runbook before acting. Require that monitor to be enabled. Use only the connected Slack integration and only read-only Slack operations. Resolve the current Slack user each run; scan the configured bounded mentions, direct messages, group direct messages, and active watched roots; attribute only through the registered project configuration. Store only stable identifiers, cursors, dispositions, and local Task Board changes through the installed Agent OS runtime; never store raw message text. Do not send Slack messages or reactions, write external tasks, edit repositories, run Git mutations, or deploy. Do not advance any cursor after a partial read. Return DONT_NOTIFY when nothing actionable changed; otherwise return the compact notification required by the runbook, including its Agent OS app link.
+Run the Agent OS Slack monitor once. Use the installed Agent OS plugin and its active private home. Read the active private home's config/monitors.yaml entry named agent-os-slack-monitor and the installed Slack monitor runbook before acting. Require that monitor to be enabled. Use only the connected Slack integration and only read-only Slack operations. Resolve the current Slack user each run; scan the configured bounded mentions, direct messages, group direct messages, and active watched roots; attribute only through the registered project configuration. Store only stable identifiers, cursors, dispositions, and local Task Board changes through the installed Agent OS runtime. A Task Board Slack source may retain only the runbook-defined normalized short title from its root message; never store full raw message text, replies, or author metadata. Do not send Slack messages or reactions, write external tasks, edit repositories, run Git mutations, or deploy. Do not advance any cursor after a partial read. Return DONT_NOTIFY when nothing actionable changed; otherwise return the compact notification required by the runbook, including its Agent OS app link.
 ```
 
 Codex Scheduled is the authority for whether this automation exists and is enabled. Inspect an existing task with the exact name before creating another one. If the current Codex surface cannot manage Scheduled tasks, create it from Codex desktop or web rather than inventing a CLI fallback. A local-project schedule runs only while its required desktop environment and machine are available, so verify the first two executions in the Scheduled task history. A user with no repositories does not need a fake Git project: Codex supports scheduled work in a non-version-controlled local directory, and the already initialized active Agent OS home provides that stable context.

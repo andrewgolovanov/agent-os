@@ -49,7 +49,8 @@ tools/task-board create \
 
 tools/task-board source TASK_ID \
   --kind slack_threads \
-  --value "https://slack.example/thread/ROOT_ID"
+  --value "https://slack.example/thread/ROOT_ID" \
+  --title "Please verify the client launch checklist"
 
 tools/task-board label TASK_ID \
   --key "slack:C123" \
@@ -89,6 +90,8 @@ Tests use `--root PATH` or `AGENT_OS_TASK_ROOT` to isolate private state.
 
 Slack channel labels use stable `slack:<channel_id>` keys and the current human-readable `#channel-name`. Reprocessing the same key is idempotent; a channel rename refreshes the display name. Labels never authorize project routing, repository access, Codex task creation, or source correlation. Direct messages remain unlabelled unless a separate non-personal work label is explicitly available; participant names are not persisted as labels.
 
+A Slack source may carry one optional display title derived from its root message. Task Board removes Slack link and formatting markup, collapses whitespace, and limits the result to 96 characters. Reprocessing the same exact source may refresh that title without changing `added_at` or source identity. The title is private presentation metadata, not a transcript, correlation key, project label, or routing signal. Existing sources without a title remain valid and the native app falls back to `Slack thread`.
+
 ## Natural-language lifecycle control
 
 Users do not need to invoke the CLI manually. In a Codex task, identify the outcome or ID and state what changed:
@@ -114,7 +117,7 @@ Correlation starts with stable external identity:
 - Figma file -> `figma:<file_key>`;
 - Codex membership -> exact `thread_id` and `codex://threads/<id>`.
 
-Only exact identity permits verified continuity. Semantic similarity alone never authorizes automatic merging. One canonical GitHub PR cannot belong to two outcomes.
+Only exact identity permits verified continuity. Semantic similarity, including a matching source title, never authorizes automatic merging. One canonical GitHub PR cannot belong to two outcomes.
 
 Labels are presentation and filtering metadata, not identity. Two similarly named channels remain distinct because their label keys contain different channel IDs, while Slack source correlation continues to use the exact thread identity.
 

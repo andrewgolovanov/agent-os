@@ -93,7 +93,7 @@ enum AgentOSSourcePresentation {
 
         switch item.kind {
         case .slackThread:
-            return slackMetadata(url: url, title: "Slack thread")
+            return slackMetadata(url: url, title: item.link.title ?? "Slack thread")
         case .pullRequest:
             return pullRequestMetadata(url: url)
         case .figma:

@@ -34,7 +34,10 @@ struct ContentView: View {
                 || $0.nextAction.localizedCaseInsensitiveContains(query)
                 || $0.projects.contains { $0.localizedCaseInsensitiveContains(query) }
                 || $0.labels.contains { $0.name.localizedCaseInsensitiveContains(query) }
-                || $0.sources.all.contains { $0.url.localizedCaseInsensitiveContains(query) }
+                || $0.sources.all.contains {
+                    $0.url.localizedCaseInsensitiveContains(query)
+                        || ($0.title?.localizedCaseInsensitiveContains(query) ?? false)
+                }
         }
     }
 

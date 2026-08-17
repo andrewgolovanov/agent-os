@@ -52,15 +52,18 @@ request, deploy, or manage a user-owned Codex task.
 ## Run sequence
 
 1. Read the current Slack user profile. This is both the availability check and the source of the exact user ID and timezone.
-2. Check the bounded set of open outcomes and `routing_pending` entries.
+2. Check the bounded set of open outcomes and `routing_pending` entries. When an
+   open Slack source has no title, read only its exact root during this bounded
+   pass and attach the short title. Do not scan surrounding history or backfill
+   `done` and `cancelled` outcomes automatically.
 3. Read active exact-root watches before general search because Slack search does not guarantee that every reply is returned.
 4. Load the last successful cursor from `AGENT_OS_HOME/.runtime/dispatcher/slack-monitor.json` and apply the configured overlap. If the cursor is `null`, read only one configured interval plus overlap; do not backfill old history.
 5. Search for exact `<@USER_ID>` mentions in all accessible public and private channels within the bounded window.
 6. Search incoming direct messages and group direct messages separately. Deduplicate conversations and expand only candidates with a new unresolved ask; acknowledgements and FYI messages do not become outcomes.
 7. For candidate roots and replies, read only enough thread or channel context to determine whether action remains. Registered project channels are attribution evidence, not permission to scan ambient traffic. Resolve the current channel display name only for an actionable named-channel signal that needs a Task Board label.
 8. Identify each new message by `channel_id + thread_ts + message_ts` and check the exact-event ledger before processing it.
-9. Correlate first by an exact Task Board source, then by registered channel mapping, explicit repository or pull-request links, and verified continuity. If the project is unknown, create one unassigned inbox outcome; never merge on similar wording alone. For a named Slack channel, upsert a display-only label with key `slack:<channel_id>`, current name `#channel-name`, and kind `slack_channel`.
-10. Persist only disposition and stable identifiers through `tools/slack-state seen`. Do not save raw Slack message text, author names, or message summaries in runtime state.
+9. Correlate first by an exact Task Board source, then by registered channel mapping, explicit repository or pull-request links, and verified continuity. If the project is unknown, create one unassigned inbox outcome; never merge on similar wording alone. Attach the exact root permalink and root-message text through `agent_os_attach_source` or `tools/task-board source --title`; Task Board stores only a normalized 96-character display title. For a named Slack channel, upsert a display-only label with key `slack:<channel_id>`, current name `#channel-name`, and kind `slack_channel`.
+10. Persist only disposition and stable identifiers through `tools/slack-state seen`. Do not save raw Slack message text, author names, or message summaries in runtime state. The short source title belongs only to the private Task Board source record and must come from the root message, never from replies or participant metadata.
 11. After a complete successful scan, record all seen events first, then advance watched-root cursors and the global cursor with the required `--complete` flag.
 12. Before deciding whether to notify, run `tools/task-board summary --json`. Every user-facing `NOTIFY` must include the configured `notifications.agent_os_app` link and the current Agent OS-wide unfinished total. The app reads the same private Task Board state, so this link is the user-facing destination; do not link to internal generated files.
 
@@ -85,12 +88,18 @@ request, deploy, or manage a user-owned Codex task.
 - If a project is unregistered or ambiguous, keep the outcome unassigned and give it one concrete clarification next action.
 - For an actionable named-channel signal, attach or refresh its Slack channel label even when no project is registered. The label supports display and filtering only; it does not create project routing.
 - Do not derive labels from DM participant names, message text, or semantic guesses.
+- Attach or refresh one short source title from the exact thread root. Do not concatenate replies, prepend an author, or use the title for correlation; Task Board normalizes Slack markup and truncates it to 96 characters.
 - If an exact source already belongs to an outcome, update that outcome's current state, next action, blocker, sources, or lifecycle only when the new Slack context materially changes it.
 - If no exact outcome exists and the ask is actionable, create one inbox outcome, attach its stable Slack source, and add a `routing_pending` handoff only when registered project routing is available.
 
 Example:
 
 ```bash
+tools/task-board source TASK_ID \
+  --kind slack_threads \
+  --value "https://slack.example/thread/ROOT_ID" \
+  --title "Please verify the client launch checklist"
+
 tools/slack-state seen \
   --channel CHANNEL_ID \
   --thread-ts ROOT_TIMESTAMP \
@@ -122,6 +131,7 @@ tools/slack-state close-watch --channel CHANNEL_ID --thread-ts ROOT_TIMESTAMP
 - A repeated identical outage returns `DONT_NOTIFY` and leaves the cursor unchanged.
 - Notify once when the integration recovers.
 - An empty run, duplicate event, or unchanged state returns `DONT_NOTIFY`.
+- A source-title-only backfill or refresh returns `DONT_NOTIFY`.
 - A new actionable outcome, blocker, ambiguity, or material lifecycle change returns `NOTIFY`.
 - Every `NOTIFY` includes the clickable Agent OS app link and the current total of unfinished outcomes. A quiet `DONT_NOTIFY` does not create a notification only because the unchanged total exists.
 

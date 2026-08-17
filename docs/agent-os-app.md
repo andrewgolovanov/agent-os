@@ -102,8 +102,9 @@ may call it on its own queue without entering main-actor-isolated code.
   chevron, flat semantic popover, automatic edge placement, and correctly
   aligned single-line and multiline placeholders;
 - interactive source rows with provider-specific labels, hover feedback,
-  external-link affordances, privacy-safe Slack permalink context, and optional
-  live GitHub pull-request title/state/review metadata; PR rows are promoted
+  external-link affordances, a normalized short Slack root-message title with a
+  generic fallback for legacy sources, privacy-safe permalink context, and
+  optional live GitHub pull-request title/state/review metadata; PR rows are promoted
   below the task header and excluded from the lower supporting-source list;
 - the supplied canonical Agent OS `A` glyph, preserved as editable paths without
   geometric distortion, optically centered inside a padded rounded black app

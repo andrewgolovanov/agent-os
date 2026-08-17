@@ -25,6 +25,10 @@ Verified: 2026-08-17
 - The current public release, `v0.3.0`, is published from commit
   `e9cdf0ab0434a7ad99b36c8b5d1cbe6023d9026a` at
   `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.3.0`.
+- The immutable `v0.3.1` tag contains the Slack-only label candidate, but no
+  GitHub Release was created because GitHub returned HTTP 503 during its
+  service incident. The candidate is superseded by `v0.3.2`, which adds short
+  Slack source titles before the next public release.
 - Documentation maintenance is part of the repository completion contract:
   affected agent instructions, human README guidance, and owning product docs
   are updated in the same change; public repository Markdown is written in
@@ -79,16 +83,21 @@ Verified: 2026-08-17
 - `agent-os doctor` passes for the current instance and for a fresh temporary
   home.
 - The full Agent OS validator passes against both homes.
-- The current Ruby suite passes 65 tests and 539 assertions, including active
+- The current Ruby suite passes 68 tests and 556 assertions, including active
   private-home resolution, safe home migration, monitor-path rewriting,
   identity-checked repository relinking, completion follow-up, and Project Time
   reporting contracts.
-- Agent OS app builds and its 22 Swift tests pass; bundle launch verification
+- Agent OS app builds and its 23 Swift tests pass; bundle launch verification
   succeeds with both the active home and a fresh empty private home.
 - Task Board and the Agent OS MCP now support idempotent display-only Slack
   channel labels keyed by `slack:<channel_id>`. The native app presents and
   filters those labels separately from registered projects, so label-only
   outcomes never enable repository routing or Codex project handoff.
+- Task Board and the Agent OS MCP accept one optional Slack root-message title,
+  normalize Slack markup and whitespace, cap it at 96 characters, and refresh
+  it idempotently without changing exact source identity. The native app uses
+  it as the source-card heading and searches it, while legacy sources retain
+  the `Slack thread` fallback. Runtime Slack state still stores no message text.
 - Optional integration guidance now supports a user with no repositories by
   using the active Agent OS home as a non-version-controlled local Scheduled
   project. A bounded connected-Slack smoke verified one named-channel outcome

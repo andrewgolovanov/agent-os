@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "cgi"
 require "fileutils"
 require "json"
 require "securerandom"
@@ -12,6 +13,7 @@ module AgentOS
     STATUSES = %w[inbox planned active waiting review done cancelled].freeze
     KINDS = %w[delivery review research maintenance coordination other].freeze
     SOURCE_KINDS = %w[slack_threads pull_requests figma deployments other].freeze
+    SOURCE_TITLE_MAX_LENGTH = 96
     LABEL_KINDS = %w[slack_channel].freeze
     THREAD_ROLES = %w[coordination research implementation review follow_up other].freeze
     THREAD_STATUSES = %w[active idle done archived].freeze
@@ -111,36 +113,52 @@ module AgentOS
       end
     end
 
-    def attach_source(id, kind:, value:)
+    def attach_source(id, kind:, value:, title: nil)
       with_lock do
         task = read_task(id)
         raise ArgumentError, "invalid source kind: #{kind}" unless SOURCE_KINDS.include?(kind)
 
-        source = canonical_source(kind, value)
-        existing = all_tasks.find do |candidate|
+        source = canonical_source(kind, value, title: title)
+        existing_task = all_tasks.find do |candidate|
           candidate.fetch("sources", {}).values.flatten.any? { |item| item["identity"] == source.fetch("identity") }
         end
-        if kind == "pull_requests" && existing && existing.fetch("id") != id
-          existing_id = existing.fetch("id")
+        if kind == "pull_requests" && existing_task && existing_task.fetch("id") != id
+          existing_id = existing_task.fetch("id")
           raise ArgumentError, "pull request already belongs to #{existing_id}: #{source.fetch("identity")}"
         end
 
         entries = task.fetch("sources").fetch(kind)
-        unless entries.any? { |item| item["identity"] == source.fetch("identity") }
-          source["added_at"] = timestamp
-          entries << source
-          if kind == "slack_threads" && task.fetch("status") == "done"
-            completion = task["completion"] ||= empty_completion
-            completion["completed_at"] ||= source.fetch("added_at")
-            completion["follow_up_status"] = "pending"
-            completion["follow_up_sent_at"] = nil
-          end
-          task["updated_at"] = source.fetch("added_at")
+        existing_source = entries.find { |item| item["identity"] == source.fetch("identity") }
+        if existing_source
+          return task unless source.key?("title") && existing_source["title"] != source.fetch("title")
+
+          existing_source["title"] = source.fetch("title")
+          task["updated_at"] = timestamp
           validate_task!(task)
           write_task!(task)
-          append_event!(id, "source_attached", source.merge("kind" => kind), task.fetch("updated_at"))
+          append_event!(
+            id,
+            "source_title_updated",
+            source.slice("identity", "title").merge("kind" => kind),
+            task.fetch("updated_at")
+          )
           rebuild_board!
+          return task
         end
+
+        source["added_at"] = timestamp
+        entries << source
+        if kind == "slack_threads" && task.fetch("status") == "done"
+          completion = task["completion"] ||= empty_completion
+          completion["completed_at"] ||= source.fetch("added_at")
+          completion["follow_up_status"] = "pending"
+          completion["follow_up_sent_at"] = nil
+        end
+        task["updated_at"] = source.fetch("added_at")
+        validate_task!(task)
+        write_task!(task)
+        append_event!(id, "source_attached", source.merge("kind" => kind), task.fetch("updated_at"))
+        rebuild_board!
         task
       end
     end
@@ -537,7 +555,7 @@ module AgentOS
       end
     end
 
-    def canonical_source(kind, value)
+    def canonical_source(kind, value, title: nil)
       identity = canonical_identity(value)
       expected_prefix = {
         "slack_threads" => "slack:",
@@ -548,7 +566,29 @@ module AgentOS
         raise ArgumentError, "#{kind} source is not a recognized #{expected_prefix.delete_suffix(":")} identity"
       end
 
-      { "identity" => identity, "url" => value.to_s.strip }
+      source = { "identity" => identity, "url" => value.to_s.strip }
+      if title
+        raise ArgumentError, "source titles are supported only for Slack threads" unless kind == "slack_threads"
+
+        source["title"] = normalize_source_title(title)
+      end
+      source
+    end
+
+    def normalize_source_title(value)
+      title = CGI.unescapeHTML(value.to_s)
+        .gsub(/<(?:https?:\/\/|mailto:)[^>|]+\|([^>]+)>/) { Regexp.last_match(1) }
+        .gsub(/<(?:https?:\/\/|mailto:)[^>]+>/, "")
+        .gsub(/<#[^>|]+\|([^>]+)>/) { "##{Regexp.last_match(1)}" }
+        .gsub(/<[@!][^>]+>/, "")
+        .gsub(/[`*_~]+/, "")
+        .gsub(/\s+/, " ")
+        .strip
+      raise ArgumentError, "source title is empty after normalization" if title.empty?
+
+      return title if title.length <= SOURCE_TITLE_MAX_LENGTH
+
+      "#{title[0, SOURCE_TITLE_MAX_LENGTH - 1].rstrip}…"
     end
 
     def validate_task!(task)
@@ -584,6 +624,11 @@ module AgentOS
         entries.each do |source|
           raise ArgumentError, "source identity is required" if source["identity"].to_s.strip.empty?
           raise ArgumentError, "source URL/value is required" if source["url"].to_s.strip.empty?
+          next unless source.key?("title")
+
+          unless source["title"] == normalize_source_title(source["title"])
+            raise ArgumentError, "source title must be normalized and at most #{SOURCE_TITLE_MAX_LENGTH} characters"
+          end
         end
       end
 

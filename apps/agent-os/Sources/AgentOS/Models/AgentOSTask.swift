@@ -3,6 +3,13 @@ import Foundation
 struct AgentOSSourceLink: Codable, Hashable, Identifiable, Sendable {
     let identity: String
     let url: String
+    let title: String?
+
+    init(identity: String, url: String, title: String? = nil) {
+        self.identity = identity
+        self.url = url
+        self.title = title
+    }
 
     var id: String { identity }
 }

@@ -31,11 +31,12 @@ class AgentOSMCPTest < Minitest::Test
       assert_equal "agent-os", initialize_result.dig("result", "serverInfo", "name")
 
       tool_list = request(stdin, stdout, 2, "tools/list")
-      assert_equal 8, tool_list.dig("result", "tools").length
+      assert_equal 9, tool_list.dig("result", "tools").length
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_onboard_project" }
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_upgrade_project_registry" }
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_relink_project" }
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_label_task" }
+      assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_attach_source" }
 
       tasks = request(
         stdin,
@@ -308,6 +309,83 @@ class AgentOSMCPTest < Minitest::Test
       listed = tasks.dig("result", "structuredContent", "tasks").find { |task| task.fetch("id") == task_id }
       assert_empty listed.fetch("projects")
       assert_equal "slack:C0CLIENT01", listed.dig("labels", 0, "key")
+
+      stdin.close
+      assert wait_thread.value.success?, stderr.read
+    end
+  end
+
+  def test_server_attaches_and_refreshes_a_short_slack_source_title
+    with_server("AGENT_OS_SOURCE_ROOT" => @source, "AGENT_OS_HOME" => @home) do |stdin, stdout, stderr, wait_thread|
+      created = request(
+        stdin,
+        stdout,
+        1,
+        "tools/call",
+        {
+          "name" => "agent_os_create_task",
+          "arguments" => {
+            "title" => "Review a client thread",
+            "goal" => "Keep Slack work recognizable",
+            "nextAction" => "Open the source thread"
+          }
+        }
+      )
+      task_id = created.dig("result", "structuredContent", "task", "id")
+      source_value = "https://example.slack.com/archives/C0CLIENT01/p1786232231519149"
+
+      attached = request(
+        stdin,
+        stdout,
+        2,
+        "tools/call",
+        {
+          "name" => "agent_os_attach_source",
+          "arguments" => {
+            "taskId" => task_id,
+            "kind" => "slack_threads",
+            "value" => source_value,
+            "title" => "*Please* review the <https://example.invalid/brief|client brief>"
+          }
+        }
+      )
+      assert_equal "Please review the client brief", attached.dig("result", "structuredContent", "task", "sources", 0, "title")
+      assert_equal 1, attached.dig("result", "structuredContent", "eventDelta")
+
+      repeated = request(
+        stdin,
+        stdout,
+        3,
+        "tools/call",
+        {
+          "name" => "agent_os_attach_source",
+          "arguments" => {
+            "taskId" => task_id,
+            "kind" => "slack_threads",
+            "value" => source_value,
+            "title" => "Please review the client brief"
+          }
+        }
+      )
+      assert_equal 0, repeated.dig("result", "structuredContent", "eventDelta")
+
+      refreshed = request(
+        stdin,
+        stdout,
+        4,
+        "tools/call",
+        {
+          "name" => "agent_os_attach_source",
+          "arguments" => {
+            "taskId" => task_id,
+            "kind" => "slack_threads",
+            "value" => source_value,
+            "title" => "Please review the revised client brief"
+          }
+        }
+      )
+      assert_equal "Please review the revised client brief", refreshed.dig("result", "structuredContent", "task", "sources", 0, "title")
+      assert_equal 1, refreshed.dig("result", "structuredContent", "eventDelta")
 
       stdin.close
       assert wait_thread.value.success?, stderr.read

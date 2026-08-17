@@ -377,6 +377,7 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(sources.supportingItems.map(\.id), [
             "slackThread:provider-thread:C123:1723723200.000000",
         ])
+        XCTAssertNil(sources.slackThreads.first?.title)
     }
 
     func testSlackSourcePresentationAddsWorkspaceChannelAndDateContext() {
@@ -392,6 +393,25 @@ final class AgentOSTests: XCTestCase {
 
         XCTAssertEqual(metadata.title, "Slack thread")
         XCTAssertTrue(metadata.context.contains("workspace.example.invalid"))
+        XCTAssertTrue(metadata.context.contains("channel C123"))
+    }
+
+    func testSlackSourcePresentationUsesStoredRootMessageTitle() throws {
+        let data = Data(#"""
+        {
+          "identity": "provider-thread:C123:1723723200.000000",
+          "url": "https://workspace.example.invalid/archives/C123/p1723723200000000",
+          "title": "Please verify the client launch checklist"
+        }
+        """#.utf8)
+        let item = AgentOSSourceItem(
+            link: try JSONDecoder().decode(AgentOSSourceLink.self, from: data),
+            kind: .slackThread
+        )
+
+        let metadata = AgentOSSourcePresentation.localMetadata(for: item)
+
+        XCTAssertEqual(metadata.title, "Please verify the client launch checklist")
         XCTAssertTrue(metadata.context.contains("channel C123"))
     }
 

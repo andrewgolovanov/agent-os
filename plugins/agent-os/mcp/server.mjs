@@ -4,7 +4,7 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { ensureAgentOSRuntime } from "./bootstrap.mjs";
 
-const serverVersion = "0.2.1";
+const serverVersion = "0.3.2";
 const { homeRoot, sourceRoot } = ensureAgentOSRuntime();
 if (homeRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_HOME");
 if (sourceRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_SOURCE_ROOT");
@@ -190,6 +190,30 @@ const tools = [
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
   },
   {
+    name: "agent_os_attach_source",
+    title: "Attach an Agent OS source",
+    description: "Attach one stable external source to an exact outcome. A Slack root-message title is optional display metadata and never becomes source identity.",
+    inputSchema: {
+      type: "object",
+      required: ["taskId", "kind", "value"],
+      properties: {
+        taskId: { type: "string", description: "Exact canonical task ID." },
+        kind: {
+          type: "string",
+          enum: ["slack_threads", "pull_requests", "figma", "deployments", "other"],
+        },
+        value: { type: "string", minLength: 1, description: "Exact provider URL or stable identifier." },
+        title: {
+          type: "string",
+          minLength: 1,
+          description: "Optional Slack root-message text; Task Board normalizes and limits it to a 96-character display title.",
+        },
+      },
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+  },
+  {
     name: "agent_os_update_task",
     title: "Update an Agent OS outcome",
     description: "Apply one validated Task Board update by exact task ID.",
@@ -319,6 +343,30 @@ function callTool(name, args = {}) {
           id: task.id,
           status: task.status,
           labels: task.labels || [],
+        },
+        beforeEventCount,
+        afterEventCount,
+        eventDelta: afterEventCount - beforeEventCount,
+      });
+    }
+
+    if (name === "agent_os_attach_source") {
+      const taskId = assertTaskId(args.taskId);
+      taskFile(taskId, "task.json");
+      const command = [
+        "source", taskId,
+        "--kind", args.kind,
+        "--value", args.value,
+      ];
+      if (args.title) command.push("--title", args.title);
+      const beforeEventCount = eventCount(taskId);
+      const task = JSON.parse(runTaskBoard(command));
+      const afterEventCount = eventCount(taskId);
+      return textResult({
+        task: {
+          id: task.id,
+          status: task.status,
+          sources: task.sources[args.kind],
         },
         beforeEventCount,
         afterEventCount,

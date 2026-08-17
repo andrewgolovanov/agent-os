@@ -23,7 +23,9 @@ transcripts or introducing another hosted task database.
 Repositories are optional for Slack-only coordination. An actionable request
 from a named Slack channel can become an unassigned inbox outcome with a
 display-only channel label, so managers and client-facing users can organize
-work without creating fake Git projects.
+work without creating fake Git projects. Slack source cards can also show one
+short root-message excerpt instead of the generic `Slack thread` title; the
+exact permalink remains the source identity.
 
 ![Agent OS demo showing Focus, Board, task details, pull request status, and sources](docs/assets/agent-os-demo.gif)
 
@@ -34,7 +36,7 @@ downloadable macOS app supports Apple Silicon (`arm64`) on macOS 14 or newer;
 an Intel or universal binary is not included yet.
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.3.1
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.3.2
 codex plugin add agent-os@agent-os
 ```
 

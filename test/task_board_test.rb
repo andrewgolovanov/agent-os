@@ -67,6 +67,55 @@ class TaskBoardTest < Minitest::Test
     assert_equal 1, @board.read_task("task_test").dig("sources", "pull_requests").length
   end
 
+  def test_slack_source_title_is_normalized_truncated_and_refreshable
+    create_task
+    url = "https://example.slack.com/archives/C0EXAMPLE01/p1786232231519149"
+    task = @board.attach_source(
+      "task_test",
+      kind: "slack_threads",
+      value: url,
+      title: "  *Please* review\n<#C0EXAMPLE01|client-checks> <@U0PERSON01> <https://example.invalid/brief|brief> &amp; confirm  "
+    )
+
+    source = task.dig("sources", "slack_threads", 0)
+    assert_equal "Please review #client-checks brief & confirm", source.fetch("title")
+    added_at = source.fetch("added_at")
+
+    repeated = @board.attach_source(
+      "task_test",
+      kind: "slack_threads",
+      value: url,
+      title: "Please review #client-checks brief & confirm"
+    )
+    assert_equal added_at, repeated.dig("sources", "slack_threads", 0, "added_at")
+
+    updated = @board.attach_source(
+      "task_test",
+      kind: "slack_threads",
+      value: url,
+      title: "A" * 120
+    )
+    assert_equal 96, updated.dig("sources", "slack_threads", 0, "title").length
+    assert updated.dig("sources", "slack_threads", 0, "title").end_with?("…")
+    assert_equal added_at, updated.dig("sources", "slack_threads", 0, "added_at")
+    assert_empty @board.validate!
+  end
+
+  def test_source_title_is_limited_to_slack_threads
+    create_task
+
+    error = assert_raises(ArgumentError) do
+      @board.attach_source(
+        "task_test",
+        kind: "pull_requests",
+        value: "https://github.com/example-org/example-site/pull/42",
+        title: "Review the pull request"
+      )
+    end
+
+    assert_match(/supported only for Slack threads/, error.message)
+  end
+
   def test_unassigned_inbox_task_is_valid
     task = @board.create(
       "id" => "task_unassigned",

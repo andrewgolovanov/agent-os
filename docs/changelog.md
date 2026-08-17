@@ -2,6 +2,14 @@
 
 ## 2026-08-17
 
+- Replaced the generic native `Slack thread` source-card heading with an
+  optional normalized 96-character excerpt from the Slack root message while
+  preserving the exact permalink as correlation identity and retaining the
+  generic heading for legacy sources.
+- Added idempotent CLI and MCP source-title attachment and refresh, search by
+  stored title, backward-compatible Swift decoding, and explicit privacy rules:
+  no replies, full Slack messages, author metadata, or runtime-state text are
+  retained.
 - Added display-only Task Board labels for Slack-only work. Named channels use
   stable `slack:<channel_id>` keys and current `#channel-name` labels without
   becoming registered projects, repository routes, or Codex handoff targets.
