@@ -2,6 +2,13 @@
 
 ## 2026-08-19
 
+- Published `v0.4.2` from
+  `17e1c450d9ba4516f643f0b64c9ad910de9b8feb` in successful workflow run
+  `32298222853`. The public archive SHA-256 is
+  `4287aa33d901e7e6f6eadf1895083e516a2e73fa8fe924812b60c8c17e90ce21`;
+  its checksum, exact app/runtime/plugin version, Apple Silicon/macOS metadata,
+  22-file runtime, strict bundle signature, stable appcast URL and length, and
+  Sparkle Ed25519 signature passed independent post-publication checks.
 - Added explicit `tools/task-bridge reassign` support for switching one Codex
   task between exact Task Board outcomes. The previous membership is archived,
   only the unfinished turn follows the target, and completed activity remains

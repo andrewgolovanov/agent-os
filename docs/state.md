@@ -22,9 +22,9 @@ Verified: 2026-08-19
 - The first public release, `v0.1.0`, is published from commit
   `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f` at
   `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.1.0`.
-- The current public release, `v0.4.1`, is published from commit
-  `e847fd9465d5b9e9128f1eb7f16b3a2048e662f5` at
-  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.4.1`.
+- The current public release, `v0.4.2`, is published from commit
+  `17e1c450d9ba4516f643f0b64c9ad910de9b8feb` at
+  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.4.2`.
 - The immutable `v0.3.1` tag contains the earlier Slack-only label candidate,
   but no GitHub Release was created because GitHub returned HTTP 503 during its
   service incident. It remains an unpublished historical tag and was not moved
@@ -87,7 +87,7 @@ Verified: 2026-08-19
 - `agent-os doctor` passes for the current instance and for a fresh temporary
   home.
 - The full Agent OS validator passes against both homes.
-- The current Ruby suite passes 73 tests and 647 assertions, including active
+- The current Ruby suite passes 76 tests and 683 assertions, including active
   private-home resolution, safe home migration, monitor-path rewriting,
   identity-checked repository relinking, preview-first Slack channel mapping,
   safe unfinished-outcome reconciliation, completion follow-up, and Project
@@ -333,11 +333,21 @@ Verified: 2026-08-19
   its checksum, strict bundle signature, version `0.4.1`, macOS 14 minimum,
   Apple Silicon executable, exact 22-file embedded runtime and modes, stable
   latest appcast URL and length, and Sparkle Ed25519 signature all passed.
+- The tag-triggered GitHub Release workflow completed successfully for
+  `v0.4.2`: the exact tag checkout passed 76 Ruby tests/683 assertions, 29 Swift
+  tests, plugin package validation, runtime synchronization, publication audit,
+  signed packaging, and release creation in run `32298222853`.
+- The public `v0.4.2` archive, checksum, and appcast were downloaded
+  independently after publication. The archive SHA-256 is
+  `4287aa33d901e7e6f6eadf1895083e516a2e73fa8fe924812b60c8c17e90ce21`;
+  its checksum, strict bundle signature, version `0.4.2`, macOS 14 minimum,
+  Apple Silicon executable, exact 22-file embedded runtime and modes, stable
+  latest appcast URL and length, and Sparkle Ed25519 signature all passed.
 
 ## Not configured
 
-- A real second-Mac install and cross-version Sparkle update from `v0.4.0` to
-  `v0.4.1`.
+- A real second-Mac install and cross-version Sparkle update from `v0.4.1` to
+  `v0.4.2`.
 - End-user hook trust remains a per-install Codex choice; the release source
   cannot pre-approve it for another user.
 - A product-owned Codex Scheduled task for a clean user; the local CLI

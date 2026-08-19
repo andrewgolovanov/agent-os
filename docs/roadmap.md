@@ -105,11 +105,18 @@ Completed publication checks:
   `32080926193`; its public checksum, Apple Silicon/macOS metadata, exact
   22-file runtime, strict bundle signature, stable appcast, and Sparkle Ed25519
   signature passed independent post-publication verification — verified.
+- `v0.4.2` published explicit exact-outcome reassignment, preservation of
+  completed activity on the original outcome, conflicting-ID timing pauses,
+  and visible archived Codex memberships from commit
+  `17e1c450d9ba4516f643f0b64c9ad910de9b8feb` in successful workflow run
+  `32298222853`; its public checksum, Apple Silicon/macOS metadata, exact
+  22-file runtime, strict bundle signature, stable appcast, and Sparkle Ed25519
+  signature passed independent post-publication verification — verified.
 
 Remaining release checks:
 
-- a second Mac completes an approved clean install and a genuine `v0.4.0` to
-  `v0.4.1` update.
+- a second Mac completes an approved clean install and a genuine `v0.4.1` to
+  `v0.4.2` update.
 
 ### Complete the local Agent OS app pilot
 
