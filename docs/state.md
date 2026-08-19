@@ -111,6 +111,10 @@ Verified: 2026-08-19
   it idempotently without changing exact source identity. The native app uses
   it as the source-card heading and searches it, while legacy sources retain
   the `Slack thread` fallback. Runtime Slack state still stores no message text.
+- Task-targeting Agent OS MCP mutations document `taskId` as canonical while
+  accepting generated `task_id` and `id` aliases. The server normalizes aliases
+  before exact-ID validation and rejects conflicting values without mutating
+  Task Board state.
 - Optional integration guidance now supports a user with no repositories by
   using the active Agent OS home as a non-version-controlled local Scheduled
   project. A bounded connected-Slack smoke verified one named-channel outcome

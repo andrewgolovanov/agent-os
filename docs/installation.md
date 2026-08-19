@@ -20,11 +20,11 @@ Add the public Git marketplace at the release tag you want to install, then add
 the Agent OS plugin from that marketplace:
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.4.2
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.4.3
 codex plugin add agent-os@agent-os
 ```
 
-For a later release, replace `v0.4.2` with the latest published `vN.N.N` tag
+For a later release, replace `v0.4.3` with the latest published `vN.N.N` tag
 shown on the [Agent OS Releases page](https://github.com/andrewgolovanov/agent-os/releases).
 Codex downloads and manages the plugin snapshot; the user does not clone or
 maintain the Agent OS repository.
@@ -222,17 +222,17 @@ The script bundles Sparkle, ad-hoc signs the complete app and its updater
 helpers, signs the update archive with the Agent OS Ed25519 key, and verifies
 the archive signature before returning. It creates:
 
-- `dist/release/AgentOS-0.4.2-macOS.zip`;
-- `dist/release/AgentOS-0.4.2-macOS.zip.sha256`;
+- `dist/release/AgentOS-0.4.3-macOS.zip`;
+- `dist/release/AgentOS-0.4.3-macOS.zip.sha256`;
 - `dist/release/appcast.xml`.
 
 This is not a Developer ID signature and the app is not notarized. Only install
 an archive downloaded from the expected Agent OS GitHub release and compare its
 checksum before opening it. The current public package and checksum are attached
-to [Agent OS v0.4.2](https://github.com/andrewgolovanov/agent-os/releases/tag/v0.4.2):
+to [Agent OS v0.4.3](https://github.com/andrewgolovanov/agent-os/releases/tag/v0.4.3):
 
 ```bash
-shasum -a 256 -c AgentOS-0.4.2-macOS.zip.sha256
+shasum -a 256 -c AgentOS-0.4.3-macOS.zip.sha256
 ```
 
 ### App updates
