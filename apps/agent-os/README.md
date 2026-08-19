@@ -46,6 +46,11 @@ and does not mix broader project-wide time into this task-owned total.
 
 `Open new Codex task` creates a named task in the registered project, records its exact membership, copies a prepared continuation prompt, and opens that task in Codex. The app deliberately does not start a background turn: paste and send the prepared prompt when you are ready to begin work.
 
+When Task Bridge explicitly reassigns an existing Codex task to another
+outcome, the inspector retains the previous membership with its `archived`
+status. Completed activity stays on that outcome, while the target displays the
+same Codex task as its current membership.
+
 The resizable task inspector opens at a wider desktop-friendly width so long
 titles, pull-request metadata, goals, and current-state text wrap less
 aggressively while the Board remains visible.

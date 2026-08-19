@@ -115,7 +115,9 @@ Correlation starts with stable external identity:
 - Slack permalink -> `slack:<channel_id>:<root_ts>`;
 - GitHub PR -> `github:<owner>/<repo>#<number>`;
 - Figma file -> `figma:<file_key>`;
-- Codex membership -> exact `thread_id` and `codex://threads/<id>`.
+- Codex membership -> exact `thread_id` and `codex://threads/<id>`; one
+  `active` or `idle` membership is current, while archived memberships preserve
+  prior outcome history.
 
 Only exact identity permits verified continuity. Semantic similarity, including a matching source title, never authorizes automatic merging. One canonical GitHub PR cannot belong to two outcomes.
 
@@ -129,9 +131,20 @@ When no suitable registered project task or Codex thread exists, Task Board stor
 
 In a registered project task, [Task Bridge](task-bridge.md) may create membership only for one exact task or source match. The project path limits candidates but never chooses the outcome. With only semantic similarity, the agent must explicitly `claim` a candidate or create a new coherent outcome.
 
+If the user explicitly switches an already linked Codex task to another exact
+outcome, Task Bridge uses `reassign`: the previous membership becomes
+`archived`, the target becomes the only current membership, and the open turn
+moves to the target without moving any completed activity. Referencing another
+outcome does not trigger this mutation automatically.
+
 ## Activity evidence
 
 Outcome time is counted only after exact Codex `thread_id` membership. The installed Agent OS Task Bridge hooks call `tools/codex-activity-hook`: `UserPromptSubmit` performs safe correlation or claim and opens an exact `turn_id`; material `PostToolUse` requires a checkpoint; `Stop` closes the turn and changes membership from `active` to `idle`. Repeated delivery is idempotent.
+
+The same Codex `thread_id` may appear as archived history on multiple outcomes,
+but validation permits only one current `active` or `idle` membership. An
+explicit reassignment can move an unfinished turn because it has not contributed
+duration yet; completed turns and totals never move automatically.
 
 This is Codex execution time, not human time tracking and not a copy of the UI “Working for…” label. Time between turns is excluded. An exact `Stop` wins; a crash-orphaned turn is capped by the configured idle timeout. Chats outside registered project paths are ignored.
 

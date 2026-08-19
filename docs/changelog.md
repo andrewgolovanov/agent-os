@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-08-19
+
+- Added explicit `tools/task-bridge reassign` support for switching one Codex
+  task between exact Task Board outcomes. The previous membership is archived,
+  only the unfinished turn follows the target, and completed activity remains
+  on its original outcome.
+- Changed exact conflicting prompts to pause outcome timing until the agent
+  explicitly reassigns the target or confirms the current outcome, preventing
+  silent time attribution to a stale membership.
+- Allowed one thread ID to remain as archived history across outcomes while
+  enforcing at most one current `active` or `idle` membership, and kept those
+  archived memberships visible in the native inspector.
+- Added Task Board and Task Bridge regression coverage for exact-switch
+  prompts, already-started turn reassignment, completed-time preservation,
+  historical re-claim, and single-current-owner validation.
+
 ## 2026-08-18
 
 - Published `v0.4.1` from

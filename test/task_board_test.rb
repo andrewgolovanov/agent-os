@@ -327,7 +327,7 @@ class TaskBoardTest < Minitest::Test
     assert_empty @board.validate!
   end
 
-  def test_codex_task_cannot_belong_to_two_outcomes
+  def test_codex_task_cannot_have_two_current_outcomes
     create_task
     create_task(id: "task_other")
     @board.attach_codex("task_test", thread_id: "session-123", role: "implementation")
@@ -336,6 +336,36 @@ class TaskBoardTest < Minitest::Test
       @board.attach_codex("task_other", thread_id: "session-123", role: "review")
     end
     assert_match(/already belongs/, error.message)
+  end
+
+  def test_reassign_codex_preserves_completed_time_and_moves_only_open_turn
+    create_task
+    create_task(id: "task_other")
+    @board.attach_codex("task_test", thread_id: "session-123", role: "implementation")
+    @board.activity_start("task_test", session_id: "session-123", turn_id: "turn-old", at: "2026-08-10T10:00:00Z")
+    @board.activity_stop("task_test", session_id: "session-123", turn_id: "turn-old", at: "2026-08-10T10:01:00Z")
+    @board.activity_start("task_test", session_id: "session-123", turn_id: "turn-current", at: "2026-08-10T10:02:00Z")
+
+    @board.reassign_codex(
+      "task_test",
+      "task_other",
+      thread_id: "session-123",
+      turn_id: "turn-current",
+      started_at: "2026-08-10T10:02:00Z",
+      project: "phrasso"
+    )
+    @board.activity_stop("task_other", session_id: "session-123", turn_id: "turn-current", at: "2026-08-10T10:04:00Z")
+
+    source = @board.read_task("task_test")
+    target = @board.read_task("task_other")
+    assert_equal 60, source.dig("activity", "total_seconds")
+    assert_equal ["turn-old"], source.dig("activity", "turns").map { |turn| turn.fetch("turn_id") }
+    assert_equal "archived", source.dig("codex_threads", 0, "status")
+    assert_equal 120, target.dig("activity", "total_seconds")
+    assert_equal ["turn-current"], target.dig("activity", "turns").map { |turn| turn.fetch("turn_id") }
+    assert_equal "idle", target.dig("codex_threads", 0, "status")
+    assert_equal %w[task_other task_test], @board.find_by_codex_thread("session-123").map { |task| task.fetch("id") }.sort
+    assert_empty @board.validate!
   end
 
   def test_activity_hook_records_a_linked_turn_and_ignores_an_unlinked_session

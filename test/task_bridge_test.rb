@@ -203,8 +203,9 @@ class TaskBridgeTest < Minitest::Test
     assert_empty @board.read_task("task_contact").fetch("codex_threads")
   end
 
-  def test_archived_mixed_history_chat_never_reactivates_task
+  def test_archived_history_requires_an_explicit_current_claim
     create_task
+    create_task(id: "task_other", source: false)
     @board.attach_codex(
       "task_contact",
       thread_id: "session-123",
@@ -215,15 +216,71 @@ class TaskBridgeTest < Minitest::Test
     )
 
     result = @bridge.handle_prompt(
-      prompt_payload(prompt: "Start an unrelated navigation task"),
+      prompt_payload(prompt: "Start task_other"),
       at: "2026-08-10T10:00:00Z"
     )
 
     context = result.dig("hookSpecificOutput", "additionalContext")
-    assert_includes context, "legacy Codex task is archived"
-    assert_includes @bridge.context(session_id: "session-123"), "legacy Codex task is archived"
+    assert_includes context, "historical outcome memberships"
+    assert_includes context, "claim task_other"
+    assert_includes @bridge.context(session_id: "session-123"), "historical outcome memberships"
     assert_equal "inbox", @board.read_task("task_contact").fetch("status")
     assert_equal "archived", @board.read_task("task_contact").dig("codex_threads", 0, "status")
     assert_empty @board.read_task("task_contact").fetch("activity").fetch("turns")
+
+    @bridge.claim("task_other", session_id: "session-123", turn_id: "turn-456", project_key: "phrasso")
+    @bridge.handle_stop(prompt_payload, at: "2026-08-10T10:02:00Z")
+    assert_equal 120, @board.read_task("task_other").dig("activity", "total_seconds")
+    assert_equal "idle", @board.read_task("task_other").dig("codex_threads", 0, "status")
+    assert_empty @board.validate!
+  end
+
+  def test_exact_other_task_requires_explicit_reassignment_and_preserves_old_time
+    create_task
+    create_task(id: "task_other", source: false)
+    first = prompt_payload(turn: "turn-old", prompt: FIGMA_URL)
+    @bridge.handle_prompt(first, at: "2026-08-10T10:00:00Z")
+    @bridge.handle_stop(first, at: "2026-08-10T10:01:00Z")
+
+    second = prompt_payload(turn: "turn-new", prompt: "Switch to task_other")
+    result = @bridge.handle_prompt(second, at: "2026-08-10T10:02:00Z")
+    context = result.dig("hookSpecificOutput", "additionalContext")
+
+    assert_includes context, "currently linked to task_contact"
+    assert_includes context, "reassign task_other"
+    assert_equal 60, @board.read_task("task_contact").dig("activity", "total_seconds")
+    assert_empty @board.read_task("task_other").dig("activity", "turns")
+
+    @bridge.reassign("task_other", session_id: "session-123", turn_id: "turn-new", project_key: "phrasso")
+    @bridge.handle_stop(second, at: "2026-08-10T10:04:00Z")
+
+    source = @board.read_task("task_contact")
+    target = @board.read_task("task_other")
+    assert_equal 60, source.dig("activity", "total_seconds")
+    assert_equal "archived", source.dig("codex_threads", 0, "status")
+    assert_equal 120, target.dig("activity", "total_seconds")
+    assert_equal "idle", target.dig("codex_threads", 0, "status")
+    assert_includes @bridge.context(session_id: "session-123"), "Task ID: task_other"
+    assert_empty @board.validate!
+  end
+
+  def test_reassign_moves_an_already_started_current_turn
+    create_task
+    create_task(id: "task_other", source: false)
+    first = prompt_payload(turn: "turn-old", prompt: FIGMA_URL)
+    @bridge.handle_prompt(first, at: "2026-08-10T10:00:00Z")
+    @bridge.handle_stop(first, at: "2026-08-10T10:01:00Z")
+
+    second = prompt_payload(turn: "turn-new", prompt: "Start the next approved outcome")
+    @bridge.handle_prompt(second, at: "2026-08-10T10:02:00Z")
+    assert_equal 2, @board.read_task("task_contact").dig("activity", "turns").length
+
+    @bridge.reassign("task_other", session_id: "session-123", turn_id: "turn-new", project_key: "phrasso")
+    @bridge.handle_stop(second, at: "2026-08-10T10:04:00Z")
+
+    assert_equal 60, @board.read_task("task_contact").dig("activity", "total_seconds")
+    assert_equal ["turn-old"], @board.read_task("task_contact").dig("activity", "turns").map { |turn| turn.fetch("turn_id") }
+    assert_equal 120, @board.read_task("task_other").dig("activity", "total_seconds")
+    assert_empty @board.validate!
   end
 end

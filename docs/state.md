@@ -1,6 +1,6 @@
 # Current state
 
-Verified: 2026-08-18
+Verified: 2026-08-19
 
 ## Product source
 
@@ -100,6 +100,12 @@ Verified: 2026-08-18
   registered projects, and omits mapped labels only from the duplicate
   top-level sidebar section. Label-only outcomes never enable repository
   routing or Codex project handoff.
+- Task Bridge supports explicit exact-outcome reassignment inside one Codex
+  task. It archives the previous membership, transfers only an unfinished turn,
+  and keeps every completed interval and total on the original outcome. Task
+  Board validation permits historical duplicate thread IDs but still enforces
+  exactly one current `active` or `idle` owner. The native inspector keeps the
+  archived membership visible as historical evidence.
 - Task Board and the Agent OS MCP accept one optional Slack root-message title,
   normalize Slack markup and whitespace, cap it at 96 characters, and refresh
   it idempotently without changing exact source identity. The native app uses

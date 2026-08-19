@@ -198,7 +198,7 @@ struct TaskInspectorView: View {
         VStack(alignment: .leading, spacing: 8) {
             sectionTitle("Codex tasks")
 
-            ForEach(task.codexThreads.filter { $0.status != "archived" }) { membership in
+            ForEach(task.codexThreads) { membership in
                 InspectorActionRow(
                     title: membership.title ?? membership.role,
                     detail: membership.status,

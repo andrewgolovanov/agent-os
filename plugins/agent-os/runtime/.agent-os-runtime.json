@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "version": "0.4.1",
-  "plugin_version": "0.4.1+codex.20260818012957",
+  "version": "0.4.2",
+  "plugin_version": "0.4.2+codex.20260819201452",
   "files": {
     "LICENSE": {
       "sha256": "56fdec8396b0f0564c3f9795b48fd025ce8bb85535ee9c1abfc0ce9ac4a27f6c",
@@ -28,7 +28,7 @@
       "executable": false
     },
     "docs/optional-integrations.md": {
-      "sha256": "678d24eb90c566596e9af2408f7cfa914e2f0b00599003e21e42582e7f051235",
+      "sha256": "648d4d706e79e0d8240d703cd8a530d019ff05e4e644cc28317cdb873dc5d749",
       "executable": false
     },
     "docs/slack-monitor.md": {
@@ -60,11 +60,11 @@
       "executable": false
     },
     "lib/agent_os/task_board.rb": {
-      "sha256": "a279209fd203f6188f55d893fd000c32ac65d69b834e921f445fd082e2111685",
+      "sha256": "1a9075292a79d1ab457353ce3dc9cb107d23f549e927edd9cd2f9136f26ba197",
       "executable": false
     },
     "lib/agent_os/task_bridge.rb": {
-      "sha256": "2e035759367985ebb46fc8be33709606c46e38dd8df94ed215a0bacf5e386205",
+      "sha256": "bb0300e109de54f652193c26e8c1394dd6b17b2f3c4b26de843a87000432288c",
       "executable": false
     },
     "lib/agent_os/updater.rb": {
@@ -88,7 +88,7 @@
       "executable": true
     },
     "tools/task-bridge": {
-      "sha256": "96dfc19534b40fa18977249a5831a36ae75279406e4226594dff6cbf153fbd89",
+      "sha256": "c221eb6b0f68c7fca7f865177d6e236274aa9221e012ecd6f0d516e58f7d8386",
       "executable": true
     }
   }
