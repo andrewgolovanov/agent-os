@@ -36,7 +36,7 @@ downloadable macOS app supports Apple Silicon (`arm64`) on macOS 14 or newer;
 an Intel or universal binary is not included yet.
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.4.1
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.4.2
 codex plugin add agent-os@agent-os
 ```
 
@@ -99,6 +99,11 @@ repository-backed checkpoints that survive compaction or a new session. Review
 hook commands with `/hooks`, start a fresh task, and ask `Set up optional Agent
 OS integrations safely.` Slack and recurring monitoring remain separate
 opt-ins; see [Optional integrations](docs/optional-integrations.md).
+
+One Codex task has one current outcome at a time, but it may keep archived
+historical memberships after an explicit switch. When a user changes outcomes,
+Task Bridge reassigns only the open and future turns to the exact target; all
+completed activity remains on the original outcome.
 
 The local Slack monitor configuration remains preview-first. Ask the plugin to
 set up optional integrations; it resolves the packaged runtime and shows every

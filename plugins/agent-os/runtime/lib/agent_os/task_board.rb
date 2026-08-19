@@ -17,6 +17,7 @@ module AgentOS
     LABEL_KINDS = %w[slack_channel].freeze
     THREAD_ROLES = %w[coordination research implementation review follow_up other].freeze
     THREAD_STATUSES = %w[active idle done archived].freeze
+    CURRENT_THREAD_STATUSES = %w[active idle].freeze
     THREAD_ORIGINS = %w[new fork routed automation].freeze
     ROUTING_STATES = %w[routing_pending routed cancelled].freeze
     FINISHED_STATUSES = %w[done cancelled].freeze
@@ -195,11 +196,15 @@ module AgentOS
         raise ArgumentError, "invalid Codex origin: #{origin}" unless THREAD_ORIGINS.include?(origin)
         raise ArgumentError, "thread_id is required" if thread_id.to_s.strip.empty?
 
-        existing_task = all_tasks.find do |candidate|
-          candidate.fetch("codex_threads", []).any? { |item| item["thread_id"] == thread_id }
-        end
-        if existing_task && existing_task.fetch("id") != id
-          raise ArgumentError, "Codex task already belongs to #{existing_task.fetch("id")}: #{thread_id}"
+        if CURRENT_THREAD_STATUSES.include?(status)
+          existing_task = all_tasks.find do |candidate|
+            candidate.fetch("codex_threads", []).any? do |item|
+              item["thread_id"] == thread_id && CURRENT_THREAD_STATUSES.include?(item["status"])
+            end
+          end
+          if existing_task && existing_task.fetch("id") != id
+            raise ArgumentError, "Codex task already belongs to #{existing_task.fetch("id")}: #{thread_id}"
+          end
         end
 
         membership = task.fetch("codex_threads").find { |item| item["thread_id"] == thread_id }
@@ -228,6 +233,94 @@ module AgentOS
         append_event!(id, action, values, now)
         rebuild_board!
         task
+      end
+    end
+
+    def reassign_codex(from_id, to_id, thread_id:, turn_id:, started_at:, role: "implementation", origin: "automation", project: nil)
+      raise ArgumentError, "source and target tasks must differ" if from_id == to_id
+      raise ArgumentError, "invalid Codex role: #{role}" unless THREAD_ROLES.include?(role)
+      raise ArgumentError, "invalid Codex origin: #{origin}" unless THREAD_ORIGINS.include?(origin)
+      raise ArgumentError, "thread_id is required" if thread_id.to_s.strip.empty?
+      identity = activity_identity(thread_id, turn_id)
+
+      with_lock do
+        source = read_task(from_id)
+        target = read_task(to_id)
+        source_membership = source.fetch("codex_threads").find { |item| item["thread_id"] == thread_id }
+        unless source_membership && CURRENT_THREAD_STATUSES.include?(source_membership["status"])
+          raise ArgumentError, "Codex task is not currently attached to #{from_id}: #{thread_id}"
+        end
+
+        current_owners = all_tasks.select do |candidate|
+          candidate.fetch("codex_threads", []).any? do |item|
+            item["thread_id"] == thread_id && CURRENT_THREAD_STATUSES.include?(item["status"])
+          end
+        end
+        unless current_owners.map { |task| task.fetch("id") } == [from_id]
+          raise ArgumentError, "Codex task current ownership is ambiguous: #{thread_id}"
+        end
+
+        source_activity = source["activity"] ||= empty_activity
+        source_turn = source_activity.fetch("turns").find { |candidate| candidate["identity"] == identity }
+        raise ArgumentError, "cannot reassign a completed turn: #{turn_id}" if source_turn && source_turn["stopped_at"]
+
+        other_open_turn = source_activity.fetch("turns").find do |candidate|
+          candidate["session_id"] == thread_id && candidate["stopped_at"].nil? && candidate["identity"] != identity
+        end
+        raise ArgumentError, "cannot reassign while another turn is active: #{other_open_turn.fetch("turn_id")}" if other_open_turn
+
+        target_activity = target["activity"] ||= empty_activity
+        if target_activity.fetch("turns").any? { |candidate| candidate["identity"] == identity }
+          raise ArgumentError, "target task already contains turn: #{turn_id}"
+        end
+
+        turn = source_turn || {
+          "identity" => identity,
+          "session_id" => thread_id,
+          "turn_id" => turn_id,
+          "started_at" => normalize_timestamp(started_at),
+          "stopped_at" => nil,
+          "duration_seconds" => nil
+        }
+        source_activity.fetch("turns").delete(source_turn) if source_turn
+        target_activity.fetch("turns") << turn
+
+        now = timestamp
+        source_membership["status"] = "archived"
+        source["updated_at"] = now
+
+        target_membership = target.fetch("codex_threads").find { |item| item["thread_id"] == thread_id }
+        membership_values = {
+          "thread_id" => thread_id,
+          "url" => "codex://threads/#{thread_id}",
+          "role" => role,
+          "status" => "active",
+          "origin" => origin,
+          "project" => project
+        }.compact
+        if target_membership
+          target_membership.merge!(membership_values)
+        else
+          membership_values["added_at"] = now
+          target.fetch("codex_threads") << membership_values
+        end
+        target["updated_at"] = now
+
+        validate_task!(source)
+        validate_task!(target)
+        write_task!(source)
+        write_task!(target)
+        event = {
+          "thread_id" => thread_id,
+          "turn_id" => turn_id,
+          "from_task_id" => from_id,
+          "to_task_id" => to_id,
+          "started_at" => turn.fetch("started_at")
+        }
+        append_event!(from_id, "codex_reassigned_out", event, now)
+        append_event!(to_id, "codex_reassigned_in", event, now)
+        rebuild_board!
+        target
       end
     end
 
@@ -370,7 +463,7 @@ module AgentOS
     def validate!
       errors = []
       identities = Hash.new { |hash, key| hash[key] = [] }
-      codex_threads = Hash.new { |hash, key| hash[key] = [] }
+      current_codex_threads = Hash.new { |hash, key| hash[key] = [] }
       tasks.each do |task|
         begin
           validate_task!(task)
@@ -381,7 +474,9 @@ module AgentOS
           identities[source["identity"]] << task.fetch("id")
         end
         task.fetch("codex_threads", []).each do |thread|
-          codex_threads[thread["thread_id"]] << task.fetch("id")
+          if CURRENT_THREAD_STATUSES.include?(thread["status"])
+            current_codex_threads[thread["thread_id"]] << task.fetch("id")
+          end
         end
       end
       identities.each do |identity, task_ids|
@@ -389,10 +484,10 @@ module AgentOS
 
         errors << "pull request source belongs to multiple tasks: #{identity}"
       end
-      codex_threads.each do |thread_id, task_ids|
+      current_codex_threads.each do |thread_id, task_ids|
         next unless task_ids.uniq.length > 1
 
-        errors << "Codex task belongs to multiple tasks: #{thread_id}"
+        errors << "Codex task has multiple current outcomes: #{thread_id}"
       end
 
       expected = board_payload(tasks)

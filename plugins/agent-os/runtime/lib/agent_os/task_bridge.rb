@@ -33,10 +33,11 @@ module AgentOS
       cwd = payload.fetch("cwd", "").to_s
       now = normalize_timestamp(at)
       project_key = cwd.strip.empty? ? nil : project_for_cwd(cwd)
-      existing = board.find_by_codex_thread(session_id)
-      raise ArgumentError, "Codex task belongs to multiple Task Board items: #{session_id}" if existing.length > 1
+      linked = board.find_by_codex_thread(session_id)
+      existing = current_linked_tasks(linked, session_id)
+      raise ArgumentError, "Codex task has multiple current Task Board items: #{session_id}" if existing.length > 1
 
-      return nil unless existing.one? || (project_key && enabled_for?(project_key))
+      return nil unless existing.one? || linked.any? || (project_key && enabled_for?(project_key))
 
       close_superseded_turns(session_id: session_id, current_turn_id: turn_id, now: now)
 
@@ -50,17 +51,29 @@ module AgentOS
 
       if existing.one?
         task = existing.first
-        membership = task.fetch("codex_threads").find { |item| item["thread_id"] == session_id }
-        if membership && %w[done archived].include?(membership["status"])
+        candidate_project = project_key || task.fetch("projects").first
+        candidates = candidate_project ? candidates_for(candidate_project, prompt) : []
+        exact_switches = candidates.select do |candidate|
+          candidate.fetch("exact") && candidate.fetch("task_id") != task.fetch("id")
+        end
+        unless exact_switches.empty?
           update_turn_state(
             session_id,
             turn_id,
             {
               "task_id" => task.fetch("id"),
-              "claim_reason" => "archived_membership"
+              "candidates" => candidates.map do |candidate|
+                {
+                  "task_id" => candidate.fetch("task_id"),
+                  "exact" => candidate.fetch("exact"),
+                  "reasons" => candidate.fetch("reasons"),
+                  "score" => candidate.fetch("score")
+                }
+              end,
+              "claim_reason" => "explicit_reassignment_required"
             }
           )
-          return hook_context(archived_context(task, session_id))
+          return hook_context(reassignment_context(task, exact_switches, session_id, turn_id))
         end
         ensure_task_active(task)
         board.activity_start(task.fetch("id"), session_id: session_id, turn_id: turn_id, at: state.fetch("started_at"))
@@ -70,6 +83,25 @@ module AgentOS
           { "task_id" => task.fetch("id"), "claim_reason" => "existing_membership" }
         )
         return hook_context(bound_context(board.read_task(task.fetch("id")), session_id, turn_id))
+      end
+
+      if linked.any?
+        candidates = project_key ? candidates_for(project_key, prompt) : []
+        update_turn_state(
+          session_id,
+          turn_id,
+          {
+            "candidates" => candidates.map do |candidate|
+              {
+                "task_id" => candidate.fetch("task_id"),
+                "exact" => candidate.fetch("exact"),
+                "reasons" => candidate.fetch("reasons"),
+                "score" => candidate.fetch("score")
+              }
+            end
+          }
+        )
+        return hook_context(historical_context(linked, project_key, session_id, turn_id, candidates))
       end
 
       return nil unless project_key && enabled_for?(project_key)
@@ -107,8 +139,8 @@ module AgentOS
     def handle_stop(payload, at: nil)
       session_id, turn_id = event_identity(payload)
       now = normalize_timestamp(at)
-      existing = board.find_by_codex_thread(session_id)
-      raise ArgumentError, "Codex task belongs to multiple Task Board items: #{session_id}" if existing.length > 1
+      existing = current_linked_tasks(board.find_by_codex_thread(session_id), session_id)
+      raise ArgumentError, "Codex task has multiple current Task Board items: #{session_id}" if existing.length > 1
 
       board.activity_stop(existing.first.fetch("id"), session_id: session_id, turn_id: turn_id, at: now) if existing.one?
       state = update_turn_state(session_id, turn_id, { "stopped_at" => now }, create: false)
@@ -153,7 +185,7 @@ module AgentOS
         end
       end
 
-      existing = board.find_by_codex_thread(session_id)
+      existing = current_linked_tasks(board.find_by_codex_thread(session_id), session_id)
       if existing.any? && existing.first.fetch("id") != task_id
         raise ArgumentError, "Codex task already belongs to #{existing.first.fetch("id")}: #{session_id}"
       end
@@ -184,13 +216,63 @@ module AgentOS
       board.read_task(task_id)
     end
 
+    def reassign(task_id, session_id:, turn_id:, project_key: nil, role: "implementation", reason: "agent_reassigned")
+      validate_identity!(session_id, "session_id")
+      validate_identity!(turn_id, "turn_id")
+      state = read_turn_state(session_id, turn_id)
+      raise ArgumentError, "no Task Bridge turn state: #{turn_id}" unless state
+      raise ArgumentError, "cannot reassign a stopped turn: #{turn_id}" if state["stopped_at"]
+
+      project_key ||= state["project"]
+      task = board.read_task(task_id)
+      raise ArgumentError, "cannot reassign to finished task: #{task_id}" unless CLAIMABLE_STATUSES.include?(task.fetch("status"))
+      if project_key
+        if task.fetch("projects").empty?
+          board.update(task_id, "projects" => [project_key])
+          task = board.read_task(task_id)
+        elsif !task.fetch("projects").include?(project_key)
+          raise ArgumentError, "task #{task_id} does not belong to project #{project_key}"
+        end
+      end
+
+      existing = current_linked_tasks(board.find_by_codex_thread(session_id), session_id)
+      raise ArgumentError, "Codex task is not currently attached: #{session_id}" if existing.empty?
+      raise ArgumentError, "Codex task has multiple current Task Board items: #{session_id}" if existing.length > 1
+      source = existing.first
+      raise ArgumentError, "Codex task already belongs to #{task_id}: #{session_id}" if source.fetch("id") == task_id
+
+      reassigned = board.reassign_codex(
+        source.fetch("id"),
+        task_id,
+        thread_id: session_id,
+        turn_id: turn_id,
+        started_at: state.fetch("started_at"),
+        role: role,
+        origin: "automation",
+        project: project_key
+      )
+      ensure_task_active(reassigned)
+      route_pending(task_id, session_id, project_key)
+      update_turn_state(
+        session_id,
+        turn_id,
+        {
+          "task_id" => task_id,
+          "claim_reason" => reason,
+          "reassigned_from_task_id" => source.fetch("id"),
+          "reassigned_at" => timestamp
+        }
+      )
+      board.read_task(task_id)
+    end
+
     def checkpoint(task_id, session_id:, turn_id:, summary:, next_action:, status: nil, waiting_on: nil)
       validate_identity!(session_id, "session_id")
       validate_identity!(turn_id, "turn_id")
       raise ArgumentError, "summary is required" if summary.to_s.strip.empty?
       raise ArgumentError, "next_action is required" if next_action.to_s.strip.empty?
 
-      linked = board.find_by_codex_thread(session_id)
+      linked = current_linked_tasks(board.find_by_codex_thread(session_id), session_id)
       raise ArgumentError, "Codex task is not attached: #{session_id}" if linked.empty?
       raise ArgumentError, "Codex task belongs to #{linked.first.fetch("id")}, not #{task_id}" if linked.first.fetch("id") != task_id
       if status && !CHECKPOINT_STATUSES.include?(status)
@@ -216,13 +298,13 @@ module AgentOS
     end
 
     def context(session_id:, turn_id: nil)
-      linked = board.find_by_codex_thread(session_id)
+      all_linked = board.find_by_codex_thread(session_id)
+      linked = current_linked_tasks(all_linked, session_id)
       if linked.one?
-        membership = linked.first.fetch("codex_threads").find { |item| item["thread_id"] == session_id }
-        return archived_context(linked.first, session_id) if membership && %w[done archived].include?(membership["status"])
-
         return bound_context(linked.first, session_id, turn_id)
       end
+
+      return historical_context(all_linked, nil, session_id, turn_id, []) if all_linked.any?
 
       state = turn_id ? read_turn_state(session_id, turn_id) : latest_turn_state(session_id)
       return "No Task Bridge context for #{session_id}." unless state
@@ -414,7 +496,7 @@ module AgentOS
 
     def close_superseded_turns(session_id:, current_turn_id:, now:)
       current_time = Time.iso8601(normalize_timestamp(now))
-      board.find_by_codex_thread(session_id).each do |task|
+      current_linked_tasks(board.find_by_codex_thread(session_id), session_id).each do |task|
         project_key = task.fetch("projects").first
         timeout_seconds = policy_for(project_key).fetch("idle_timeout_minutes", 30).to_i * 60
         task.fetch("activity", {}).fetch("turns", []).each do |turn|
@@ -473,7 +555,34 @@ module AgentOS
 
         Before the final answer after any material file change, checkpoint the outcome with:
         #{File.join(source_root, "tools", "task-bridge")} checkpoint #{task.fetch("id")} --session-id #{session_id} --turn-id #{turn_id || "TURN_ID"} --summary "CURRENT VERIFIED STATE" --next-action "ONE CONCRETE NEXT STEP" --status active|review|waiting
+        If the user explicitly switches this chat to another outcome, reassign the current turn before substantive work with:
+        #{File.join(source_root, "tools", "task-bridge")} reassign TARGET_TASK_ID --session-id #{session_id} --turn-id #{turn_id || "TURN_ID"}
+        Reassignment preserves completed time on this outcome and sends only the current and future turns to the exact target.
         Use review only when implementation and relevant verification are ready. Never set done or cancelled automatically; those require explicit user acceptance. Do not create a duplicate Task Board item.
+      TEXT
+    end
+
+    def reassignment_context(current_task, exact_switches, session_id, turn_id)
+      candidate_lines = exact_switches.map do |candidate|
+        task = candidate.fetch("task")
+        "- #{task.fetch("id")} — #{task.fetch("title")} [#{task.fetch("status")}]"
+      end
+      instruction = if exact_switches.one?
+                      "#{File.join(source_root, "tools", "task-bridge")} reassign #{exact_switches.first.fetch("task_id")} --session-id #{session_id} --turn-id #{turn_id}"
+                    else
+                      "#{File.join(source_root, "tools", "task-bridge")} reassign TASK_ID --session-id #{session_id} --turn-id #{turn_id}"
+                    end
+      <<~TEXT.strip
+        Agent OS Task Bridge: this Codex task is currently linked to #{current_task.fetch("id")}, but the prompt contains exact identity for another outcome.
+        No outcome activity has started for this turn while the destination is unresolved.
+        Exact target candidates:
+        #{candidate_lines.join("\n")}
+
+        If the user is switching outcomes, reassign the current and future turns explicitly with:
+        #{instruction}
+        If the user is only referring to another outcome and work remains on #{current_task.fetch("id")}, keep the current membership with:
+        #{File.join(source_root, "tools", "task-bridge")} claim #{current_task.fetch("id")} --session-id #{session_id} --turn-id #{turn_id}
+        Completed historical activity is never moved automatically.
       TEXT
     end
 
@@ -497,14 +606,26 @@ module AgentOS
       TEXT
     end
 
-    def archived_context(task, session_id)
+    def historical_context(tasks, project_key, session_id, turn_id, candidates)
+      task_ids = tasks.map { |task| task.fetch("id") }.join(", ")
+      exact = candidates.select { |candidate| candidate.fetch("exact") }
+      target = exact.one? ? exact.first.fetch("task_id") : "TASK_ID"
       <<~TEXT.strip
-        Agent OS Task Bridge: this legacy Codex task is archived because it contains work for multiple outcomes.
-        Historical Task ID: #{task.fetch("id")}
+        Agent OS Task Bridge: this Codex task has historical outcome memberships but no current outcome.
+        Historical Task IDs: #{task_ids}
         Session ID: #{session_id}
 
-        Do not perform new project mutations in this mixed-history chat. Start a fresh chat in the registered project and include the exact Task Board ID or stable Slack/GitHub/Figma source in the first meaningful prompt. The archived membership remains read-only historical evidence and must not be reused for another outcome.
+        No activity has started for this turn. Before substantive work, claim one exact current outcome with:
+        #{File.join(source_root, "tools", "task-bridge")} claim #{target} --session-id #{session_id} --turn-id #{turn_id || "TURN_ID"}#{project_key ? " --project #{project_key}" : ""}
+        Historical memberships and their completed activity remain attached to their original outcomes.
       TEXT
+    end
+
+    def current_linked_tasks(tasks, session_id)
+      tasks.select do |task|
+        membership = task.fetch("codex_threads", []).find { |item| item["thread_id"] == session_id }
+        membership && TaskBoard::CURRENT_THREAD_STATUSES.include?(membership["status"])
+      end
     end
 
     def checkpoint_reminder(state, task)

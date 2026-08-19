@@ -9,7 +9,7 @@ project Codex task
   -> UserPromptSubmit
   -> project-time start for every registered project task
   -> registered cwd + exact task/source identity
-  -> one Task Board membership
+  -> one current Task Board membership
   -> activity-start
   -> material-change marker
   -> checkpoint
@@ -32,10 +32,16 @@ Task Bridge resolves a project by the longest exact registered path in `AGENT_OS
 
 Titles and similar text only produce candidates. Semantic similarity never attaches a Codex task automatically. With zero or multiple exact matches, the hook returns instructions and candidates without changing the outcome.
 
+If a linked prompt contains exact identity for a different outcome, Task Bridge
+does not start outcome activity for that turn. It presents the exact target and
+requires an explicit `reassign`, or an explicit `claim` of the current outcome
+when the other identity was only a reference.
+
 ## Lifecycle and time
 
 - The first exact claim attaches `session_id`, moves `inbox`, `planned`, or `review` to `active`, and opens the exact `turn_id`.
 - Each later `UserPromptSubmit` in a linked task opens a new turn; repeated events are idempotent.
+- Explicit `reassign` archives the previous membership, makes the exact target the only current membership, and moves only the open turn. Completed turns and accumulated time stay on their original outcome.
 - `Stop` closes that turn and changes only Codex membership to `idle`. The checkpoint controls whether the outcome remains `active`, `waiting`, or `review`.
 - An exact `Stop` timestamp wins. A new turn in the same session closes the previous unfinished turn, and `idle_timeout_minutes` caps it; the default is 30 minutes. Global reconcile runs only when explicitly requested and does not interfere with a parallel active task.
 - The system counts Codex execution, not human time between messages.
@@ -72,6 +78,10 @@ tools/task-bridge claim TASK_ID \
   --session-id SESSION_ID \
   --turn-id TURN_ID
 
+tools/task-bridge reassign TARGET_TASK_ID \
+  --session-id SESSION_ID \
+  --turn-id TURN_ID
+
 tools/task-bridge checkpoint TASK_ID \
   --session-id SESSION_ID \
   --turn-id TURN_ID \
@@ -83,9 +93,7 @@ tools/task-bridge context --session-id SESSION_ID --turn-id TURN_ID
 tools/task-bridge reconcile --session-id SESSION_ID
 ```
 
-If the exact outcome does not exist, create it through `tools/task-board` before `claim`. Import old turns only from exact Codex timestamps; guessed time is prohibited.
-
-A legacy task that sequentially handled several outcomes cannot become durable membership automatically. Attach only proven historical activity, mark its membership `archived`, and continue future work in a fresh project task. Otherwise one old thread ID would permanently mix time from unrelated outcomes.
+If the exact outcome does not exist, create it through `tools/task-board` before `claim` or `reassign`. Import old turns only from exact Codex timestamps; guessed time is prohibited. A chat with historical archived memberships but no current outcome must explicitly `claim` its next exact outcome before substantive work.
 
 ## Codex setup
 

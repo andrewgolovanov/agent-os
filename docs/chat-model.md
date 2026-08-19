@@ -5,6 +5,8 @@ The root Agent OS task coordinates architecture, monitoring, and cross-project w
 ## Durable membership
 
 - A durable Codex task is registered only by exact `thread_id`.
+- One Codex task has at most one current `active` or `idle` outcome membership;
+  archived memberships preserve earlier outcome history.
 - Title, creation time, branch, and semantic similarity never replace the thread ID.
 - Independent tasks and forks are peer relationships; an outcome has no required primary task.
 - Spawned subagent threads are not registered.
@@ -24,7 +26,10 @@ Opening a registered project path does not select an outcome because several out
 1. Mention the exact outcome ID or stable source URL in the project task so Task Bridge can claim and start it.
 2. If the prompt has no exact identity, use the suggested `claim TASK_ID`; a similar title never links work automatically.
 3. Let the agent checkpoint material progress; the user supplies only domain decisions such as wait, resume, ready for review, close, or cancel.
-4. If work began before Task Bridge was installed, import only proven session and turn timestamps, then continue in a fresh hooked task.
+4. If the user explicitly changes outcomes in the same chat, use `reassign` with
+   the exact target ID before substantive work. The open turn follows the new
+   outcome; completed time stays with the previous one.
+5. If work began before Task Bridge was installed, import only proven session and turn timestamps, then continue in a fresh hooked task.
 
 Codex membership and Task Board lifecycle are independent. Membership says whether a turn is running now (`active` or `idle`); lifecycle describes the overall result (`inbox`, `planned`, `active`, `waiting`, `review`, `done`, or `cancelled`).
 

@@ -4,6 +4,11 @@ Date: 2026-08-10
 
 Status: accepted
 
+Amended: 2026-08-19 by
+`0020-explicit-codex-outcome-reassignment.md`; one current membership remains
+exact, while explicit reassignment may preserve archived historical memberships
+for the same Codex task.
+
 Supersedes: unregistered-session ignore and explicit-only lifecycle portions of `0005-linked-codex-activity.md`
 
 ## Context
@@ -32,4 +37,6 @@ Dynamic hook context reaches every registered project chat without overriding re
 - A prompt containing only a similar title may require one explicit claim command.
 - Hook configuration must be trusted in `/hooks` and is guaranteed only for fresh chats.
 - Imported historical time requires exact Codex turn timestamps; guessed human time is never added.
-- A legacy chat that contains multiple unrelated outcomes is archived after scoped backfill and must not be reused as a durable membership.
+- A legacy chat that contains multiple unrelated outcomes retains archived
+  historical memberships; `0020` permits later reuse only through an explicit
+  exact claim or reassignment with one current owner.

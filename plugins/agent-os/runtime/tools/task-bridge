@@ -48,6 +48,18 @@ begin
     bridge = bridge_from(options)
     task = bridge.claim(task_id, **options)
     puts JSON.pretty_generate(task)
+  when "reassign"
+    task_id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
+    options = parse_options(ARGV) do |opts, values|
+      opts.on("--session-id ID") { |value| values[:session_id] = value }
+      opts.on("--turn-id ID") { |value| values[:turn_id] = value }
+      opts.on("--project KEY") { |value| values[:project_key] = value }
+      opts.on("--role ROLE") { |value| values[:role] = value }
+    end
+    %i[session_id turn_id].each { |key| raise OptionParser::MissingArgument, key.to_s.tr("_", "-") unless options[key] }
+    bridge = bridge_from(options)
+    task = bridge.reassign(task_id, **options)
+    puts JSON.pretty_generate(task)
   when "checkpoint"
     task_id = ARGV.shift or raise OptionParser::MissingArgument, "task ID"
     options = parse_options(ARGV) do |opts, values|
@@ -85,6 +97,7 @@ begin
 
       Commands:
         claim TASK_ID --session-id ID --turn-id ID [--project KEY]
+        reassign TASK_ID --session-id ID --turn-id ID [--project KEY]
         checkpoint TASK_ID --session-id ID --turn-id ID --summary TEXT --next-action TEXT [--status active|waiting|review]
         context --session-id ID [--turn-id ID]
         reconcile [--session-id ID] [--at ISO8601_OR_EPOCH]
