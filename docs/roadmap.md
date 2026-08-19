@@ -112,11 +112,17 @@ Completed publication checks:
   `32298222853`; its public checksum, Apple Silicon/macOS metadata, exact
   22-file runtime, strict bundle signature, stable appcast, and Sparkle Ed25519
   signature passed independent post-publication verification — verified.
+- `v0.4.3` published compatible `taskId`, `task_id`, and `id` handling across
+  task-targeting MCP mutations from commit
+  `d196e5ddef4c467e5614c84668756037af117da0` in successful workflow run
+  `32300042057`; its public checksum, Apple Silicon/macOS metadata, exact
+  22-file runtime, strict bundle signature, stable appcast, Sparkle Ed25519
+  signature, and fresh anonymous tag-clone validation passed — verified.
 
 Remaining release checks:
 
-- a second Mac completes an approved clean install and a genuine `v0.4.1` to
-  `v0.4.2` update.
+- a second Mac completes an approved clean install and a genuine `v0.4.2` to
+  `v0.4.3` update.
 
 ### Complete the local Agent OS app pilot
 

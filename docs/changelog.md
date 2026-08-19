@@ -2,6 +2,15 @@
 
 ## 2026-08-19
 
+- Published `v0.4.3` from
+  `d196e5ddef4c467e5614c84668756037af117da0` in successful workflow run
+  `32300042057`. The public archive SHA-256 is
+  `96e8bd3ce6c9eaff5f2040d674b27eca2d8abdac307e6ced581cdd6f22b848f5`;
+  its checksum, exact app/runtime/plugin version, Apple Silicon/macOS metadata,
+  22-file runtime, strict bundle signature, stable appcast URL and length, and
+  Sparkle Ed25519 signature passed independent post-publication checks. A fresh
+  anonymous tag clone also initialized and validated against an empty private
+  home.
 - Made Agent OS MCP task-targeting mutations tolerant of `taskId`, `task_id`,
   and `id` request fields while retaining `taskId` as canonical. Conflicting
   aliases now fail before any Task Board mutation, with focused regression
