@@ -4,7 +4,7 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { ensureAgentOSRuntime } from "./bootstrap.mjs";
 
-const serverVersion = "0.4.0";
+const serverVersion = "0.4.3";
 const { homeRoot, sourceRoot } = ensureAgentOSRuntime();
 if (homeRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_HOME");
 if (sourceRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_SOURCE_ROOT");
@@ -34,6 +34,23 @@ function assertTaskId(taskId) {
     throw new Error("Invalid task ID");
   }
   return taskId;
+}
+
+function resolveTaskId(args) {
+  const provided = [
+    ["taskId", args.taskId],
+    ["task_id", args.task_id],
+    ["id", args.id],
+  ].filter(([, value]) => value !== undefined);
+  if (provided.length === 0) {
+    throw new Error("One of taskId, task_id, or id is required");
+  }
+
+  const validated = provided.map(([name, value]) => [name, assertTaskId(value)]);
+  if (new Set(validated.map(([, value]) => value)).size > 1) {
+    throw new Error(`Conflicting task ID fields: ${validated.map(([name]) => name).join(", ")}`);
+  }
+  return validated[0][1];
 }
 
 function taskFile(taskId, filename) {
@@ -93,6 +110,12 @@ function textResult(value, isError = false) {
     ...(isError ? { isError: true } : {}),
   };
 }
+
+const taskIdProperties = {
+  taskId: { type: "string", description: "Exact canonical task ID (preferred field)." },
+  task_id: { type: "string", description: "Compatibility alias for taskId." },
+  id: { type: "string", description: "Compatibility alias for taskId." },
+};
 
 const tools = [
   {
@@ -182,12 +205,12 @@ const tools = [
   {
     name: "agent_os_label_task",
     title: "Label an Agent OS outcome",
-    description: "Add or refresh one display-only label without treating it as a registered project or routing target.",
+    description: "Add or refresh one display-only label. Provide taskId (preferred), task_id, or id for the exact outcome.",
     inputSchema: {
       type: "object",
-      required: ["taskId", "key", "name", "kind"],
+      required: ["key", "name", "kind"],
       properties: {
-        taskId: { type: "string", description: "Exact canonical task ID." },
+        ...taskIdProperties,
         key: { type: "string", minLength: 1, description: "Stable namespaced label key, for example slack:C123." },
         name: { type: "string", minLength: 1, description: "Current user-facing label, for example #client-checks." },
         kind: { type: "string", enum: ["slack_channel"] },
@@ -199,12 +222,12 @@ const tools = [
   {
     name: "agent_os_attach_source",
     title: "Attach an Agent OS source",
-    description: "Attach one stable external source to an exact outcome. A Slack root-message title is optional display metadata and never becomes source identity.",
+    description: "Attach one stable external source to an exact outcome using taskId (preferred), task_id, or id. A Slack root-message title is optional display metadata and never becomes source identity.",
     inputSchema: {
       type: "object",
-      required: ["taskId", "kind", "value"],
+      required: ["kind", "value"],
       properties: {
-        taskId: { type: "string", description: "Exact canonical task ID." },
+        ...taskIdProperties,
         kind: {
           type: "string",
           enum: ["slack_threads", "pull_requests", "figma", "deployments", "other"],
@@ -223,12 +246,11 @@ const tools = [
   {
     name: "agent_os_update_task",
     title: "Update an Agent OS outcome",
-    description: "Apply one validated Task Board update by exact task ID.",
+    description: "Apply one validated Task Board update using taskId (preferred), task_id, or id for the exact outcome.",
     inputSchema: {
       type: "object",
-      required: ["taskId"],
       properties: {
-        taskId: { type: "string", description: "Exact canonical task ID." },
+        ...taskIdProperties,
         status: {
           type: "string",
           enum: ["inbox", "planned", "active", "waiting", "review", "done", "cancelled"],
@@ -243,14 +265,7 @@ const tools = [
           description: "Completion communication state for a done outcome.",
         },
       },
-      anyOf: [
-        { required: ["status"] },
-        { required: ["summary"] },
-        { required: ["nextAction"] },
-        { required: ["waitingOn"] },
-        { required: ["clearWaiting"] },
-        { required: ["completionFollowUp"] },
-      ],
+      minProperties: 2,
       additionalProperties: false,
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
@@ -336,7 +351,7 @@ function callTool(name, args = {}) {
     }
 
     if (name === "agent_os_label_task") {
-      const taskId = assertTaskId(args.taskId);
+      const taskId = resolveTaskId(args);
       taskFile(taskId, "task.json");
       const beforeEventCount = eventCount(taskId);
       const task = JSON.parse(runTaskBoard([
@@ -359,7 +374,7 @@ function callTool(name, args = {}) {
     }
 
     if (name === "agent_os_attach_source") {
-      const taskId = assertTaskId(args.taskId);
+      const taskId = resolveTaskId(args);
       taskFile(taskId, "task.json");
       const command = [
         "source", taskId,
@@ -383,7 +398,7 @@ function callTool(name, args = {}) {
     }
 
     if (name === "agent_os_update_task") {
-      const taskId = assertTaskId(args.taskId);
+      const taskId = resolveTaskId(args);
       taskFile(taskId, "task.json");
       if (args.waitingOn && args.clearWaiting) {
         throw new Error("waitingOn and clearWaiting are mutually exclusive");

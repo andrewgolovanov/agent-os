@@ -26,6 +26,13 @@ AGENT_OS_HOME/work/
 
 All structured writes go through `tools/task-board`. File locking and atomic replacement prevent concurrent writers from corrupting the index.
 
+The Agent OS MCP keeps `taskId` as the documented task identifier field for
+task-targeting mutations. For compatibility with generated tool calls it also
+accepts `task_id` and `id`, normalizes all three names before validation, and
+rejects a call when multiple supplied identifier fields contain different
+values. This tolerance changes only the MCP request boundary; exact canonical
+Task Board identity remains mandatory.
+
 ## When to create an outcome
 
 Create an outcome before the first meaningful mutation, multi-step investigation, review, release, deployment, or explicit request to continue later. Do not create one for a short explanation, FYI, or one-time lookup with no next action.

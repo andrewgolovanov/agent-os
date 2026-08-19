@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "version": "0.4.2",
-  "plugin_version": "0.4.2+codex.20260819201452",
+  "version": "0.4.3",
+  "plugin_version": "0.4.3+codex.20260819203718",
   "files": {
     "LICENSE": {
       "sha256": "56fdec8396b0f0564c3f9795b48fd025ce8bb85535ee9c1abfc0ce9ac4a27f6c",
@@ -28,7 +28,7 @@
       "executable": false
     },
     "docs/optional-integrations.md": {
-      "sha256": "648d4d706e79e0d8240d703cd8a530d019ff05e4e644cc28317cdb873dc5d749",
+      "sha256": "46660e366774648cf3c61e5ccce12a05405c7e945aea63434b8c8f55227c32a1",
       "executable": false
     },
     "docs/slack-monitor.md": {

@@ -36,7 +36,7 @@ downloadable macOS app supports Apple Silicon (`arm64`) on macOS 14 or newer;
 an Intel or universal binary is not included yet.
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.4.2
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.4.3
 codex plugin add agent-os@agent-os
 ```
 

@@ -29,6 +29,7 @@ class AgentOSMCPTest < Minitest::Test
     with_server(environment) do |stdin, stdout, stderr, wait_thread|
       initialize_result = request(stdin, stdout, 1, "initialize", { "protocolVersion" => "2025-11-25" })
       assert_equal "agent-os", initialize_result.dig("result", "serverInfo", "name")
+      assert_equal "0.4.3", initialize_result.dig("result", "serverInfo", "version")
 
       tool_list = request(stdin, stdout, 2, "tools/list")
       assert_equal 9, tool_list.dig("result", "tools").length
@@ -37,6 +38,14 @@ class AgentOSMCPTest < Minitest::Test
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_relink_project" }
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_label_task" }
       assert tool_list.dig("result", "tools").any? { |tool| tool.fetch("name") == "agent_os_attach_source" }
+      task_mutations = tool_list.dig("result", "tools").select do |tool|
+        %w[agent_os_label_task agent_os_attach_source agent_os_update_task].include?(tool.fetch("name"))
+      end
+      task_mutations.each do |tool|
+        assert_equal %w[id taskId task_id], tool.dig("inputSchema", "properties").keys.grep(/\A(?:id|taskId|task_id)\z/).sort
+        refute tool.fetch("inputSchema").key?("anyOf")
+        refute tool.fetch("inputSchema").key?("allOf")
+      end
 
       tasks = request(
         stdin,
@@ -358,6 +367,96 @@ class AgentOSMCPTest < Minitest::Test
     end
   end
 
+  def test_server_accepts_task_id_aliases_and_rejects_conflicts
+    with_server("AGENT_OS_SOURCE_ROOT" => @source, "AGENT_OS_HOME" => @home) do |stdin, stdout, stderr, wait_thread|
+      created = request(
+        stdin,
+        stdout,
+        1,
+        "tools/call",
+        {
+          "name" => "agent_os_create_task",
+          "arguments" => {
+            "title" => "Verify task ID aliases",
+            "goal" => "Keep task mutation calls compatible",
+            "nextAction" => "Exercise each supported identifier field"
+          }
+        }
+      )
+      task_id = created.dig("result", "structuredContent", "task", "id")
+
+      snake_case = request(
+        stdin,
+        stdout,
+        2,
+        "tools/call",
+        {
+          "name" => "agent_os_update_task",
+          "arguments" => { "task_id" => task_id, "summary" => "Updated through task_id" }
+        }
+      )
+      assert_equal "Updated through task_id", snake_case.dig("result", "structuredContent", "task", "summary")
+
+      short_alias = request(
+        stdin,
+        stdout,
+        3,
+        "tools/call",
+        {
+          "name" => "agent_os_update_task",
+          "arguments" => { "id" => task_id, "nextAction" => "Continue through id" }
+        }
+      )
+      assert_equal "Continue through id", short_alias.dig("result", "structuredContent", "task", "nextAction")
+
+      matching_aliases = request(
+        stdin,
+        stdout,
+        4,
+        "tools/call",
+        {
+          "name" => "agent_os_update_task",
+          "arguments" => { "taskId" => task_id, "task_id" => task_id, "status" => "active" }
+        }
+      )
+      assert_equal "active", matching_aliases.dig("result", "structuredContent", "task", "status")
+
+      conflicting_aliases = request(
+        stdin,
+        stdout,
+        5,
+        "tools/call",
+        {
+          "name" => "agent_os_update_task",
+          "arguments" => { "taskId" => task_id, "id" => "another_task", "status" => "review" }
+        }
+      )
+      assert conflicting_aliases.dig("result", "isError")
+      assert_match(/Conflicting task ID fields: taskId, id/, conflicting_aliases.dig("result", "structuredContent", "error"))
+
+      missing_alias = request(
+        stdin,
+        stdout,
+        6,
+        "tools/call",
+        {
+          "name" => "agent_os_update_task",
+          "arguments" => { "summary" => "Must not apply without an exact task ID" }
+        }
+      )
+      assert missing_alias.dig("result", "isError")
+      assert_match(/One of taskId, task_id, or id is required/, missing_alias.dig("result", "structuredContent", "error"))
+
+      tasks = request(stdin, stdout, 7, "tools/call", { "name" => "agent_os_list_tasks", "arguments" => {} })
+      task = tasks.dig("result", "structuredContent", "tasks").find { |candidate| candidate.fetch("id") == task_id }
+      assert_equal "active", task.fetch("status")
+      assert_equal 4, task.fetch("eventCount")
+
+      stdin.close
+      assert wait_thread.value.success?, stderr.read
+    end
+  end
+
   def test_server_labels_an_unassigned_task_without_project_routing
     with_server("AGENT_OS_SOURCE_ROOT" => @source, "AGENT_OS_HOME" => @home) do |stdin, stdout, stderr, wait_thread|
       created = request(
@@ -384,7 +483,7 @@ class AgentOSMCPTest < Minitest::Test
         {
           "name" => "agent_os_label_task",
           "arguments" => {
-            "taskId" => task_id,
+            "task_id" => task_id,
             "key" => "slack:C0CLIENT01",
             "name" => "#client-checks",
             "kind" => "slack_channel"
@@ -448,7 +547,7 @@ class AgentOSMCPTest < Minitest::Test
         {
           "name" => "agent_os_attach_source",
           "arguments" => {
-            "taskId" => task_id,
+            "id" => task_id,
             "kind" => "slack_threads",
             "value" => source_value,
             "title" => "*Please* review the <https://example.invalid/brief|client brief>"

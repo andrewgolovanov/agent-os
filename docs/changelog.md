@@ -2,6 +2,10 @@
 
 ## 2026-08-19
 
+- Made Agent OS MCP task-targeting mutations tolerant of `taskId`, `task_id`,
+  and `id` request fields while retaining `taskId` as canonical. Conflicting
+  aliases now fail before any Task Board mutation, with focused regression
+  coverage for schema exposure, normalization, and conflict rejection.
 - Published `v0.4.2` from
   `17e1c450d9ba4516f643f0b64c9ad910de9b8feb` in successful workflow run
   `32298222853`. The public archive SHA-256 is
