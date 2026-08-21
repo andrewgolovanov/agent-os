@@ -29,7 +29,7 @@ Done when:
 
 ### Verify local-only project sync and structured Slack bot mentions in a packaged install
 
-The public `v0.7.0` app/runtime/plugin artifacts and an anonymous tag checkout
+The public `v0.7.1` app/runtime/plugin artifacts and an anonymous tag checkout
 are verified. The remaining proof is pickup in a fresh installed Codex task and
 one real Scheduled Slack monitor execution.
 
@@ -183,11 +183,17 @@ Completed publication checks:
   `32508847564`; its public checksum, Apple Silicon/macOS metadata, exact
   23-file runtime, strict bundle signature, stable appcast, Sparkle Ed25519
   signature, and fresh anonymous tag-clone validation passed — verified.
+- `v0.7.1` published completed-only Slack label restoration, aligned project
+  stars, and actionable unpinned-project filtering from commit
+  `27b1bdf370e27764b26c851ed2bf5e7f72dc94cb` in successful workflow run
+  `32512791540`; its public checksum, Apple Silicon/macOS metadata, exact
+  23-file runtime, strict bundle signature, stable appcast, Sparkle Ed25519
+  signature, and fresh anonymous tag-clone validation passed — verified.
 
 Remaining release checks:
 
-- a second Mac completes an approved clean install and a genuine `v0.6.0` to
-  `v0.7.0` update.
+- a second Mac completes an approved clean install and a genuine `v0.7.0` to
+  `v0.7.1` update.
 
 ### Complete the local Agent OS app pilot
 

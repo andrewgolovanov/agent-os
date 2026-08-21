@@ -2,6 +2,15 @@
 
 ## 2026-08-21
 
+- Published `v0.7.1` from
+  `27b1bdf370e27764b26c851ed2bf5e7f72dc94cb` in successful workflow run
+  `32512791540`. The public archive SHA-256 is
+  `9b3d660aea1bcdbfd793144afc21534f0fcc76e539afba15fe425a412760ceb1`;
+  its checksum, exact app/runtime/plugin version, Apple Silicon/macOS metadata,
+  23-file runtime, strict bundle signature, stable appcast URL and length, and
+  Sparkle Ed25519 signature passed independent post-publication checks. A fresh
+  anonymous tag clone also initialized and validated against an empty private
+  home.
 - Published `v0.7.0` from
   `66fb08f77d7d6497f85fc7d4c1ebcb67e781284c` in successful workflow run
   `32508847564`. The public archive SHA-256 is
