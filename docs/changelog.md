@@ -2,6 +2,15 @@
 
 ## 2026-08-21
 
+- Published `v0.7.2` from
+  `be15c8a6f8936edd725868997b3abdcb01ac43c5` in successful workflow run
+  `32526208065`. The public archive SHA-256 is
+  `e645973ea979f9afd4124839adcc5153c2b79a3035ad8e5b5b0c9caa40265154`;
+  its checksum, exact app/runtime/plugin version, Apple Silicon/macOS metadata,
+  23-file runtime, strict bundle signature, stable appcast URL and length, and
+  Sparkle Ed25519 signature passed independent post-publication checks. A fresh
+  anonymous tag clone also initialized and validated against an empty private
+  home.
 - Fixed the native Focus list moving down by 16 points on its first hover after
   navigation. The first section now owns the initial spacing, each task row owns
   its hover state, and hover feedback no longer applies a broad row animation or

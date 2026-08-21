@@ -29,7 +29,7 @@ Done when:
 
 ### Verify local-only project sync and structured Slack bot mentions in a packaged install
 
-The public `v0.7.1` app/runtime/plugin artifacts and an anonymous tag checkout
+The public `v0.7.2` app/runtime/plugin artifacts and an anonymous tag checkout
 are verified. The remaining proof is pickup in a fresh installed Codex task and
 one real Scheduled Slack monitor execution.
 
@@ -189,11 +189,16 @@ Completed publication checks:
   `32512791540`; its public checksum, Apple Silicon/macOS metadata, exact
   23-file runtime, strict bundle signature, stable appcast, Sparkle Ed25519
   signature, and fresh anonymous tag-clone validation passed — verified.
+- `v0.7.2` published the stable Focus first-hover layout fix from commit
+  `be15c8a6f8936edd725868997b3abdcb01ac43c5` in successful workflow run
+  `32526208065`; its public checksum, Apple Silicon/macOS metadata, exact
+  23-file runtime, strict bundle signature, stable appcast, Sparkle Ed25519
+  signature, and fresh anonymous tag-clone validation passed — verified.
 
 Remaining release checks:
 
-- a second Mac completes an approved clean install and a genuine `v0.7.0` to
-  `v0.7.1` update.
+- a second Mac completes an approved clean install and a genuine `v0.7.1` to
+  `v0.7.2` update.
 
 ### Complete the local Agent OS app pilot
 

@@ -22,9 +22,9 @@ Verified: 2026-08-21
 - The first public release, `v0.1.0`, is published from commit
   `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f` at
   `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.1.0`.
-- The current public release, `v0.7.1`, is published from commit
-  `27b1bdf370e27764b26c851ed2bf5e7f72dc94cb` at
-  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.7.1`.
+- The current public release, `v0.7.2`, is published from commit
+  `be15c8a6f8936edd725868997b3abdcb01ac43c5` at
+  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.7.2`.
 - The immutable `v0.3.1` tag contains the earlier Slack-only label candidate,
   but no GitHub Release was created because GitHub returned HTTP 503 during its
   service incident. It remains an unpublished historical tag and was not moved
@@ -129,8 +129,8 @@ Verified: 2026-08-21
 - Agent OS app builds and its 38 Swift tests pass. The current candidate binary
   also passes an isolated signed-bundle launch: it initializes and reads a
   separate temporary private home without touching the installed app's home.
-  The locally installed app remains `v0.7.0` while the current public release is
-  `v0.7.1`; the prior active-home
+  The locally installed app remains `v0.7.1` while the current public release is
+  `v0.7.2`; the prior active-home
   inventory contains 13 local-only and 25 repository-backed projects, with no
   duplicate, missing, or private-home roots.
 - Task Board and the Agent OS MCP now support idempotent display-only Slack
@@ -466,11 +466,23 @@ Verified: 2026-08-21
   exact 23-file embedded runtime, stable latest appcast URL and length, and
   Sparkle Ed25519 signature all passed. A fresh anonymous tag clone initialized
   a separate empty private home and passed the complete Agent OS validation.
+- The tag-triggered GitHub Release workflow completed successfully for
+  `v0.7.2`: the exact tag checkout passed 105 Ruby tests/862 assertions, 38
+  Swift tests, plugin package validation, runtime synchronization, publication
+  audit, signed packaging, and release creation in run `32526208065`.
+- The public `v0.7.2` archive, checksum, and appcast were downloaded
+  independently after publication. The archive SHA-256 is
+  `e645973ea979f9afd4124839adcc5153c2b79a3035ad8e5b5b0c9caa40265154`;
+  its checksum, strict bundle signature, version `0.7.2`, plugin version
+  `0.7.2+codex.20260821225120`, macOS 14 minimum, Apple Silicon executable,
+  exact 23-file embedded runtime, stable latest appcast URL and length, and
+  Sparkle Ed25519 signature all passed. A fresh anonymous tag clone initialized
+  a separate empty private home and passed the complete Agent OS validation.
 
 ## Not configured
 
-- A real second-Mac install and cross-version Sparkle update from `v0.7.0` to
-  `v0.7.1`.
+- A real second-Mac install and cross-version Sparkle update from `v0.7.1` to
+  `v0.7.2`.
 - End-user hook trust remains a per-install Codex choice; the release source
   cannot pre-approve it for another user.
 - A product-owned Codex Scheduled task for a clean user; the local CLI
