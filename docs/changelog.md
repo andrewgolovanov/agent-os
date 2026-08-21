@@ -2,6 +2,10 @@
 
 ## 2026-08-21
 
+- Fixed the native Focus list moving down by 16 points on its first hover after
+  navigation. The first section now owns the initial spacing, each task row owns
+  its hover state, and hover feedback no longer applies a broad row animation or
+  invalidates the full mixed-row list.
 - Published `v0.7.1` from
   `27b1bdf370e27764b26c851ed2bf5e7f72dc94cb` in successful workflow run
   `32512791540`. The public archive SHA-256 is

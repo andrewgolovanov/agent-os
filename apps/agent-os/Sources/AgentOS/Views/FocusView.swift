@@ -4,20 +4,28 @@ struct FocusView: View {
     let projects: [AgentOSProject]
     let tasks: [AgentOSTask]
     @Binding var selectedTaskID: String?
-    @State private var hoveredTaskID: String?
 
     var body: some View {
+        let rows = FocusDateSections.rows(from: tasks)
+
         List(selection: $selectedTaskID) {
-            ForEach(FocusDateSections.rows(from: tasks)) { row in
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                 switch row {
                 case let .section(bucket):
-                    sectionHeader(bucket.title)
+                    FocusSectionHeaderView(
+                        title: bucket.title,
+                        topPadding: FocusListLayout.sectionTopPadding(
+                            addsContentPadding: index == rows.startIndex
+                        )
+                    )
+                    .modifier(FocusListRowStyle())
                 case let .task(task):
-                    taskRow(task)
+                    FocusTaskRowView(projects: projects, task: task)
+                        .tag(task.id)
+                        .modifier(FocusListRowStyle())
                 }
             }
         }
-        .contentMargins(.top, AgentOSMetrics.focusContentTopPadding, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .background(AgentOSTheme.canvas)
         .overlay {
@@ -28,8 +36,24 @@ struct FocusView: View {
         }
         .navigationTitle("Focus")
     }
+}
 
-    private func taskRow(_ task: AgentOSTask) -> some View {
+private struct FocusListRowStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(AgentOSTheme.canvas)
+            .listRowSeparator(.hidden)
+    }
+}
+
+private struct FocusTaskRowView: View {
+    let projects: [AgentOSProject]
+    let task: AgentOSTask
+
+    @State private var isHovering = false
+
+    var body: some View {
         HStack(alignment: .top, spacing: 24) {
             VStack(alignment: .leading, spacing: AgentOSTypography.listFlow) {
                 attributionBadge(for: task)
@@ -57,7 +81,7 @@ struct FocusView: View {
         .padding(.horizontal, AgentOSMetrics.focusRowHorizontalPadding)
         .padding(.vertical, AgentOSMetrics.focusRowVerticalPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(hoveredTaskID == task.id ? AgentOSTheme.surfaceHover : Color.clear)
+        .background(isHovering ? AgentOSTheme.surfaceHover : Color.clear)
         .overlay(alignment: .bottom) {
             Rectangle()
                 .fill(AgentOSTheme.border)
@@ -65,34 +89,12 @@ struct FocusView: View {
                 .accessibilityHidden(true)
         }
         .contentShape(Rectangle())
-        .onHover { isHovering in
-            if isHovering {
-                hoveredTaskID = task.id
-            } else if hoveredTaskID == task.id {
-                hoveredTaskID = nil
+        .onHover { newValue in
+            if newValue != isHovering {
+                isHovering = newValue
             }
         }
         .pointingHandCursor()
-        .animation(.easeOut(duration: 0.12), value: hoveredTaskID == task.id)
-        .tag(task.id)
-        .listRowInsets(EdgeInsets())
-        .listRowBackground(AgentOSTheme.canvas)
-        .listRowSeparator(.hidden)
-    }
-
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title)
-            .font(AgentOSTypography.listSectionTitle)
-            .foregroundStyle(AgentOSTheme.textSecondary)
-            .textCase(nil)
-            .padding(.horizontal, AgentOSMetrics.focusRowHorizontalPadding)
-            .padding(.top, AgentOSMetrics.focusSectionHeaderTopPadding)
-            .padding(.bottom, AgentOSMetrics.focusSectionHeaderBottomPadding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityAddTraits(.isHeader)
-            .listRowInsets(EdgeInsets())
-            .listRowBackground(AgentOSTheme.canvas)
-            .listRowSeparator(.hidden)
     }
 
     private func attributionBadge(for task: AgentOSTask) -> some View {
@@ -121,5 +123,22 @@ struct FocusView: View {
         }
         .joined(separator: ", ")
         return (label, "folder")
+    }
+}
+
+private struct FocusSectionHeaderView: View {
+    let title: String
+    let topPadding: CGFloat
+
+    var body: some View {
+        Text(title)
+            .font(AgentOSTypography.listSectionTitle)
+            .foregroundStyle(AgentOSTheme.textSecondary)
+            .textCase(nil)
+            .padding(.horizontal, AgentOSMetrics.focusRowHorizontalPadding)
+            .padding(.top, topPadding)
+            .padding(.bottom, AgentOSMetrics.focusSectionHeaderBottomPadding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
     }
 }

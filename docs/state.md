@@ -126,7 +126,7 @@ Verified: 2026-08-21
   validation, identity-checked repository relinking, deterministic and
   preview-first Slack channel mapping, safe unfinished-outcome reconciliation, completion
   follow-up, and Project Time reporting contracts.
-- Agent OS app builds and its 37 Swift tests pass. The current candidate binary
+- Agent OS app builds and its 38 Swift tests pass. The current candidate binary
   also passes an isolated signed-bundle launch: it initializes and reads a
   separate temporary private home without touching the installed app's home.
   The locally installed app remains `v0.7.0` while the current public release is
@@ -206,8 +206,11 @@ Verified: 2026-08-21
   trailing signal. Local-calendar Today, Yesterday, This Week, Last Week, and
   Earlier sections group outcomes by their last update and omit empty periods.
   Their lightweight text headings scroll with the list without a separate
-  backing surface; a custom semantic separator spans every row edge-to-edge, and
-  the shared hover surface retains pointer feedback for task selection.
+  backing surface. The first heading owns the stable top spacing rather than
+  relying on a scroll-content margin, and each task owns its hover state so the
+  initial pointer entry cannot shift the list. A custom semantic separator spans
+  every row edge-to-edge, and the shared hover surface retains pointer feedback
+  for task selection.
 - The task detail is no longer a permanent empty third column or animated
   inspector sheet. Real-window accessibility and screenshot QA verified a
   closed-at-launch, open-on-selection, resizable native split with explicit

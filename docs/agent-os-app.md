@@ -121,10 +121,13 @@ may call it on its own queue without entering main-actor-isolated code.
   added leading, a 6-point vertical flow, and a bounded text measure;
   local-calendar Today, Yesterday, This Week, Last Week, and Earlier sections
   group outcomes by their last update, omit empty periods, and use lightweight
-  non-sticky headings without a separate backing surface;
+  non-sticky headings without a separate backing surface; the first heading
+  owns the stable top spacing so the initial layout cannot move when a row first
+  receives hover state;
   registered project context sits above each task title while lifecycle status
   remains the only trailing signal; full-width semantic separators, the shared
-  hover surface, and pointing-hand feedback make every selectable row clear;
+  hover surface, and pointing-hand feedback make every selectable row clear,
+  while hover state stays local to the affected row;
 - display-only Slack channel labels on outcomes, with an unmapped Labels sidebar
   section across every lifecycle; completed-only channels remain navigable with
   a zero unfinished count, while mapped labels stay on cards without duplicating

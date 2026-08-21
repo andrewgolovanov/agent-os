@@ -108,3 +108,10 @@ enum FocusDateSections {
         return try? Date(timestamp, strategy: Date.ISO8601FormatStyle())
     }
 }
+
+enum FocusListLayout {
+    static func sectionTopPadding(addsContentPadding: Bool) -> CGFloat {
+        AgentOSMetrics.focusSectionHeaderTopPadding
+            + (addsContentPadding ? AgentOSMetrics.focusContentTopPadding : 0)
+    }
+}

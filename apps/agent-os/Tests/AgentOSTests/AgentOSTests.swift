@@ -381,6 +381,11 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(AgentOSMetrics.focusTextMeasure, 880)
     }
 
+    func testFocusListOwnsStableTopPaddingInItsFirstSection() {
+        XCTAssertEqual(FocusListLayout.sectionTopPadding(addsContentPadding: true), 26)
+        XCTAssertEqual(FocusListLayout.sectionTopPadding(addsContentPadding: false), 10)
+    }
+
     func testFocusDateSectionsUseLocalCalendarBoundaries() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 2 * 60 * 60))
