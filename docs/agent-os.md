@@ -1,6 +1,6 @@
 # Agent OS distribution
 
-Status: public source and `v0.6.0` checkout-independent release published
+Status: public source and `v0.7.0` checkout-independent release published
 
 Remote policy: public source on `main`; automatic updates only from signed
 semantic-version GitHub Releases
@@ -106,14 +106,14 @@ bootstrap.
 ## Remaining gates
 
 The Sparkle private key has an independently verified encrypted recovery copy,
-the matching GitHub Actions secret is configured, and `v0.6.0` is published.
+the matching GitHub Actions secret is configured, and `v0.7.0` is published.
 Its public zip, checksum, latest appcast, bundle metadata, architecture,
 embedded runtime, and Ed25519 signature passed independent post-publication
 verification. A fresh anonymous clone of the tag also initialized and validated
 against a separate private home without relying on the development checkout.
 
 1. Complete a user-approved install on a second Mac, then prove a genuine
-   `v0.5.0` to `v0.6.0` update.
+   `v0.6.0` to `v0.7.0` update.
 
 Public source does not authorize copying private local state, changing unrelated
 remotes, or publishing an unsigned release.

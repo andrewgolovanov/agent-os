@@ -2,6 +2,15 @@
 
 ## 2026-08-21
 
+- Published `v0.7.0` from
+  `66fb08f77d7d6497f85fc7d4c1ebcb67e781284c` in successful workflow run
+  `32508847564`. The public archive SHA-256 is
+  `0eb48199f6a29e6ceae12d2c304a3c2464983038493ec1904a8c06c70a5e2eea`;
+  its checksum, exact app/runtime/plugin version, Apple Silicon/macOS metadata,
+  23-file runtime, strict bundle signature, stable appcast URL and length, and
+  Sparkle Ed25519 signature passed independent post-publication checks. A fresh
+  anonymous tag clone also initialized and validated against an empty private
+  home.
 - Fixed native project synchronization failing with App Server status `127`
   when a GUI launch selected a Node-based `~/.local/bin/codex` wrapper but did
   not inherit the shell path containing `node`. The app now prefers the
