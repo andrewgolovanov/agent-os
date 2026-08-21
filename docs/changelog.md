@@ -2,6 +2,15 @@
 
 ## 2026-08-21
 
+- Published `v0.6.0` from
+  `da78a9124cad93ee0a365b7d6b8e9eeb5256c239` in successful workflow run
+  `32499730792`. The public archive SHA-256 is
+  `0ffd4465fd988c5db10f17d3d1e32fec6de2a76cb03325f55fd7996061284bf3`;
+  its checksum, exact app/runtime/plugin version, Apple Silicon/macOS metadata,
+  23-file runtime, strict bundle signature, stable appcast URL and length, and
+  Sparkle Ed25519 signature passed independent post-publication checks. A fresh
+  anonymous tag clone also initialized and validated against an empty private
+  home.
 - Changed automatic Codex project synchronization so an existing local folder
   is a valid project without Git. App launch and the task-start hook now create
   local-only entries with `repositories: []`; a later committed Git root and

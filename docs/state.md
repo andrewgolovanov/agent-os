@@ -22,9 +22,9 @@ Verified: 2026-08-21
 - The first public release, `v0.1.0`, is published from commit
   `0d816b4724dc0ef14a2f49f7f0c451e5a1684f8f` at
   `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.1.0`.
-- The current public release, `v0.5.0`, is published from commit
-  `5e6d0f16dd880e15ca681e6fa1e713acbf00facb` at
-  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.5.0`.
+- The current public release, `v0.6.0`, is published from commit
+  `da78a9124cad93ee0a365b7d6b8e9eeb5256c239` at
+  `https://github.com/andrewgolovanov/agent-os/releases/tag/v0.6.0`.
 - The immutable `v0.3.1` tag contains the earlier Slack-only label candidate,
   but no GitHub Release was created because GitHub returned HTTP 503 during its
   service incident. It remains an unpublished historical tag and was not moved
@@ -51,7 +51,7 @@ Verified: 2026-08-21
   valid explicitly selected development checkout remains authoritative.
 - MCP and CLI onboarding can preview and register an existing Git repository
   from any absolute location without moving, cloning, renaming, or modifying it.
-- The development branch can automatically synchronize deterministic active
+- The public release can automatically synchronize deterministic active
   Codex project roots with or without Git. The app supplies only active
   non-archived `thread/list` `cwd` metadata on launch, and the plugin hook
   supplies the current task `cwd` before Task Bridge routing. A later committed
@@ -391,11 +391,23 @@ Verified: 2026-08-21
   latest appcast URL and length, and Sparkle Ed25519 signature all passed. A
   fresh anonymous tag clone initialized a separate empty private home and
   passed the complete Agent OS validation.
+- The tag-triggered GitHub Release workflow completed successfully for
+  `v0.6.0`: the exact tag checkout passed 94 Ruby tests/790 assertions, 32 Swift
+  tests, plugin package validation, runtime synchronization, publication audit,
+  signed packaging, and release creation in run `32499730792`.
+- The public `v0.6.0` archive, checksum, and appcast were downloaded
+  independently after publication. The archive SHA-256 is
+  `0ffd4465fd988c5db10f17d3d1e32fec6de2a76cb03325f55fd7996061284bf3`;
+  its checksum, strict bundle signature, version `0.6.0`, macOS 14 minimum,
+  Apple Silicon executable, exact 23-file embedded runtime and modes, stable
+  latest appcast URL and length, and Sparkle Ed25519 signature all passed. A
+  fresh anonymous tag clone initialized a separate empty private home and
+  passed the complete Agent OS validation.
 
 ## Not configured
 
-- A real second-Mac install and cross-version Sparkle update from `v0.4.3` to
-  `v0.5.0`.
+- A real second-Mac install and cross-version Sparkle update from `v0.5.0` to
+  `v0.6.0`.
 - End-user hook trust remains a per-install Codex choice; the release source
   cannot pre-approve it for another user.
 - A product-owned Codex Scheduled task for a clean user; the local CLI

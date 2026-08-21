@@ -6,8 +6,9 @@ This roadmap contains only the next verifiable product outcomes.
 
 ### Verify local-only project sync and structured Slack bot mentions in a packaged install
 
-The implementation is local and must be proven with the synchronized packaged
-runtime and a fresh Codex task before release.
+The public `v0.6.0` app/runtime/plugin artifacts and an anonymous tag checkout
+are verified. The remaining proof is pickup in a fresh installed Codex task and
+one real Scheduled Slack monitor execution.
 
 Done when:
 
@@ -146,11 +147,17 @@ Completed publication checks:
   `32495953322`; its public checksum, Apple Silicon/macOS metadata, exact
   23-file runtime, strict bundle signature, stable appcast, Sparkle Ed25519
   signature, and fresh anonymous tag-clone validation passed — verified.
+- `v0.6.0` published local-only project registration, stable same-name keys,
+  and later same-root repository enrichment from commit
+  `da78a9124cad93ee0a365b7d6b8e9eeb5256c239` in successful workflow run
+  `32499730792`; its public checksum, Apple Silicon/macOS metadata, exact
+  23-file runtime, strict bundle signature, stable appcast, Sparkle Ed25519
+  signature, and fresh anonymous tag-clone validation passed — verified.
 
 Remaining release checks:
 
-- a second Mac completes an approved clean install and a genuine `v0.4.3` to
-  `v0.5.0` update.
+- a second Mac completes an approved clean install and a genuine `v0.5.0` to
+  `v0.6.0` update.
 
 ### Complete the local Agent OS app pilot
 
