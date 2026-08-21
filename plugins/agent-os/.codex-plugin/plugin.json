@@ -1,7 +1,7 @@
 {
   "name": "agent-os",
-  "version": "0.5.0+codex.20260821153550",
-  "description": "Bootstrap Agent OS locally, synchronize active Codex repositories, manage its canonical Task Board, and preserve durable Context Loop work.",
+  "version": "0.6.0+codex.20260821154421",
+  "description": "Bootstrap Agent OS locally, synchronize active Codex projects with or without Git, manage its canonical Task Board, and preserve durable Context Loop work.",
   "author": {
     "name": "Andrew Golovanov"
   },
@@ -13,7 +13,7 @@
   "interface": {
     "displayName": "Agent OS",
     "shortDescription": "Sync projects and manage Agent OS from Codex.",
-    "longDescription": "Creates the private Agent OS home automatically, registers eligible active Codex repositories without moving them, applies validated Task Board mutations, and keeps long-running work resumable through the bundled Context Loop skill.",
+    "longDescription": "Creates the private Agent OS home automatically, registers active Codex projects with or without Git, enriches same-root repository metadata safely, applies validated Task Board mutations, and keeps long-running work resumable through the bundled Context Loop skill.",
     "developerName": "Andrew Golovanov",
     "category": "Productivity",
     "websiteURL": "https://github.com/andrewgolovanov/agent-os",
