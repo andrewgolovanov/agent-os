@@ -10,6 +10,7 @@ final class AgentOSStore {
     private(set) var busyTaskID: String?
     private(set) var lastRefreshedAt: Date?
     private(set) var componentUpdateStatus: AgentOSUpdateStatus?
+    private(set) var projectSyncReport: AgentOSProjectSyncReport?
     private(set) var isCheckingForComponentUpdates = false
     private(set) var sourceMetadata: [String: AgentOSSourceMetadata] = [:]
     private(set) var loadingSourceIDs: Set<String> = []
@@ -41,6 +42,7 @@ final class AgentOSStore {
 
     func bootstrap() async {
         installWatchersIfAvailable()
+        await synchronizeCodexProjects()
         await refresh()
         let packagedRuntime = FileManager.default.fileExists(
             atPath: configuration.sourceURL.appendingPathComponent(".agent-os-runtime.json").path
@@ -49,6 +51,25 @@ final class AgentOSStore {
             apply: !packagedRuntime && UserDefaults.standard.bool(forKey: "agent-os.auto-update-core-plugin"),
             announceCurrent: false
         )
+    }
+
+    private func synchronizeCodexProjects() async {
+        do {
+            let workingDirectories = try await codexService.activeWorkingDirectories(
+                startingAt: configuration.homeURL
+            )
+            let report = try await agentOSService.syncCodexProjects(
+                configuration: configuration,
+                workingDirectories: workingDirectories
+            )
+            projectSyncReport = report
+            if report.registeredCount > 0 {
+                let suffix = report.skippedCount > 0 ? "; skipped \(report.skippedCount) ambiguous or unavailable paths" : ""
+                noticeMessage = "Registered \(report.registeredCount) Codex project\(report.registeredCount == 1 ? "" : "s")\(suffix)."
+            }
+        } catch {
+            noticeMessage = "Codex project synchronization was unavailable: \(error.localizedDescription)"
+        }
     }
 
     func refresh() async {

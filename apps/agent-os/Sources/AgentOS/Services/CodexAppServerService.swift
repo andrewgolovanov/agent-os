@@ -31,6 +31,49 @@ actor CodexAppServerService {
         process?.terminate()
     }
 
+    func activeWorkingDirectories(startingAt directory: URL) async throws -> [URL] {
+        try validateWorkingDirectory(directory)
+        try await ensureServer(currentDirectory: directory)
+
+        var directories: [URL] = []
+        var seenDirectories = Set<String>()
+        var seenCursors = Set<String>()
+        var cursor: String?
+
+        repeat {
+            var params: [String: Any] = [
+                "archived": false,
+                "limit": 100,
+            ]
+            if let cursor { params["cursor"] = cursor }
+            let response = try await request(method: "thread/list", params: params)
+            let result = try resultObject(from: response)
+            guard let threads = result["data"] as? [[String: Any]] else {
+                throw ServiceError.invalidResponse("thread/list omitted result.data")
+            }
+
+            for thread in threads {
+                guard let path = thread["cwd"] as? String, !path.isEmpty else { continue }
+                let url = URL(fileURLWithPath: path).standardizedFileURL
+                if seenDirectories.insert(url.path).inserted {
+                    directories.append(url)
+                }
+            }
+
+            let nextCursor = result["nextCursor"] as? String
+            if let nextCursor, !nextCursor.isEmpty {
+                guard seenCursors.insert(nextCursor).inserted else {
+                    throw ServiceError.invalidResponse("thread/list repeated a pagination cursor")
+                }
+                cursor = nextCursor
+            } else {
+                cursor = nil
+            }
+        } while cursor != nil
+
+        return directories
+    }
+
     func createTask(
         workingDirectory: URL,
         title: String

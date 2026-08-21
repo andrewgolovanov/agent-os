@@ -20,18 +20,19 @@ Add the public Git marketplace at the release tag you want to install, then add
 the Agent OS plugin from that marketplace:
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.4.3
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.5.0
 codex plugin add agent-os@agent-os
 ```
 
-For a later release, replace `v0.4.3` with the latest published `vN.N.N` tag
+For a later release, replace `v0.5.0` with the latest published `vN.N.N` tag
 shown on the [Agent OS Releases page](https://github.com/andrewgolovanov/agent-os/releases).
 Codex downloads and manages the plugin snapshot; the user does not clone or
 maintain the Agent OS repository.
 
 Start a fresh Codex task. Plugin startup creates `~/.agent-os` when it does not
-exist, copies no project code, and records the packaged runtime selected for
-that plugin version. An existing valid development checkout selected through
+exist, copies no project code, records the packaged runtime selected for that
+plugin version, and idempotently registers the current task's eligible Git root
+in the private project registry. An existing valid development checkout selected through
 `AGENT_OS_SOURCE_ROOT` or the private source pointer remains authoritative and
 is never replaced by packaged bootstrap.
 
@@ -57,7 +58,24 @@ The installed Agent OS plugin also carries the deterministic Slack monitor
 runbook and its optional-integration guide. No documentation checkout is
 required for that workflow.
 
-## 2. Onboard a project from any folder
+## 2. Automatic project sync and manual onboarding
+
+On first launch, the macOS app uses public Codex App Server `thread/list`
+metadata for active, non-archived tasks. It passes only their `cwd` values to
+the packaged runtime. Existing unique Git roots are registered automatically;
+the app does not call `thread/read`, import task text, or create Task Board
+outcomes. The runtime deduplicates nested folders and normalized origins,
+prefers a durable checkout over a transient `.codex/worktrees` path, and skips
+missing paths, non-Git folders, unborn repositories, ambiguous keys, and
+worktrees with no durable checkout.
+
+The plugin applies the same idempotent operation to the current `cwd` on each
+new Codex task before Task Bridge resolves project routing. Automatic sync
+never moves a repository, changes Git state, maps Slack channels, or rewrites
+existing project entries.
+
+Use manual onboarding for a skipped repository, a multi-repository project, or
+reviewed Slack channel reconciliation.
 
 Open an existing Git repository from any location on the computer and ask:
 
@@ -222,17 +240,17 @@ The script bundles Sparkle, ad-hoc signs the complete app and its updater
 helpers, signs the update archive with the Agent OS Ed25519 key, and verifies
 the archive signature before returning. It creates:
 
-- `dist/release/AgentOS-0.4.3-macOS.zip`;
-- `dist/release/AgentOS-0.4.3-macOS.zip.sha256`;
+- `dist/release/AgentOS-0.5.0-macOS.zip`;
+- `dist/release/AgentOS-0.5.0-macOS.zip.sha256`;
 - `dist/release/appcast.xml`.
 
 This is not a Developer ID signature and the app is not notarized. Only install
 an archive downloaded from the expected Agent OS GitHub release and compare its
 checksum before opening it. The current public package and checksum are attached
-to [Agent OS v0.4.3](https://github.com/andrewgolovanov/agent-os/releases/tag/v0.4.3):
+to [Agent OS v0.5.0](https://github.com/andrewgolovanov/agent-os/releases/tag/v0.5.0):
 
 ```bash
-shasum -a 256 -c AgentOS-0.4.3-macOS.zip.sha256
+shasum -a 256 -c AgentOS-0.5.0-macOS.zip.sha256
 ```
 
 ### App updates

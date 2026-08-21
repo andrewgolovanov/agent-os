@@ -7,6 +7,7 @@ This repository is the portable Agent OS source. Keep user project code and muta
 ## Always
 
 - Treat private `AGENT_OS_HOME/config/projects.yaml` as the canonical registry for project keys, aliases, project roots, and repository paths.
+- Automatic Codex project sync may add only deterministic existing Git roots discovered from public active-thread `cwd` metadata or the current task `cwd`. It must skip conflicts, missing paths, non-Git folders, and transient worktrees without a durable checkout; it never imports thread content or Task Board outcomes. Manual onboarding and Slack channel reconciliation remain preview-first.
 - Resolve a project through the registry before substantive project work.
 - Read the registered project root `AGENTS.md` before working on that project. For a multi-repository registration, then obey any more specific repository `AGENTS.md` before editing that repository.
 - Before Git-sensitive conclusions or mutations, verify the exact path, repository root, remotes, branch, HEAD, and worktree status.

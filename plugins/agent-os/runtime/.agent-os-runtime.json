@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "version": "0.4.3",
-  "plugin_version": "0.4.3+codex.20260819203718",
+  "version": "0.5.0",
+  "plugin_version": "0.5.0+codex.20260821150412",
   "files": {
     "LICENSE": {
       "sha256": "56fdec8396b0f0564c3f9795b48fd025ce8bb85535ee9c1abfc0ce9ac4a27f6c",
       "executable": false
     },
     "bin/agent-os": {
-      "sha256": "0a46f5056671ea3586f952d3e8b882890c8efb9221515e18ec2df84600c69ca1",
+      "sha256": "88cb859575aaf242678608530939e0242b7cc464c07dc18a718e44bae67e45e7",
       "executable": true
     },
     "config/examples/monitors.yaml": {
@@ -20,7 +20,7 @@
       "executable": false
     },
     "config/examples/slack-monitor.yaml": {
-      "sha256": "a35c68d58fd67d77a796fe394cb6d0e4f285fbc6f3a3b27bb1b3a82cd074855c",
+      "sha256": "df4c1152c614a39088d22160c665424accaa9ca7e21df1fbca727b1da824200a",
       "executable": false
     },
     "config/examples/task-bridge.yaml": {
@@ -28,11 +28,15 @@
       "executable": false
     },
     "docs/optional-integrations.md": {
-      "sha256": "46660e366774648cf3c61e5ccce12a05405c7e945aea63434b8c8f55227c32a1",
+      "sha256": "ffa090d77f51e2769324d775580d40c8d44ad9221700c03a96214af9c708f33d",
       "executable": false
     },
     "docs/slack-monitor.md": {
-      "sha256": "81be20daebea0ecd9e7f70f518f403326548f03e454167e28863dfbff34cea4b",
+      "sha256": "c6654614975ad401c9423567e739a891323a94a52c4ca726ba6f7318e9cd3da5",
+      "executable": false
+    },
+    "lib/agent_os/codex_project_sync.rb": {
+      "sha256": "740c7c33b7f7e098b03291a78d1145866dd7fbe646a80b98952a8964e47f836d",
       "executable": false
     },
     "lib/agent_os/home_migrator.rb": {
@@ -56,7 +60,7 @@
       "executable": false
     },
     "lib/agent_os/slack_state.rb": {
-      "sha256": "2d5c186a9a087ef8e2ecb4012475f920da78964eb2260ac9c4ade698952dc5ea",
+      "sha256": "aa95333d750060138141f5ad49194344c4ada5148b1dea28fcc3120f53913111",
       "executable": false
     },
     "lib/agent_os/task_board.rb": {
@@ -72,7 +76,7 @@
       "executable": false
     },
     "tools/codex-activity-hook": {
-      "sha256": "33db37c33bcd80c90b83876f117a5b9a3ea244da8c685e00684ae98ae299756a",
+      "sha256": "2673f8c95ceb502b37e763e21b28b648ffa0afd68955b850ab0108de9e8e93de",
       "executable": true
     },
     "tools/project-time": {
@@ -80,7 +84,7 @@
       "executable": true
     },
     "tools/slack-state": {
-      "sha256": "2694c086ab555c6835a2ebaa4eb1b83fdc7484bdf5b471463bcdcfe767590bca",
+      "sha256": "900b188d9003a159e286dba707dc91eda9cd40d53f541e4fbea7965b7da9c8e4",
       "executable": true
     },
     "tools/task-board": {

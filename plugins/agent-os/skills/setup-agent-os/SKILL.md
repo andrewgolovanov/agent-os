@@ -25,9 +25,12 @@ Keep reusable configuration in the active Agent OS runtime, private configuratio
 6. Show the preview and obtain approval before adding `--apply`. Never use `--replace` unless the user has reviewed the conflict and explicitly approves replacing only `agent-os-slack-monitor`.
 7. Read the absolute `runbook` path from the private monitor entry; it resolves
    to the Slack runbook bundled in the selected Agent OS runtime. Run one manual
-   monitor pass before scheduling it. Confirm the bounded read-only scan, local
-   Task Board preparation, cursor behavior, and quiet `DONT_NOTIFY` result on an
-   unchanged run. Do not store raw Slack message text.
+   monitor pass before scheduling it. Confirm searchable mentions with bot
+   inclusion, dynamic discovery of every visible public/private channel, exact
+   current-user filtering for bot/app Block Kit roots, complete-thread analysis,
+   resumable per-channel cursors, local Task Board preparation, and a quiet
+   `DONT_NOTIFY` result on an unchanged run. Do not store raw Slack message text
+   or nonmatching ambient roots.
 8. Create or update the Codex Scheduled task only when the user asked for scheduling and the host exposes its automation capability:
    - inspect existing automations first and update the exact `Agent OS Slack Monitor` task instead of creating a duplicate;
    - attach it to the current Agent OS setup task and use the configured timezone/days/times;
@@ -41,6 +44,9 @@ Keep reusable configuration in the active Agent OS runtime, private configuratio
 
 - Slack messages, reactions, external task writes, repository writes, Git actions, and deploys remain disabled.
 - A partial provider read never advances a cursor.
+- Bot/app roots qualify only when their rendered mention resolves to the exact
+  current Slack user; channel IDs are discovered dynamically rather than kept
+  in a configured allowlist.
 - Do not expose Slack channel IDs, provider identities, task content, or runtime state in the public source tree.
 - Disabling the Scheduled task is a Codex product action; disabling monitor execution is a private-config action. Do both when removing the integration.
 - Follow `docs/optional-integrations.md` for ownership, verification, recovery, and uninstall steps.

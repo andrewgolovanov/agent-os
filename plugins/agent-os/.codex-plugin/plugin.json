@@ -1,7 +1,7 @@
 {
   "name": "agent-os",
-  "version": "0.4.3+codex.20260819203718",
-  "description": "Bootstrap Agent OS locally, onboard repositories from any folder, manage its canonical Task Board, and preserve durable Context Loop work from Codex.",
+  "version": "0.5.0+codex.20260821150412",
+  "description": "Bootstrap Agent OS locally, synchronize active Codex repositories, manage its canonical Task Board, and preserve durable Context Loop work.",
   "author": {
     "name": "Andrew Golovanov"
   },
@@ -12,8 +12,8 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Agent OS",
-    "shortDescription": "Bootstrap, onboard, and manage Agent OS from Codex.",
-    "longDescription": "Creates the private Agent OS home automatically, registers existing repositories without moving them, applies validated Task Board mutations, and keeps long-running work resumable through the bundled Context Loop skill.",
+    "shortDescription": "Sync projects and manage Agent OS from Codex.",
+    "longDescription": "Creates the private Agent OS home automatically, registers eligible active Codex repositories without moving them, applies validated Task Board mutations, and keeps long-running work resumable through the bundled Context Loop skill.",
     "developerName": "Andrew Golovanov",
     "category": "Productivity",
     "websiteURL": "https://github.com/andrewgolovanov/agent-os",

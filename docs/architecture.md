@@ -49,7 +49,17 @@ Each layer has one purpose. The root `AGENTS.md` routes work without duplicating
 
 Every project exists only as an entry in private `AGENT_OS_HOME/config/projects.yaml`. `root` defines the working project root, `repositories` stores verified Git roots and roles, and optional `slack_channels` records reviewed stable channel IDs that belong to the project. For a normal single-repository project, `root` is the Git root. A repository may live in any user-selected folder.
 
-Project onboarding accepts an existing absolute Git root, verifies its identity, and previews the registry change. A conservative channel-name comparison may suggest existing unfinished Slack-only work, but it never selects a channel automatically. After a second preview with exact reviewed channel IDs, apply records those mappings and may assign only unfinished outcomes that currently have no project; existing attribution and card labels are preserved. Onboarding never creates `AGENT_OS_HOME/projects`, writes Agent OS metadata into the product repository, moves source code, or merges outcomes by similar text. Existing repository `AGENTS.md`, READMEs, and documentation continue to own project-local rules and context.
+Automatic Codex synchronization is a narrow registry-only path. The macOS app
+pages through public App Server metadata for active, non-archived tasks and
+passes only unique `cwd` values to the shared runtime. The plugin hook passes
+the current task `cwd` before Task Bridge routing. The runtime registers only
+deterministic existing Git roots, deduplicates nested paths and normalized
+origins, prefers a durable checkout over transient Codex worktrees, preserves
+existing entries, and skips every unavailable, non-Git, unborn, or conflicting
+candidate. It never reads thread bodies, creates outcomes, maps channels, or
+changes repository files or Git state.
+
+Manual project onboarding accepts an existing absolute Git root, verifies its identity, and previews the registry change. A conservative channel-name comparison may suggest existing unfinished Slack-only work, but it never selects a channel automatically. After a second preview with exact reviewed channel IDs, apply records those mappings and may assign only unfinished outcomes that currently have no project; existing attribution and card labels are preserved. Onboarding never creates `AGENT_OS_HOME/projects`, writes Agent OS metadata into the product repository, moves source code, or merges outcomes by similar text. Existing repository `AGENTS.md`, READMEs, and documentation continue to own project-local rules and context.
 
 A multi-repository project uses the same model: one registry entry contains multiple `repositories`, and `root` points to the primary repository. It does not need an Agent OS-owned container.
 
@@ -58,7 +68,10 @@ If a user moves a repository, identity-checked relink updates only `root` and th
 ## Security and authority
 
 - Discovery and reads are allowed only inside the selected Agent OS installation and registered paths.
-- Project onboarding does not move, clone, or modify repositories. Its optional Task Board reconciliation is preview-first, limited to selected stable Slack channel IDs, and never overwrites an existing project attribution.
+- Automatic Codex synchronization may mutate only the private project registry
+  for deterministic eligible Git roots. Manual onboarding and optional Task
+  Board reconciliation remain preview-first, limited to selected stable Slack
+  channel IDs, and never overwrite an existing project attribution.
 - External provider tools are read-only by default.
 - Commits, pushes, PRs, deployments, messages, and external task mutations require explicit user intent.
 - Agent OS does not store secrets, full conversations, or complete build logs.
@@ -72,11 +85,11 @@ The user-level Task Bridge handles chats inside registered project paths and alr
 
 Project Time independently accounts for every Codex turn inside a registered project, whether or not it is linked to an outcome. Its project ledger does not alter outcome lifecycle and must not be added to Task Board time because linked turns already appear in the project total. Historical paths and exact exclusions belong to the project registry, and generated reports aggregate completed intervals by month in the Agent OS timezone.
 
-Slack Monitor is one Agent OS-wide read-only heartbeat. It collects direct mentions, incoming DMs and group DMs, and active watched roots. Project channels provide attribution rather than ambient full-channel scanning. An actionable signal from a named channel may attach a `slack:<channel_id>` label with the current `#channel-name`; DMs never use participant names as labels. It may retain only the normalized short root-message title in the private Task Board source record; replies, full messages, authors, cursors, and dispositions keep their existing owners and privacy boundaries. Its short prompt references canonical `AGENT_OS_HOME/config/monitors.yaml` and the installed `docs/slack-monitor.md`; policy is not copied into the automation. The cursor advances only after a complete scan.
+Slack Monitor is one Agent OS-wide read-only heartbeat. It collects direct mentions, incoming DMs and group DMs, and active watched roots. Search enables bot results, while a dynamic inventory of all visible public/private channels supplies the fallback for Block Kit-only app mentions that Slack search may omit. That fallback reads only each channel's bounded new-root window, discards human roots and bot/app roots without an exact current-user mention, and expands matching threads through the same unresolved-actionability rules as human mentions. Project channels still provide attribution rather than scan permission; no channel allowlist is configured. An actionable signal from a named channel may attach a `slack:<channel_id>` label with the current `#channel-name`; DMs never use participant names as labels. It may retain only the normalized short root-message title in the private Task Board source record; replies, full messages, authors, and discarded ambient roots are never persisted. Per-channel cursors retain resumable scan progress, while the global cursor advances only after every source and the complete dynamic inventory succeed. Its short prompt references canonical `AGENT_OS_HOME/config/monitors.yaml` and the installed `docs/slack-monitor.md`; policy is not copied into the automation.
 
 Optional integration setup keeps owners separate. The Agent OS CLI manages private monitor configuration, the plugin bundle supplies hook commands, the connected Slack integration owns provider access, and Codex Scheduled owns recurring execution. The setup skill coordinates these steps without storing credentials or emulating a missing product API.
 
-Packaged bootstrap also preserves ownership. Versioned plugin and app bundles contain a read-only runtime payload, `AGENT_OS_HOME` owns mutable state and the selected runtime pointer, and project repositories remain independent Git roots. The first component to run performs idempotent bootstrap; the other reuses the same private home.
+Packaged bootstrap also preserves ownership. Versioned plugin and app bundles contain a read-only runtime payload, `AGENT_OS_HOME` owns mutable state and the selected runtime pointer, and project repositories remain independent Git roots. The first component to run performs idempotent bootstrap; the app and task-start hook then invoke the same runtime-owned deterministic project synchronization, and the other component reuses the same private home.
 
 The macOS app is a replaceable presentation and action layer over these owners. It has no separate task database and mutates state only through deterministic Agent OS tools. It creates and names an idle Codex task through the stable App Server `stdio` API, records exact membership, copies the prepared prompt, and opens the public `codex://threads/<id>` handoff. Turn start stays in Codex so two App Server clients do not compete for one task.
 
@@ -89,6 +102,6 @@ The update plane has no separate database. Core and plugin updates accept only v
 - a verified cross-version and second-Mac update pilot;
 - Slack, GitHub, or other provider writes;
 - Daily Chores and Trackline integrations;
-- mutating project or repository auto-discovery.
+- broader project discovery from private Codex desktop state or thread bodies.
 
 A new layer is added only after repeated real work establishes its need. Continuity comes before telemetry or broader automation.

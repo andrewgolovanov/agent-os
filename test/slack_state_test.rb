@@ -63,6 +63,34 @@ class SlackStateTest < Minitest::Test
     assert_equal "200.000002", recovered.fetch("last_successful_cursor")
   end
 
+  def test_channel_cursors_advance_independently_only_after_complete_reads
+    assert_raises(ArgumentError) do
+      @state.advance_channel(channel_id: "C123", cursor: "100.000001", complete: false)
+    end
+
+    first = @state.advance_channel(channel_id: "C123", cursor: "100.000001", complete: true)
+    second = @state.advance_channel(channel_id: "G456", cursor: "200.000002", complete: true)
+
+    assert_nil first.fetch("previous_cursor")
+    assert_equal "200.000002", second.fetch("cursor")
+    assert_equal(
+      { "C123" => "100.000001", "G456" => "200.000002" },
+      @state.status.dig("monitor", "channel_cursors")
+    )
+    assert_empty @state.validate!
+  end
+
+  def test_channel_cursor_cannot_move_backwards
+    @state.advance_channel(channel_id: "C123", cursor: "200.000002", complete: true)
+
+    error = assert_raises(ArgumentError) do
+      @state.advance_channel(channel_id: "C123", cursor: "100.000001", complete: true)
+    end
+
+    assert_match(/backwards/, error.message)
+    assert_equal "200.000002", @state.status.dig("monitor", "channel_cursors", "C123")
+  end
+
   def test_seen_ledger_rejects_raw_message_content
     error = assert_raises(ArgumentError) do
       @state.record_seen(

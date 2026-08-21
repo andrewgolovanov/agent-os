@@ -39,6 +39,50 @@ struct AgentOSCLIService: Sendable {
         )
     }
 
+    func syncCodexProjects(
+        configuration: AgentOSConfiguration,
+        workingDirectories: [URL]
+    ) async throws -> AgentOSProjectSyncReport {
+        try validate(configuration)
+        let repositories = workingDirectories
+            .filter(\.isFileURL)
+            .map(\.standardizedFileURL)
+            .reduce(into: [URL]()) { result, url in
+                if !result.contains(where: { $0.path == url.path }) { result.append(url) }
+            }
+        guard !repositories.isEmpty else {
+            return AgentOSProjectSyncReport(
+                applied: true,
+                discoveredCount: 0,
+                eligibleCount: 0,
+                registeredCount: 0,
+                preservedCount: 0,
+                skippedCount: 0
+            )
+        }
+
+        let executable = configuration.sourceURL.appendingPathComponent("bin/agent-os")
+        guard FileManager.default.isExecutableFile(atPath: executable.path) else {
+            throw ProcessRunnerError.launchFailed("Missing executable bin/agent-os under \(configuration.sourceURL.path).")
+        }
+        var arguments = [
+            "sync-codex-projects",
+            "--source", configuration.sourceURL.path,
+            "--home", configuration.homeURL.path,
+            "--apply",
+            "--json",
+        ]
+        for repository in repositories {
+            arguments.append(contentsOf: ["--repository", repository.path])
+        }
+        let output = try await ProcessRunner.run(
+            executable: executable,
+            arguments: arguments,
+            currentDirectory: configuration.homeURL
+        )
+        return try JSONDecoder().decode(AgentOSProjectSyncReport.self, from: output.stdout)
+    }
+
     func createTask(
         configuration: AgentOSConfiguration,
         title: String,

@@ -4,6 +4,28 @@ import XCTest
 @testable import AgentOS
 
 final class AgentOSTests: XCTestCase {
+    func testProjectSyncReportDecodesRuntimeCounts() throws {
+        let data = Data(#"""
+        {
+          "applied": true,
+          "discovered_count": 12,
+          "eligible_count": 8,
+          "registered_count": 3,
+          "preserved_count": 5,
+          "skipped_count": 4
+        }
+        """#.utf8)
+
+        let report = try JSONDecoder().decode(AgentOSProjectSyncReport.self, from: data)
+
+        XCTAssertTrue(report.applied)
+        XCTAssertEqual(report.discoveredCount, 12)
+        XCTAssertEqual(report.eligibleCount, 8)
+        XCTAssertEqual(report.registeredCount, 3)
+        XCTAssertEqual(report.preservedCount, 5)
+        XCTAssertEqual(report.skippedCount, 4)
+    }
+
     func testAppearanceDefaultsToDarkAndSupportsPersistentToggle() {
         XCTAssertEqual(AgentOSAppearance.resolved(arguments: [], storedValue: "invalid"), .dark)
         XCTAssertEqual(AgentOSAppearance.resolved(arguments: [], storedValue: "light"), .light)

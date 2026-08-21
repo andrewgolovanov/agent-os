@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-08-21
+
+- Added automatic registration of deterministic active Codex repositories.
+  The macOS app pages public non-archived `thread/list` metadata on launch, and
+  the plugin hook synchronizes the current task `cwd` before Task Bridge
+  routing. The shared runtime deduplicates nested paths and origins, normalizes
+  transient worktrees to durable checkouts, skips unsafe candidates, and never
+  reads thread bodies or creates historical tasks.
+- Added `agent-os sync-codex-projects` with preview and apply modes plus focused
+  Ruby coverage for eligible roots, duplicate origins, transient worktrees,
+  conflicts, and registry-only behavior. Manual onboarding and reviewed Slack
+  channel mapping remain preview-first.
+- Extended Slack monitor state with independently validated per-channel cursors
+  and an `advance-channel --complete` command so a rate-limited dynamic channel
+  pass can resume without advancing the global cursor.
+- Updated the Slack monitor template, runbook, canonical Scheduled prompt, and
+  setup skill to discover every visible public/private channel dynamically,
+  retain only bot/app roots mentioning the exact current user, and process
+  those complete threads through the same actionable rules as human mentions.
+  Nonmatching ambient messages and raw thread bodies remain unpersisted.
+
 ## 2026-08-19
 
 - Published `v0.4.3` from

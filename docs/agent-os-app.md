@@ -19,10 +19,10 @@ the canonical Agent OS registry and Task Board remain usable without this app.
 
 | Concern | Canonical owner | Console role |
 | --- | --- | --- |
-| Project identity and paths | private `AGENT_OS_HOME/config/projects.yaml` | read and present |
+| Project identity and paths | private `AGENT_OS_HOME/config/projects.yaml` | invoke deterministic sync, then read and present |
 | Outcome lifecycle | private Task Board via `tools/task-board` | invoke validated actions |
 | Task index | generated private `AGENT_OS_HOME/work/board.json` | refresh/read model |
-| Codex tasks | Codex App Server | create/name exact idle task and hand off |
+| Codex tasks | Codex App Server | list active task `cwd` metadata, create/name exact idle task, and hand off |
 | Provider context | exact source URLs | contextual display and open only; optional read-only `gh` PR lookup |
 
 The app never edits Task Board JSON or Markdown directly and owns no database.
@@ -38,6 +38,10 @@ with an argument array.
 - `AGENT_OS_HOME` points to private registry, tasks, and runtime.
 - If the source variable is absent, the app initializes or upgrades the private
   runtime pointer from the bundle, then reads `AGENT_OS_HOME/source-path`.
+- On each app launch, public App Server `thread/list` supplies active,
+  non-archived `cwd` metadata. The shared runtime automatically registers only
+  deterministic eligible Git roots before the app loads its project snapshot;
+  no thread body or historical task is imported.
 - The private home defaults to `~/.agent-os`.
 - `WORKSPACE_CONSOLE_ROOT` remains only as a deprecated compatibility alias for older
   one-directory installations.
@@ -126,6 +130,8 @@ may call it on its own queue without entering main-actor-isolated code.
   template version of the same path geometry for the menu-bar extra;
 - create outcome and validated lifecycle changes;
 - bounded menu-bar counts and quick actions.
+- a compact notice after newly discovered eligible Codex repositories are
+  registered; skipped paths do not block the existing Board from loading.
 - unified update settings: Sparkle owns packaged app/runtime updates, while
   Codex owns versioned marketplace snapshots of the companion plugin; automatic
   app installation remains disabled until the user opts in.

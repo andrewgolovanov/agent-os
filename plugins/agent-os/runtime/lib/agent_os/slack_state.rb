@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "bigdecimal"
 require "fileutils"
 require "json"
 require "securerandom"
@@ -9,6 +10,8 @@ module AgentOS
   class SlackState
     DISPOSITIONS = %w[actionable update blocker ambiguity fyi duplicate ignored].freeze
     WATCH_STATES = %w[active closed expired].freeze
+    CHANNEL_ID_PATTERN = /\A[CG][A-Z0-9]+\z/.freeze
+    SLACK_TIMESTAMP_PATTERN = /\A\d+\.\d+\z/.freeze
 
     attr_reader :root
 
@@ -124,6 +127,30 @@ module AgentOS
       end
     end
 
+    def advance_channel(channel_id:, cursor:, complete:)
+      raise ArgumentError, "refusing to advance channel after a partial read" unless complete
+
+      channel_id = channel_id.to_s.upcase
+      cursor = cursor.to_s
+      raise ArgumentError, "invalid Slack channel ID: #{channel_id}" unless channel_id.match?(CHANNEL_ID_PATTERN)
+      raise ArgumentError, "invalid Slack channel cursor: #{cursor}" unless cursor.match?(SLACK_TIMESTAMP_PATTERN)
+
+      with_lock do
+        initialize_files
+        payload = read_json(monitor_path)
+        cursors = payload["channel_cursors"] ||= {}
+        previous = cursors[channel_id]
+        if previous && BigDecimal(cursor) < BigDecimal(previous)
+          raise ArgumentError, "refusing to move channel cursor backwards for #{channel_id}"
+        end
+
+        cursors[channel_id] = cursor
+        payload["updated_at"] = timestamp
+        atomic_write(monitor_path, JSON.pretty_generate(payload) + "\n")
+        { "channel_id" => channel_id, "cursor" => cursor, "previous_cursor" => previous }
+      end
+    end
+
     def monitor_failure(code:)
       with_lock do
         initialize_files
@@ -168,6 +195,14 @@ module AgentOS
       monitor = read_json(monitor_path)
       errors << "monitor schema_version must be 1" unless monitor["schema_version"] == 1
       errors << "monitor consecutive_failures must be non-negative" unless monitor["consecutive_failures"].is_a?(Integer) && monitor["consecutive_failures"] >= 0
+      channel_cursors = monitor.fetch("channel_cursors", {})
+      errors << "monitor channel_cursors must be a mapping" unless channel_cursors.is_a?(Hash)
+      if channel_cursors.is_a?(Hash)
+        channel_cursors.each do |channel_id, cursor|
+          errors << "monitor has invalid channel ID: #{channel_id}" unless channel_id.to_s.match?(CHANNEL_ID_PATTERN)
+          errors << "monitor has invalid channel cursor for #{channel_id}" unless cursor.to_s.match?(SLACK_TIMESTAMP_PATTERN)
+        end
+      end
       errors
     rescue JSON::ParserError => e
       ["invalid runtime JSON: #{e.message}"]
@@ -210,7 +245,8 @@ module AgentOS
         "last_failure_code" => nil,
         "last_failure_at" => nil,
         "consecutive_failures" => 0,
-        "recovered" => false
+        "recovered" => false,
+        "channel_cursors" => {}
       }
     end
 

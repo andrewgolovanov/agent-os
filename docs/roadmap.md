@@ -4,6 +4,27 @@ This roadmap contains only the next verifiable product outcomes.
 
 ## Now
 
+### Verify automatic project sync and structured Slack bot mentions in a packaged install
+
+The implementation is local and must be proven with the synchronized packaged
+runtime and a fresh Codex task before release.
+
+Done when:
+
+- a fresh app launch registers eligible active Codex Git roots without reading
+  thread bodies or changing repository state;
+- a fresh plugin task in a previously unknown repository registers its current
+  root before Task Bridge routing;
+- missing, non-Git, duplicate-origin, conflicting, and transient-only paths are
+  skipped without blocking the app;
+- a manual Slack monitor pass dynamically inventories visible channels, finds
+  one exact current-user mention hidden in a bot/app Block Kit root, reads its
+  complete thread, and ignores a comparable root without the mention;
+- an interrupted channel pass resumes from per-channel cursors without moving
+  the global cursor, and an unchanged complete repeat returns `DONT_NOTIFY`;
+- the live `Agent OS Slack Monitor` Scheduled prompt is updated only after its
+  exact preview is approved.
+
 ### Verify the no-checkout packaged setup with a second installation
 
 `v0.3.0` packages the checkout-independent minimal runtime in both the Codex

@@ -30,7 +30,7 @@ prompt, and recovery procedure are in [optional integrations](optional-integrati
 1. Find `agent-os-slack-monitor` in private `AGENT_OS_HOME/config/monitors.yaml`.
 2. Resolve the current Slack user profile again on every run and use its exact user ID for mention search.
 3. Resolve project attribution through `AGENT_OS_HOME/config/projects.yaml`; never guess channel IDs or duplicate them in the Scheduled prompt.
-4. Use `tools/task-board` for outcome state and `tools/slack-state` for the runtime cursor, seen ledger, and watched roots.
+4. Use `tools/task-board` for outcome state and `tools/slack-state` for the global cursor, per-channel cursors, seen ledger, and watched roots.
 
 If the config, registry, or connected Slack integration is unavailable, record
 a monitor failure. Never advance any cursor after a partial read.
@@ -58,22 +58,34 @@ request, deploy, or manage a user-owned Codex task.
    `done` and `cancelled` outcomes automatically.
 3. Read active exact-root watches before general search because Slack search does not guarantee that every reply is returned.
 4. Load the last successful cursor from `AGENT_OS_HOME/.runtime/dispatcher/slack-monitor.json` and apply the configured overlap. If the cursor is `null`, read only one configured interval plus overlap; do not backfill old history.
-5. Search for exact `<@USER_ID>` mentions in all accessible public and private channels within the bounded window.
-6. Search incoming direct messages and group direct messages separately. Deduplicate conversations and expand only candidates with a new unresolved ask; acknowledgements and FYI messages do not become outcomes.
-7. For candidate roots and replies, read only enough thread or channel context to determine whether action remains. Registered project channels are attribution evidence, not permission to scan ambient traffic. Resolve the current channel display name only for an actionable named-channel signal that needs a Task Board label.
-8. Identify each new message by `channel_id + thread_ts + message_ts` and check the exact-event ledger before processing it.
-9. Correlate first by an exact Task Board source, then by registered channel mapping, explicit repository or pull-request links, and verified continuity. If the project is unknown, create one unassigned inbox outcome; never merge on similar wording alone. Attach the exact root permalink and root-message text through `agent_os_attach_source` or `tools/task-board source --title`; Task Board stores only a normalized 96-character display title. For a named Slack channel, upsert a display-only label with key `slack:<channel_id>`, current name `#channel-name`, and kind `slack_channel`.
-10. Persist only disposition and stable identifiers through `tools/slack-state seen`. Do not save raw Slack message text, author names, or message summaries in runtime state. The short source title belongs only to the private Task Board source record and must come from the root message, never from replies or participant metadata.
-11. After a complete successful scan, record all seen events first, then advance watched-root cursors and the global cursor with the required `--complete` flag.
-12. Before deciding whether to notify, run `tools/task-board summary --json`. Every user-facing `NOTIFY` must include the configured `notifications.agent_os_app` link and the current Agent OS-wide unfinished total. The app reads the same private Task Board state, so this link is the user-facing destination; do not link to internal generated files.
+5. Search for exact `<@USER_ID>` mentions in all accessible public and private channels within the bounded window. Set `include_bots: true`; this catches searchable bot text but is not sufficient for Block Kit-only messages.
+6. Dynamically list every public and private channel visible to the current user; do not use a configured channel allowlist. Page the complete inventory. For each channel, read only roots newer than its saved channel cursor, or the global bounded cursor when the channel is new.
+7. In the dynamic channel pass, discard human-authored roots and bot/app roots that do not contain a mention resolving to the exact current user ID in their rendered text or blocks. A display-name string, `@channel`, `@here`, or user-group mention is not an exact user mention. Do not persist or semantically analyze discarded ambient messages.
+8. For every matching bot/app root, read the thread to the end and apply the same unresolved-actionability rules as a human direct mention. Advance that channel with `tools/slack-state advance-channel --complete` only after its bounded pages and candidate threads were read completely. If rate limiting interrupts the inventory, preserve completed channel cursors, record a monitor failure, leave the global cursor unchanged, and resume remaining channels on the next run.
+9. Search incoming direct messages and group direct messages separately. Deduplicate conversations and expand only candidates with a new unresolved ask; acknowledgements and FYI messages do not become outcomes.
+10. For candidate roots and replies, read only enough thread or channel context to determine whether action remains. Registered project channels are attribution evidence only. Resolve the current channel display name only for an actionable named-channel signal that needs a Task Board label.
+11. Identify each new message by `channel_id + thread_ts + message_ts` and check the exact-event ledger before processing it.
+12. Correlate first by an exact Task Board source, then by registered channel mapping, explicit repository or pull-request links, and verified continuity. If the project is unknown, create one unassigned inbox outcome; never merge on similar wording alone. Attach the exact root permalink and root-message text through `agent_os_attach_source` or `tools/task-board source --title`; Task Board stores only a normalized 96-character display title. For a named Slack channel, upsert a display-only label with key `slack:<channel_id>`, current name `#channel-name`, and kind `slack_channel`.
+13. Persist only disposition and stable identifiers through `tools/slack-state seen`. Do not save raw Slack message text, author names, or message summaries in runtime state. The short source title belongs only to the private Task Board source record and must come from the root message, never from replies or participant metadata.
+14. After every source and the entire dynamic channel inventory complete successfully, record all seen events first, then advance watched-root cursors and the global cursor with the required `--complete` flag.
+15. Before deciding whether to notify, run `tools/task-board summary --json`. Every user-facing `NOTIFY` must include the configured `notifications.agent_os_app` link and the current Agent OS-wide unfinished total. The app reads the same private Task Board state, so this link is the user-facing destination; do not link to internal generated files.
 
 ## Source-specific rules
 
 ### Mentions
 
 - Search public and private channels for the exact current-user mention.
+- Set `include_bots: true`, while retaining the dynamic channel pass because Slack search may omit Block Kit-only bot mentions.
 - A mention inside a thread requires reading that thread to the end so an already resolved ask does not create an outcome.
 - `@channel`, `@here`, and user-group mentions are not direct mentions of the current user.
+
+### Bot and app mentions
+
+- Discover visible public and private channels on every run; channel IDs are runtime identities and are never configured as an allowlist.
+- Read only each channel's bounded new-root window. Filter by bot/app authorship first, then require a rendered mention that resolves to the exact current user ID.
+- Once selected, process the complete thread exactly like a human mention: require a concrete unresolved ask, review, approval, blocker, or follow-up owned by the current user.
+- A bot-authored FYI, automated status without the exact user mention, resolved review, or repeated event does not create an outcome.
+- Advance one channel cursor only after its pages and matching threads are complete. Per-channel progress is resumable; the global cursor still requires the complete inventory.
 
 ### Direct and group direct messages
 
@@ -110,6 +122,11 @@ tools/slack-state seen \
   --task-id TASK_ID
 
 tools/slack-state monitor-success --cursor CURSOR_TIMESTAMP --complete
+
+tools/slack-state advance-channel \
+  --channel CHANNEL_ID \
+  --cursor CHANNEL_CURSOR_TIMESTAMP \
+  --complete
 ```
 
 ## Watches
@@ -135,5 +152,7 @@ tools/slack-state close-watch --channel CHANNEL_ID --thread-ts ROOT_TIMESTAMP
 - A new actionable outcome, blocker, ambiguity, or material lifecycle change returns `NOTIFY`.
 - Every `NOTIFY` includes the clickable Agent OS app link and the current total of unfinished outcomes. A quiet `DONT_NOTIFY` does not create a notification only because the unchanged total exists.
 
-The monitor does not use Chrome, Slack Desktop, or Computer Use as a fallback,
-and it does not read the full ambient traffic of registered project channels.
+The monitor does not use Chrome, Slack Desktop, or Computer Use as a fallback.
+Structured bot-mention discovery performs a bounded read of new roots across
+dynamically visible channels, but it immediately discards nonmatching ambient
+messages and never persists or treats them as task context.

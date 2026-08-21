@@ -1,6 +1,6 @@
 # Current state
 
-Verified: 2026-08-19
+Verified: 2026-08-21
 
 ## Product source
 
@@ -51,6 +51,12 @@ Verified: 2026-08-19
   valid explicitly selected development checkout remains authoritative.
 - MCP and CLI onboarding can preview and register an existing Git repository
   from any absolute location without moving, cloning, renaming, or modifying it.
+- The shared runtime can automatically synchronize deterministic active Codex
+  Git roots. The app supplies only active non-archived `thread/list` `cwd`
+  metadata on launch, and the plugin hook supplies the current task `cwd`
+  before Task Bridge routing. Thread bodies and historical tasks are not
+  imported; missing, non-Git, unborn, duplicate, conflicting, and transient-only
+  candidates are skipped.
 - Onboarding can conservatively suggest matching Slack channels, then requires
   a second preview with exact selected channel IDs before it records mappings
   or assigns unfinished outcomes that have no current project. Existing project
@@ -78,22 +84,26 @@ Verified: 2026-08-19
   remains in its existing repository location.
 - The verified local project repositories now live independently of the Agent
   OS source checkout and resolve through absolute paths in the private registry.
-- Packaged bootstrap preserves existing files, creates no project entries, and
-  enables no monitor or provider integration. Project onboarding remains a
-  separate preview-first operation.
+- Packaged bootstrap itself preserves existing files and enables no monitor or
+  provider integration. Immediately afterward, the app or task-start hook may
+  add only deterministic eligible Git roots to the private registry. Manual
+  onboarding, relinking, and Slack channel reconciliation remain preview-first.
 
 ## Verified implementation
 
 - `agent-os doctor` passes for the current instance and for a fresh temporary
   home.
 - The full Agent OS validator passes against both homes.
-- The current Ruby suite passes 76 tests and 683 assertions, including active
-  private-home resolution, safe home migration, monitor-path rewriting,
-  identity-checked repository relinking, preview-first Slack channel mapping,
-  safe unfinished-outcome reconciliation, completion follow-up, and Project
-  Time reporting contracts.
-- Agent OS app builds and its 29 Swift tests pass; bundle launch verification
-  succeeds with both the active home and a fresh empty private home.
+- The current Ruby suite passes 86 tests and 751 assertions, including active
+  private-home resolution, safe home migration, automatic eligible Codex
+  repository registration, monitor-path rewriting, per-channel Slack cursor
+  validation, identity-checked repository relinking, preview-first Slack
+  channel mapping, safe unfinished-outcome reconciliation, completion
+  follow-up, and Project Time reporting contracts.
+- Agent OS app builds and its 30 Swift tests pass. Current bundle launch
+  verification succeeds against the active private home: the ad-hoc signed
+  development bundle passes strict code-signature validation, launches from
+  `apps/agent-os/dist`, and leaves the validated eight-project registry intact.
 - Task Board and the Agent OS MCP now support idempotent display-only Slack
   channel labels keyed by `slack:<channel_id>`. The native app keeps every
   channel label on its task card, filters unmapped labels separately from
@@ -120,6 +130,11 @@ Verified: 2026-08-19
   project. A bounded connected-Slack smoke verified one named-channel outcome
   with no registered projects; a real product-owned Scheduled execution remains
   unverified.
+- Slack monitor policy now dynamically discovers visible public/private
+  channels for a bounded bot/app root pass, requires an exact current-user
+  mention, processes matches like human mention threads, and stores resumable
+  per-channel cursors. Nonmatching ambient messages are discarded and never
+  persisted. A real updated Scheduled execution remains unverified.
 - The two recurrent native crash signatures are covered at their executor
   boundaries: Task Board filesystem events enter the main-actor watcher on the
   main queue, and the LaunchServices Codex-open callback is a nonisolated

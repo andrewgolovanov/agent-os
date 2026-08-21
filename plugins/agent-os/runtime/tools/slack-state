@@ -82,6 +82,15 @@ begin
     raise OptionParser::MissingArgument, "cursor" unless options[:cursor]
     root = options.delete(:root)
     puts JSON.pretty_generate(AgentOS::SlackState.new(root).monitor_success(**options))
+  when "advance-channel"
+    options = options_for(ARGV) do |opts, values|
+      opts.on("--channel ID") { |value| values[:channel_id] = value }
+      opts.on("--cursor VALUE") { |value| values[:cursor] = value }
+      opts.on("--complete") { values[:complete] = true }
+    end
+    %i[channel_id cursor].each { |key| raise OptionParser::MissingArgument, key.to_s unless options[key] }
+    root = options.delete(:root)
+    puts JSON.pretty_generate(AgentOS::SlackState.new(root).advance_channel(**options))
   when "monitor-failure"
     options = options_for(ARGV) { |opts, values| opts.on("--code CODE") { |value| values[:code] = value } }
     raise OptionParser::MissingArgument, "code" unless options[:code]
@@ -111,6 +120,7 @@ begin
         advance-watch --channel ID --thread-ts TS --last-seen-message-ts TS --complete
         close-watch --channel ID --thread-ts TS [--state closed|expired]
         monitor-success --cursor VALUE --complete
+        advance-channel --channel ID --cursor VALUE --complete
         monitor-failure --code CODE
         status
         validate

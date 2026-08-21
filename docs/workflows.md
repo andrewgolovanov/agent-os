@@ -1,6 +1,21 @@
 # Workflows
 
-## Onboard a project
+## Synchronize Codex projects
+
+1. On first app launch, page through public Codex App Server `thread/list` with
+   `archived: false` and collect only unique `cwd` metadata.
+2. Normalize each directory to a real Git root. Collapse nested paths and
+   equivalent origins, and replace transient Codex worktrees with a durable
+   checkout when one exists.
+3. Automatically register only deterministic roots whose project key is not
+   owned by another repository. Preserve existing entries and skip every
+   unavailable, non-Git, unborn, ambiguous, or worktree-only candidate.
+4. At `UserPromptSubmit`, apply the same idempotent operation to the current
+   task `cwd` before Task Bridge resolves the project.
+5. Never read thread bodies, create outcomes, migrate Slack history, map
+   channels, move repositories, or change Git state during synchronization.
+
+## Onboard a project manually
 
 1. Invoke `$onboard-project` from the existing repository.
 2. Provide a project key, display name, and absolute paths for its repositories.
@@ -58,13 +73,16 @@ Change lifecycle only through `tools/task-board`. Private `task.json` is the str
 
 1. One Agent OS heartbeat resolves the current Slack user through the connected integration.
 2. Active watched roots are read before global mention and DM search.
-3. Direct mentions are searched across accessible public and private channels; DMs and group DMs are read separately.
-4. Exact event identity is checked through `tools/slack-state`.
-5. Correlation uses stable Task Board sources and verified registry attribution, not similar text.
-6. A registered stable Slack channel mapping provides project attribution. Without one, an unknown-project named-channel signal may become an unassigned inbox outcome with a display-only `#channel-name` label keyed by the stable Slack channel ID.
-7. Channel labels remain visible on task cards after attribution. They support scanning and filtering but never become project keys, repository paths, source identity, or routing authority. DMs do not persist participant names as labels.
-8. The cursor advances only after a complete successful scan.
-9. External messages, ambient full-channel scans, code or Git mutations, deployments, and management of user-owned Codex tasks are prohibited.
+3. Human direct mentions are searched across accessible public and private channels; DMs and group DMs are read separately.
+4. Visible public/private channels are discovered dynamically. Only their new
+   root-message window is read, and only bot/app roots containing an exact
+   current-user mention are expanded and processed like human mention threads.
+5. Exact event identity is checked through `tools/slack-state`.
+6. Correlation uses stable Task Board sources and verified registry attribution, not similar text.
+7. A registered stable Slack channel mapping provides project attribution. Without one, an unknown-project named-channel signal may become an unassigned inbox outcome with a display-only `#channel-name` label keyed by the stable Slack channel ID.
+8. Channel labels remain visible on task cards after attribution. They support scanning and filtering but never become project keys, repository paths, source identity, or routing authority. DMs do not persist participant names as labels.
+9. A channel cursor advances only after that channel page is complete; the global cursor advances only after every configured source and the full dynamic channel inventory are complete.
+10. Nonmatching ambient messages are discarded immediately and never persisted or analyzed as tasks. External messages, code or Git mutations, deployments, and management of user-owned Codex tasks are prohibited.
 
 See `docs/slack-monitor.md` for the canonical sequence and circuit breaker.
 

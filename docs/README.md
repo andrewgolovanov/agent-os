@@ -7,7 +7,7 @@ This directory explains how Agent OS is designed, how to operate it, and why its
 | Document | Owns |
 | --- | --- |
 | [architecture.md](architecture.md) | layers, boundaries, and the source of truth for each data type |
-| [workflows.md](workflows.md) | project onboarding, execution, and task handoff |
+| [workflows.md](workflows.md) | automatic project synchronization, manual onboarding, execution, and task handoff |
 | [task-board.md](task-board.md) | structured outcomes, source identity, and Codex memberships |
 | [task-bridge.md](task-bridge.md) | automatic project-task correlation, checkpoints, and time evidence |
 | [project-time.md](project-time.md) | all-thread Codex time by project and month |

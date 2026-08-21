@@ -36,7 +36,7 @@ downloadable macOS app supports Apple Silicon (`arm64`) on macOS 14 or newer;
 an Intel or universal binary is not included yet.
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.4.3
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.5.0
 codex plugin add agent-os@agent-os
 ```
 
@@ -46,13 +46,22 @@ component you open bootstraps the bundled runtime and private state in
 Codex manages its plugin snapshot. Start a fresh Codex task after installing or
 updating the plugin so the MCP tools, skills, and hooks are loaded.
 
-Open any existing Git repository from any folder in Codex and ask:
+On first app launch, Agent OS asks the public Codex App Server only for active,
+non-archived task metadata and automatically registers each deterministic
+existing Git root. It never reads task bodies or migrates historical tasks.
+The plugin hook repeats the same idempotent check for the current `cwd` when a
+new Codex task starts, so a repository first used later becomes available for
+future routing. Missing paths, non-Git folders, ambiguous key collisions, and
+transient worktrees without a durable checkout are skipped.
+
+For a skipped repository, a multi-repository project, or reviewed Slack channel
+mapping, open the repository from any folder in Codex and ask:
 
 ```text
 Onboard this repository into Agent OS safely.
 ```
 
-The plugin previews the registry change before applying it. Every project is
+Manual onboarding previews the registry change before applying it. Every project is
 registered at its existing Git root, regardless of where that folder lives.
 Agent OS does not create a second project folder or move, copy, rename, commit,
 or otherwise modify the project repository. If unfinished Slack-only work has
@@ -90,8 +99,9 @@ identifiers, and repository paths never belong in a release candidate.
 ## Codex plugin
 
 The installed plugin contains its own minimal Agent OS runtime. On first use it
-creates or repairs the private home, then exposes Task Board and project
-onboarding through MCP. No manually managed Agent OS checkout is required.
+creates or repairs the private home, automatically registers the current
+eligible Git root, then exposes Task Board and manual project onboarding through
+MCP. No manually managed Agent OS checkout is required.
 
 The source plugin also contains the Context Loop skill, Task Bridge hooks, and
 the `setup-agent-os` skill. Use `$context-loop` when one long-running task needs
@@ -145,8 +155,10 @@ guide for the exact flow and update trust boundary.
 
 ## Safety and publication
 
-Integrations are opt-in and read-only by default. Initialization does not enable
-hooks, schedules, Slack access, repository writes, commits, pushes, or deploys.
+Integrations are opt-in and read-only by default. Initialization may write only
+deterministic eligible project entries to the private registry; it does not
+modify those repositories or enable hooks, schedules, Slack access, commits,
+pushes, or deploys.
 Plugin installation makes its hook bundle available, but Codex still requires
 the user to review trust with `/hooks`; the Slack connection and Scheduled task
 remain separately controlled product state.

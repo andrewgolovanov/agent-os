@@ -57,6 +57,10 @@ bootstrap.
   mutable local state; legacy one-root variables remain compatible.
 - App and plugin bootstrap select their bundled runtime, create missing private
   state, and preserve a valid selected development source.
+- The app pages public active, non-archived Codex task metadata and passes only
+  `cwd` values to the shared runtime; the plugin hook synchronizes the current
+  task `cwd` before routing. Both automatically register only deterministic
+  eligible Git roots and never import thread bodies or historical tasks.
 - MCP project onboarding previews and registers any existing Git repository by
   absolute path without moving or modifying it; the private registry is the
   only Agent OS owner of project routing metadata.

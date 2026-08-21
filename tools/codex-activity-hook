@@ -3,6 +3,7 @@
 
 require "json"
 require_relative "../lib/agent_os/paths"
+require_relative "../lib/agent_os/codex_project_sync"
 require_relative "../lib/agent_os/project_time"
 require_relative "../lib/agent_os/task_bridge"
 
@@ -13,12 +14,25 @@ rescue StandardError => e
   nil
 end
 
+def synchronize_current_project(agent_os_home, payload)
+  cwd = payload["cwd"].to_s
+  return if cwd.empty?
+
+  AgentOS::CodexProjectSync.new(
+    source: AgentOS::Paths.source_root,
+    home: agent_os_home
+  ).sync(repositories: [cwd], apply: true)
+rescue StandardError => e
+  warn "codex-project-sync-hook: #{e.message}"
+end
+
 begin
   payload = JSON.parse($stdin.read)
   event = payload["hook_event_name"]
   exit 0 unless %w[UserPromptSubmit PostToolUse Stop].include?(event)
 
   agent_os_home = AgentOS::Paths.home_root
+  synchronize_current_project(agent_os_home, payload) if event == "UserPromptSubmit"
   bridge = AgentOS::TaskBridge.new(
     agent_os_home: agent_os_home,
     source_root: AgentOS::Paths.source_root,

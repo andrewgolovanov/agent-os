@@ -35,6 +35,13 @@ monitors:
         channel_types:
           - public_channel
           - private_channel
+      bot_mentions:
+        enabled: true
+        channel_types:
+          - public_channel
+          - private_channel
+        discover_visible_channels_each_run: true
+        require_exact_current_user_mention: true
       direct_messages:
         enabled: true
       group_direct_messages:

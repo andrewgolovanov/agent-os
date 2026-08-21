@@ -164,6 +164,8 @@ class AgentOSCLITest < Minitest::Test
     assert_equal true, monitor.fetch("enabled")
     assert_equal %w[10:00 14:00 18:00], monitor.dig("schedule", "local_times")
     assert_equal false, monitor.dig("authority", "slack_write")
+    assert_equal true, monitor.dig("slack_sources", "bot_mentions", "discover_visible_channels_each_run")
+    assert_equal true, monitor.dig("slack_sources", "bot_mentions", "require_exact_current_user_mention")
     assert_equal File.join(@home, "work"), monitor.fetch("task_board_root")
     assert_equal "Open Agent OS", monitor.dig("notifications", "agent_os_app", "label")
     assert_equal "agent-os://board", monitor.dig("notifications", "agent_os_app", "url")
@@ -205,6 +207,39 @@ class AgentOSCLITest < Minitest::Test
     assert_equal "replace", JSON.parse(stdout).fetch("action")
     replaced = YAML.safe_load(File.read(config_path), permitted_classes: [], permitted_symbols: [], aliases: false)
     assert_equal %w[11:00 15:00], replaced.dig("monitors", "agent-os-slack-monitor", "schedule", "local_times")
+  end
+
+  def test_codex_project_sync_previews_then_registers_eligible_repositories
+    _, stderr, status = Open3.capture3(
+      @executable, "init", "--source", @source, "--home", @home, "--apply"
+    )
+    assert status.success?, stderr
+    repository = File.join(@temporary, "codex-project")
+    FileUtils.mkdir_p(repository)
+    _stdout, stderr, status = Open3.capture3("git", "-C", repository, "init", "-q")
+    assert status.success?, stderr
+    Open3.capture3("git", "-C", repository, "config", "user.email", "agent-os@example.invalid")
+    Open3.capture3("git", "-C", repository, "config", "user.name", "Agent OS")
+    File.write(File.join(repository, "README.md"), "# Codex Project\n")
+    Open3.capture3("git", "-C", repository, "add", "README.md")
+    _stdout, stderr, status = Open3.capture3("git", "-C", repository, "commit", "-qm", "Initial commit")
+    assert status.success?, stderr
+
+    stdout, stderr, status = Open3.capture3(
+      @executable, "sync-codex-projects", "--source", @source, "--home", @home,
+      "--repository", repository, "--json"
+    )
+    assert status.success?, stderr
+    assert_equal "create", JSON.parse(stdout).dig("projects", 0, "action")
+    assert_equal({}, YAML.safe_load(File.read(File.join(@home, "config", "projects.yaml"))).fetch("projects"))
+
+    stdout, stderr, status = Open3.capture3(
+      @executable, "sync-codex-projects", "--source", @source, "--home", @home,
+      "--repository", repository, "--apply", "--json"
+    )
+    assert status.success?, stderr
+    assert_equal 1, JSON.parse(stdout).fetch("registered_count")
+    assert_equal File.realpath(repository), YAML.safe_load(File.read(File.join(@home, "config", "projects.yaml"))).dig("projects", "codex-project", "root")
   end
 
   def test_doctor_integration_checks_do_not_change_core_readiness

@@ -10,6 +10,7 @@ require "rubygems/version"
 require "tempfile"
 require_relative "../lib/agent_os/paths"
 require_relative "../lib/agent_os/home_migrator"
+require_relative "../lib/agent_os/codex_project_sync"
 require_relative "../lib/agent_os/project_registry"
 require_relative "../lib/agent_os/slack_monitor_setup"
 require_relative "../lib/agent_os/task_board"
@@ -39,6 +40,7 @@ module AgentOS
       when "activate" then activate_home
       when "install-plugin" then install_plugin
       when "onboard-project" then onboard_project
+      when "sync-codex-projects" then sync_codex_projects
       when "upgrade-project-registry" then upgrade_project_registry
       when "relink-project" then relink_project
       when "configure-slack-monitor" then configure_slack_monitor
@@ -391,6 +393,39 @@ module AgentOS
         unless options.fetch(:apply)
           @out.puts "Preview only. Add reviewed --slack-channel IDs, preview again, then re-run that exact command with --apply."
         end
+      end
+      0
+    end
+
+    def sync_codex_projects
+      options = common_options(apply: false, json: false, repositories: [])
+      OptionParser.new do |parser|
+        parser.banner = "Usage: agent-os sync-codex-projects --repository PATH [--repository PATH ...] [--home PATH] [--source PATH] [--json] [--apply]"
+        add_common_options(parser, options)
+        parser.on("--repository PATH", "Repeat for active Codex working directories") { |value| options[:repositories] << value }
+        parser.on("--json", "Print the machine-readable synchronization result") { options[:json] = true }
+        parser.on("--apply", "Register only deterministic eligible Git roots") { options[:apply] = true }
+        parser.parse!(@arguments)
+      end
+      reject_extra_arguments!
+      raise OptionParser::MissingArgument, "repository" if options.fetch(:repositories).empty?
+
+      result = AgentOS::CodexProjectSync.new(
+        source: validated_root(options.fetch(:source), "source"),
+        home: validated_root(options.fetch(:home), "home")
+      ).sync(repositories: options.fetch(:repositories), apply: options.fetch(:apply))
+
+      if options.fetch(:json)
+        @out.puts JSON.pretty_generate(result)
+      else
+        @out.puts options.fetch(:apply) ? "Agent OS Codex project sync result" : "Agent OS Codex project sync plan"
+        result.fetch(:projects).each do |project|
+          @out.puts "  #{project.fetch(:action).upcase.ljust(8)} #{project.fetch(:project_key)} -> #{project.fetch(:repository)}"
+        end
+        result.fetch(:skipped).each do |entry|
+          @out.puts "  SKIP     #{entry.fetch(:input)} (#{entry.fetch(:reason)})"
+        end
+        @out.puts "Preview only. Re-run with --apply to register eligible repositories." unless options.fetch(:apply)
       end
       0
     end
@@ -881,6 +916,7 @@ module AgentOS
           activate   Preview or select the home used by app and plugin processes
           install-plugin  Preview or install the Agent OS Codex plugin
           onboard-project  Preview or register an existing Git repository
+          sync-codex-projects  Register eligible active Codex Git repositories
           upgrade-project-registry  Preview or upgrade obsolete project registry metadata
           relink-project  Preview or update the path of an already registered repository
           configure-slack-monitor  Preview or configure the optional read-only Slack monitor
