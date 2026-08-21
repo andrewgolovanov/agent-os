@@ -53,10 +53,14 @@ with an argument array.
 - The app owns one narrow presentation preference: an ordered list of pinned
   project keys in macOS `UserDefaults`. Pinned projects appear in their own
   section above the otherwise alphabetical project list and can be toggled from
-  the row or its context menu. This preference never changes registry or task
-  routing state. Codex thread pins are not interpreted as project pins, private
-  desktop state is not read, and icon/color mirroring remains deferred until a
-  supported App Server contract exists.
+  the row or its context menu. Pinned projects remain visible without unfinished
+  work; unpinned projects appear only while at least one unfinished outcome is
+  assigned to them. Hiding is presentation-only: the registry and Done history
+  retain every project, and new unfinished work restores its sidebar row. This
+  preference never changes registry or task routing state. Codex thread pins are
+  not interpreted as project pins, private desktop state is not read, and
+  icon/color mirroring remains deferred until a supported App Server contract
+  exists.
 - The private home defaults to `~/.agent-os`.
 - `WORKSPACE_CONSOLE_ROOT` remains only as a deprecated compatibility alias for older
   one-directory installations.
@@ -122,8 +126,9 @@ may call it on its own queue without entering main-actor-isolated code.
   remains the only trailing signal; full-width semantic separators, the shared
   hover surface, and pointing-hand feedback make every selectable row clear;
 - display-only Slack channel labels on outcomes, with an unmapped Labels sidebar
-  section for unfinished work that filters non-code work without retaining
-  completed-only zero-count rows or enabling repository actions;
+  section across every lifecycle; completed-only channels remain navigable with
+  a zero unfinished count, while mapped labels stay on cards without duplicating
+  their project or enabling repository actions;
 - tracked outcome time at the top of every Board card for immediate scanning;
 - compact status-only markers in Done use a fixed 24-point circular
   surface instead of retaining the horizontal padding of a text badge;

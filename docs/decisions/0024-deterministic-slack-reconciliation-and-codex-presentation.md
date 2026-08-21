@@ -4,6 +4,9 @@ Date: 2026-08-21
 
 Status: accepted
 
+Amended: 2026-08-21 after `v0.7.0` feedback restored completed-only unmapped
+labels to the sidebar
+
 Supersedes: the blanket automatic channel-mapping exclusion in 0021
 
 Partially superseded by: 0025 for app-owned project pins
@@ -13,9 +16,9 @@ Partially superseded by: 0025 for app-owned project pins
 Automatic Codex project registration can create a real project after Slack-only
 work already produced a display label. Preview-only reconciliation leaves that
 stable channel ID unmapped, so future Slack work still routes to the label even
-when the corresponding project is now known. The native sidebar also collected
-labels from completed outcomes, leaving historical channels visible with a zero
-unfinished count.
+when the corresponding project is now known. The native sidebar also needs to
+keep historical Slack-only work reachable when no registered project owns its
+channel.
 
 The Codex desktop UI separately supports project presentation such as pinning,
 order, icons, and colors. Agent OS should mirror Codex rather than own a second
@@ -38,8 +41,10 @@ pin state and no stable project-presentation contract.
 - Any ambiguous identity, conflicting mapping, or conflicting outcome
   attribution fails closed and remains available to the existing preview-first
   manual onboarding flow.
-- The top-level Labels sidebar is an unfinished-work filter. Completed-only
-  labels are omitted instead of being shown with a zero count.
+- The top-level Labels sidebar lists every unmapped stable channel label across
+  outcome lifecycles. Its number remains an unfinished-work count, so a
+  completed-only channel stays navigable with zero. Only an exact registered
+  project-channel mapping removes the duplicate top-level label.
 - Do not add Agent OS-owned pin, order, icon, or color controls. Do not infer a
   project pin from a thread pin or read private Codex desktop storage. Continue
   alphabetical project presentation with folder glyphs until a supported Codex

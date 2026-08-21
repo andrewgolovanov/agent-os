@@ -11,6 +11,19 @@
   Sparkle Ed25519 signature passed independent post-publication checks. A fresh
   anonymous tag clone also initialized and validated against an empty private
   home.
+- Restored completed-only unmapped Slack labels to the native sidebar after
+  `v0.7.0` made historical channel filters unreachable. The task labels and
+  Task Board records were never deleted; the sidebar now keeps those channels
+  visible with a zero unfinished count and hides only labels mapped to a
+  registered project.
+- Replaced the project-row pin glyph with a compact hover star immediately to
+  the left of the trailing task count. The count keeps its original right-edge
+  alignment, while pinned projects retain a visible filled star and the same
+  context-menu action.
+- Reduced project-sidebar noise by keeping pinned projects visible and showing
+  unpinned projects only while they own unfinished outcomes. Completed-only and
+  zero-work projects remain registered and available in Done history; assigning
+  new unfinished work restores the regular sidebar row automatically.
 - Fixed native project synchronization failing with App Server status `127`
   when a GUI launch selected a Node-based `~/.local/bin/codex` wrapper but did
   not inherit the shell path containing `node`. The app now prefers the
@@ -22,9 +35,8 @@
   owner, and every labeled outcome is unassigned or already belongs only to
   that project. Only unfinished unassigned outcomes are attributed; completed
   and conflicting history is never rewritten.
-- Removed completed-only zero-count Slack labels from the native sidebar while
-  preserving labels on Done cards and source history. Added sync-report counts
-  and app notices for linked channels and newly attributed unfinished tasks.
+- Added sync-report counts and app notices for linked channels and newly
+  attributed unfinished tasks.
 - Added app-local ordered project pins to the native sidebar. A hover button or
   context-menu action moves a project into or out of a `Pinned` section while
   unpinned projects remain alphabetical. Stable project keys are stored only

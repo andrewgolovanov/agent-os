@@ -21,9 +21,13 @@ It gives those systems a small, deterministic continuity layer without copying
 transcripts or introducing another hosted task database.
 
 The native sidebar can pin frequently used projects in a persistent ordered
-section. Pins are a local macOS presentation preference only: project identity,
+section through a compact hover star that leaves the trailing task count fixed.
+Pins are a local macOS presentation preference only: project identity,
 routing, Slack mappings, and plugin behavior continue to use the canonical
-Agent OS registry.
+Agent OS registry. Pinned projects remain visible even with no unfinished work;
+the regular Projects section shows only projects with at least one unfinished
+outcome. A hidden project stays registered, remains available in Done history,
+and returns automatically when new unfinished work is assigned to it.
 
 Repositories are optional for every project, including local-only development
 that never uses Git. An actionable request
@@ -42,7 +46,7 @@ downloadable macOS app supports Apple Silicon (`arm64`) on macOS 14 or newer;
 an Intel or universal binary is not included yet.
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.7.0
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.7.1
 codex plugin add agent-os@agent-os
 ```
 

@@ -71,14 +71,19 @@ Verified: 2026-08-21
   of that gap: a stable Slack channel label whose normalized name has exactly
   one registered, non-conflicting project owner is linked to that project.
   Only unfinished unassigned outcomes are attributed; completed and conflicting
-  history is unchanged. Completed-only unmapped labels no longer remain in the
-  native sidebar with a zero count.
+  history is unchanged. Unmapped labels remain navigable across every lifecycle;
+  completed-only channels show a zero unfinished count.
 - The native sidebar now supports app-local ordered project pins through a
-  `Pinned` section, row affordance, and context-menu action. The stable project
+  `Pinned` section, a hover star immediately left of the invariant trailing
+  count, and a context-menu action. The stable project
   keys are stored only in macOS `UserDefaults`; they do not alter the registry,
   Task Board routing, Slack mappings, or plugin behavior. Agent OS still does
   not read private Codex desktop state, and project icon/color mirroring remains
-  intentionally unimplemented.
+  intentionally unimplemented. Pinned projects remain visible without
+  unfinished work; the regular Projects section includes only projects that
+  own unfinished outcomes. Completed-only and zero-work projects remain in the
+  registry and Done filters and reappear automatically when unfinished work is
+  assigned again.
 - Project onboarding now has one registry-only topology: every project records
   a `root` plus an optional `repositories` collection and creates no generated folder under
   `AGENT_OS_HOME/projects`, including multi-repository registrations.
@@ -124,8 +129,8 @@ Verified: 2026-08-21
 - Agent OS app builds and its 37 Swift tests pass. The current candidate binary
   also passes an isolated signed-bundle launch: it initializes and reads a
   separate temporary private home without touching the installed app's home.
-  The locally installed app remains `v0.6.0` while the current public release is
-  `v0.7.0`; the prior active-home
+  The locally installed app and current public release are both `v0.7.0`; the
+  prior active-home
   inventory contains 13 local-only and 25 repository-backed projects, with no
   duplicate, missing, or private-home roots.
 - Task Board and the Agent OS MCP now support idempotent display-only Slack

@@ -29,7 +29,7 @@ class AgentOSMCPTest < Minitest::Test
     with_server(environment) do |stdin, stdout, stderr, wait_thread|
       initialize_result = request(stdin, stdout, 1, "initialize", { "protocolVersion" => "2025-11-25" })
       assert_equal "agent-os", initialize_result.dig("result", "serverInfo", "name")
-      assert_equal "0.7.0", initialize_result.dig("result", "serverInfo", "version")
+      assert_equal "0.7.1", initialize_result.dig("result", "serverInfo", "version")
 
       tool_list = request(stdin, stdout, 2, "tools/list")
       assert_equal 9, tool_list.dig("result", "tools").length

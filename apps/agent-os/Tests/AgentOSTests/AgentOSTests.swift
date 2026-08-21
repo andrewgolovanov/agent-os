@@ -223,7 +223,7 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(labels.map(\.name), ["#project-sample-product-int", "#general-checks"])
     }
 
-    func testSidebarOmitsLabelsThatExistOnlyOnCompletedTasks() throws {
+    func testSidebarKeepsUnmappedLabelsFromCompletedTasks() throws {
         let activeTask = try decodeSidebarTask(
             id: "task_active",
             status: "active",
@@ -239,7 +239,7 @@ final class AgentOSTests: XCTestCase {
 
         XCTAssertEqual(
             SidebarView.visibleLabels(projects: [], tasks: [activeTask, doneTask]).map(\.key),
-            ["slack:CACTIVE"]
+            ["slack:CACTIVE", "slack:CDONE"]
         )
     }
 
@@ -264,6 +264,7 @@ final class AgentOSTests: XCTestCase {
             ("agent-os", "Agent OS"),
             ("sample-utility", "Sample Utility"),
             ("example-product", "Example Product"),
+            ("inactive-product", "Inactive Product"),
         ].map { key, displayName in
             try JSONDecoder().decode(
                 AgentOSProject.self,
@@ -272,14 +273,47 @@ final class AgentOSTests: XCTestCase {
         }
 
         let pinnedProjectKeys = ["example-product", "missing-project", "agent-os"]
+        let activeTask = try decodeSidebarTask(
+            id: "task_active_project",
+            status: "active",
+            labelKey: "slack:CACTIVEPROJECT",
+            labelName: "#active-project",
+            projects: ["sample-utility"]
+        )
+        let doneTask = try decodeSidebarTask(
+            id: "task_done_project",
+            status: "done",
+            labelKey: "slack:CDONEPROJECT",
+            labelName: "#done-project",
+            projects: ["inactive-product"]
+        )
+        let reactivatedTask = try decodeSidebarTask(
+            id: "task_reactivated_project",
+            status: "planned",
+            labelKey: "slack:CREACTIVATEDPROJECT",
+            labelName: "#reactivated-project",
+            projects: ["inactive-product"]
+        )
 
         XCTAssertEqual(
             SidebarView.pinnedProjects(projects: projects, pinnedProjectKeys: pinnedProjectKeys).map(\.key),
             ["example-product", "agent-os"]
         )
         XCTAssertEqual(
-            SidebarView.unpinnedProjects(projects: projects, pinnedProjectKeys: pinnedProjectKeys).map(\.key),
+            SidebarView.unpinnedProjects(
+                projects: projects,
+                pinnedProjectKeys: pinnedProjectKeys,
+                tasks: [activeTask, doneTask]
+            ).map(\.key),
             ["sample-utility"]
+        )
+        XCTAssertEqual(
+            SidebarView.unpinnedProjects(
+                projects: projects,
+                pinnedProjectKeys: pinnedProjectKeys,
+                tasks: [activeTask, doneTask, reactivatedTask]
+            ).map(\.key),
+            ["sample-utility", "inactive-product"]
         )
     }
 
@@ -774,13 +808,16 @@ final class AgentOSTests: XCTestCase {
         id: String,
         status: String,
         labelKey: String,
-        labelName: String
+        labelName: String,
+        projects: [String] = []
     ) throws -> AgentOSTask {
+        let encodedProjects = try JSONEncoder().encode(projects)
+        let projectList = String(decoding: encodedProjects, as: UTF8.self)
         let data = Data("""
         {
           "id": "\(id)",
           "title": "Sidebar task",
-          "projects": [],
+          "projects": \(projectList),
           "labels": [{"key":"\(labelKey)","name":"\(labelName)","kind":"slack_channel"}],
           "kind": "delivery",
           "status": "\(status)",

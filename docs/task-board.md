@@ -2,7 +2,7 @@
 
 Task Board connects one real outcome to any number of external threads, Codex tasks, PRs, designs, and deployment sources. Its files live only under private `AGENT_OS_HOME`; the product checkout contains implementation and this contract, never user task data.
 
-An outcome may also carry display-only labels. A Slack channel label groups non-code work without pretending that the channel is a registered project or repository routing target. When a stable channel ID is mapped to a project, the label remains visible on cards while the app omits it from the separate top-level Labels section. That sidebar section lists only labels attached to unfinished outcomes, so historical completed-only channels do not appear with a zero count.
+An outcome may also carry display-only labels. A Slack channel label groups non-code work without pretending that the channel is a registered project or repository routing target. When a stable channel ID is mapped to a project, the label remains visible on cards while the app omits it from the separate top-level Labels section. Unmapped labels remain in that sidebar across every outcome lifecycle; a completed-only channel has a zero unfinished count but stays available for historical navigation.
 
 ## Storage
 

@@ -4,7 +4,7 @@ import { isAbsolute, join, relative, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { ensureAgentOSRuntime } from "./bootstrap.mjs";
 
-const serverVersion = "0.7.0";
+const serverVersion = "0.7.1";
 const { homeRoot, sourceRoot } = ensureAgentOSRuntime();
 if (homeRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_HOME");
 if (sourceRoot === "/") throw new Error("Refusing to use the filesystem root as AGENT_OS_SOURCE_ROOT");

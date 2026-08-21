@@ -177,8 +177,8 @@ Completed publication checks:
   23-file runtime, strict bundle signature, stable appcast, Sparkle Ed25519
   signature, and fresh anonymous tag-clone validation passed — verified.
 - `v0.7.0` published deterministic Slack reconciliation, ordered app-local
-  project pins, safe stable-tag plugin updates, completed-only label cleanup,
-  and GUI-safe Codex App Server resolution from commit
+  project pins, safe stable-tag plugin updates, its initial completed-only label
+  filter, and GUI-safe Codex App Server resolution from commit
   `66fb08f77d7d6497f85fc7d4c1ebcb67e781284c` in successful workflow run
   `32508847564`; its public checksum, Apple Silicon/macOS metadata, exact
   23-file runtime, strict bundle signature, stable appcast, Sparkle Ed25519

@@ -93,7 +93,11 @@ struct SidebarView: View {
     }
 
     private var unpinnedProjects: [AgentOSProject] {
-        Self.unpinnedProjects(projects: projects, pinnedProjectKeys: pinnedProjectKeys)
+        Self.unpinnedProjects(
+            projects: projects,
+            pinnedProjectKeys: pinnedProjectKeys,
+            tasks: tasks
+        )
     }
 
     nonisolated static func pinnedProjects(
@@ -106,16 +110,24 @@ struct SidebarView: View {
 
     nonisolated static func unpinnedProjects(
         projects: [AgentOSProject],
-        pinnedProjectKeys: [String]
+        pinnedProjectKeys: [String],
+        tasks: [AgentOSTask]
     ) -> [AgentOSProject] {
         let pinnedKeys = Set(pinnedProjectKeys)
-        return projects.filter { !pinnedKeys.contains($0.key) }
+        let activeProjectKeys = Set(
+            tasks
+                .filter(\.status.isUnfinished)
+                .flatMap(\.projects)
+        )
+        return projects.filter {
+            !pinnedKeys.contains($0.key) && activeProjectKeys.contains($0.key)
+        }
     }
 
     nonisolated static func visibleLabels(projects: [AgentOSProject], tasks: [AgentOSTask]) -> [AgentOSLabel] {
         visibleLabels(
             projects: projects,
-            labels: tasks.filter(\.status.isUnfinished).flatMap(\.labels)
+            labels: tasks.flatMap(\.labels)
         )
     }
 
@@ -154,7 +166,7 @@ struct SidebarView: View {
             onTogglePin: { onToggleProjectPin(project.key) }
         )
         .contextMenu {
-            Button(isPinned ? "Unpin Project" : "Pin Project", systemImage: isPinned ? "pin.slash" : "pin") {
+            Button(isPinned ? "Unpin Project" : "Pin Project", systemImage: isPinned ? "star.slash" : "star") {
                 onToggleProjectPin(project.key)
             }
         }
@@ -169,7 +181,7 @@ struct SidebarView: View {
         isPinned: Bool? = nil,
         onTogglePin: (() -> Void)? = nil
     ) -> some View {
-        HStack(alignment: .top, spacing: 0) {
+        ZStack(alignment: .trailing) {
             Button {
                 selection = key
             } label: {
@@ -190,13 +202,19 @@ struct SidebarView: View {
                             .lineLimit(1)
                     }
                     Spacer(minLength: 8)
-                    Text(count, format: .number)
-                        .font(.caption.weight(.medium).monospacedDigit())
-                        .foregroundStyle(AgentOSTheme.textSecondary)
-                        .frame(minWidth: 20, minHeight: 20)
+                    HStack(spacing: 4) {
+                        if onTogglePin != nil {
+                            Color.clear
+                                .frame(width: 24, height: 20)
+                        }
+                        Text(count, format: .number)
+                            .font(.caption.weight(.medium).monospacedDigit())
+                            .foregroundStyle(AgentOSTheme.textSecondary)
+                            .frame(width: 20, height: 20)
+                    }
                 }
                 .padding(.leading, 8)
-                .padding(.trailing, onTogglePin == nil ? 8 : 2)
+                .padding(.trailing, 8)
                 .padding(.vertical, 6)
                 .frame(height: 48, alignment: .top)
                 .frame(maxWidth: .infinity)
@@ -206,13 +224,16 @@ struct SidebarView: View {
 
             if let isPinned, let onTogglePin {
                 Button(action: onTogglePin) {
-                    Image(systemName: isPinned ? "pin.fill" : "pin")
+                    Image(systemName: isPinned ? "star.fill" : "star")
                         .font(.caption)
                         .foregroundStyle(AgentOSTheme.textSecondary)
-                        .frame(width: 26, height: 48)
+                        .frame(width: 24, height: 20)
+                        .padding(.top, 6)
+                        .padding(.bottom, 22)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .padding(.trailing, 32)
                 .opacity(isPinned || hoveredKey == key ? 1 : 0)
                 .allowsHitTesting(isPinned || hoveredKey == key)
                 .accessibilityLabel(isPinned ? "Unpin \(title)" : "Pin \(title)")

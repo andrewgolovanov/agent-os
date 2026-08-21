@@ -30,9 +30,10 @@ label context sits above each task title, while status remains the only trailing
 signal. Semantic separators span the full row width instead of inheriting the
 variable native list inset.
 Unassigned outcomes may carry display-only Slack channel labels. The app shows
-those labels in Focus, Board, Done, and the inspector. Unmapped channels on
-unfinished outcomes remain available as a separate sidebar filter; completed-
-only channels do not remain there with a zero count. A channel mapped to a
+those labels in Focus, Board, Done, and the inspector. Unmapped channels remain
+available as a separate sidebar filter across every outcome lifecycle; a
+completed-only channel stays visible with a zero unfinished count so historical
+work remains navigable. A channel mapped to a
 registered project stays visible on task cards but is omitted from that
 top-level section to avoid duplicating the project. Labels never enable `Open
 new Codex task` on their own.
@@ -87,8 +88,12 @@ paths so Node-based CLI wrappers also work when macOS launches the app without
 an interactive shell environment.
 
 The sidebar has an app-local `Pinned` section. Pin or unpin a project from the
-row affordance or its context menu; pinned projects keep the order in which
-they were pinned, while the remaining project list stays alphabetical. The
+hover star immediately left of the unchanged trailing count, or from its
+context menu; pinned projects keep the order in which
+they were pinned. The remaining alphabetical project list includes only
+projects with at least one unfinished outcome. Zero-work and completed-only
+projects remain registered and available to Done filters but stay out of the
+regular sidebar until new unfinished work makes them visible again. The
 ordered project keys live only in macOS `UserDefaults` and never change the
 project registry, Task Board routing, Slack mappings, or plugin behavior.
 Codex thread pins are not interpreted as project pins, and private Codex
