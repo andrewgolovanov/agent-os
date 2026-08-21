@@ -59,7 +59,9 @@ struct AgentOSCLIService: Sendable {
                 enrichedCount: 0,
                 refreshedCount: 0,
                 preservedCount: 0,
-                skippedCount: 0
+                skippedCount: 0,
+                linkedSlackChannelCount: 0,
+                attributedSlackTaskCount: 0
             )
         }
 

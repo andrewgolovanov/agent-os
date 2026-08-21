@@ -9,6 +9,8 @@ struct AgentOSProjectSyncReport: Decodable, Sendable {
     let refreshedCount: Int
     let preservedCount: Int
     let skippedCount: Int
+    let linkedSlackChannelCount: Int
+    let attributedSlackTaskCount: Int
 
     enum CodingKeys: String, CodingKey {
         case applied
@@ -19,6 +21,8 @@ struct AgentOSProjectSyncReport: Decodable, Sendable {
         case refreshedCount = "refreshed_count"
         case preservedCount = "preserved_count"
         case skippedCount = "skipped_count"
+        case linkedSlackChannelCount = "linked_slack_channel_count"
+        case attributedSlackTaskCount = "attributed_slack_task_count"
     }
 
     init(
@@ -29,7 +33,9 @@ struct AgentOSProjectSyncReport: Decodable, Sendable {
         enrichedCount: Int,
         refreshedCount: Int,
         preservedCount: Int,
-        skippedCount: Int
+        skippedCount: Int,
+        linkedSlackChannelCount: Int,
+        attributedSlackTaskCount: Int
     ) {
         self.applied = applied
         self.discoveredCount = discoveredCount
@@ -39,6 +45,8 @@ struct AgentOSProjectSyncReport: Decodable, Sendable {
         self.refreshedCount = refreshedCount
         self.preservedCount = preservedCount
         self.skippedCount = skippedCount
+        self.linkedSlackChannelCount = linkedSlackChannelCount
+        self.attributedSlackTaskCount = attributedSlackTaskCount
     }
 
     init(from decoder: Decoder) throws {
@@ -51,5 +59,7 @@ struct AgentOSProjectSyncReport: Decodable, Sendable {
         refreshedCount = try container.decodeIfPresent(Int.self, forKey: .refreshedCount) ?? 0
         preservedCount = try container.decode(Int.self, forKey: .preservedCount)
         skippedCount = try container.decode(Int.self, forKey: .skippedCount)
+        linkedSlackChannelCount = try container.decodeIfPresent(Int.self, forKey: .linkedSlackChannelCount) ?? 0
+        attributedSlackTaskCount = try container.decodeIfPresent(Int.self, forKey: .attributedSlackTaskCount) ?? 0
     }
 }

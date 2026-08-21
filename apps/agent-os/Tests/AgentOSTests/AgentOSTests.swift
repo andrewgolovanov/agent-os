@@ -12,7 +12,9 @@ final class AgentOSTests: XCTestCase {
           "eligible_count": 8,
           "registered_count": 3,
           "preserved_count": 5,
-          "skipped_count": 4
+          "skipped_count": 4,
+          "linked_slack_channel_count": 2,
+          "attributed_slack_task_count": 1
         }
         """#.utf8)
 
@@ -24,6 +26,8 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(report.registeredCount, 3)
         XCTAssertEqual(report.preservedCount, 5)
         XCTAssertEqual(report.skippedCount, 4)
+        XCTAssertEqual(report.linkedSlackChannelCount, 2)
+        XCTAssertEqual(report.attributedSlackTaskCount, 1)
     }
 
     func testAppearanceDefaultsToDarkAndSupportsPersistentToggle() {
@@ -219,6 +223,66 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(labels.map(\.name), ["#project-sample-product-int", "#general-checks"])
     }
 
+    func testSidebarOmitsLabelsThatExistOnlyOnCompletedTasks() throws {
+        let activeTask = try decodeSidebarTask(
+            id: "task_active",
+            status: "active",
+            labelKey: "slack:CACTIVE",
+            labelName: "#active"
+        )
+        let doneTask = try decodeSidebarTask(
+            id: "task_done",
+            status: "done",
+            labelKey: "slack:CDONE",
+            labelName: "#done"
+        )
+
+        XCTAssertEqual(
+            SidebarView.visibleLabels(projects: [], tasks: [activeTask, doneTask]).map(\.key),
+            ["slack:CACTIVE"]
+        )
+    }
+
+    func testProjectPinsPersistStableUniqueOrder() {
+        XCTAssertEqual(AgentOSProjectPins.decode("not-json"), [])
+        XCTAssertEqual(
+            AgentOSProjectPins.decode(#"["example-product","agent-os","example-product",""]"#),
+            ["example-product", "agent-os"]
+        )
+
+        var pins = AgentOSProjectPins.toggled("example-product", in: [])
+        pins = AgentOSProjectPins.toggled("agent-os", in: pins)
+        pins = AgentOSProjectPins.toggled("example-product", in: pins)
+        pins = AgentOSProjectPins.toggled("example-product", in: pins)
+
+        XCTAssertEqual(pins, ["agent-os", "example-product"])
+        XCTAssertEqual(AgentOSProjectPins.decode(AgentOSProjectPins.encode(pins)), pins)
+    }
+
+    func testSidebarPartitionsProjectsUsingPinnedOrder() throws {
+        let projects = try [
+            ("agent-os", "Agent OS"),
+            ("sample-utility", "Sample Utility"),
+            ("example-product", "Example Product"),
+        ].map { key, displayName in
+            try JSONDecoder().decode(
+                AgentOSProject.self,
+                from: Data(#"{"key":"\#(key)","displayName":"\#(displayName)","status":"active","root":"/tmp/\#(key)"}"#.utf8)
+            )
+        }
+
+        let pinnedProjectKeys = ["example-product", "missing-project", "agent-os"]
+
+        XCTAssertEqual(
+            SidebarView.pinnedProjects(projects: projects, pinnedProjectKeys: pinnedProjectKeys).map(\.key),
+            ["example-product", "agent-os"]
+        )
+        XCTAssertEqual(
+            SidebarView.unpinnedProjects(projects: projects, pinnedProjectKeys: pinnedProjectKeys).map(\.key),
+            ["sample-utility"]
+        )
+    }
+
     func testLocalOnlyProjectDecodesWithoutRepositories() throws {
         let data = Data(#"""
         {
@@ -254,6 +318,8 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(report.enrichedCount, 0)
         XCTAssertEqual(report.refreshedCount, 0)
         XCTAssertEqual(report.preservedCount, 1)
+        XCTAssertEqual(report.linkedSlackChannelCount, 0)
+        XCTAssertEqual(report.attributedSlackTaskCount, 0)
     }
 
     func testInspectorUsesComfortableResizableDesktopWidths() {
@@ -485,7 +551,10 @@ final class AgentOSTests: XCTestCase {
             "source_version": "0.2.0",
             "refresh_required": true,
             "updated": false,
-            "action": "refresh-after-core"
+            "action": "install-packaged-release",
+            "marketplace_source": "https://github.com/andrewgolovanov/agent-os.git",
+            "marketplace_ref": "v0.1.0",
+            "target_ref": "v0.2.0"
           }
         }
         """#.utf8)
@@ -495,6 +564,9 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(status.updateAvailable, true)
         XCTAssertEqual(status.source.latestVersion, "0.2.0")
         XCTAssertEqual(status.plugin.refreshRequired, true)
+        XCTAssertEqual(status.plugin.marketplaceRef, "v0.1.0")
+        XCTAssertEqual(status.plugin.targetRef, "v0.2.0")
+        XCTAssertTrue(status.plugin.canInstallUpdate)
     }
 
     func testBoardStatusOrderKeepsSemanticWorkflow() {
@@ -661,6 +733,76 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(candidates.prefix(2), ["/usr/bin/gh", "/bin/gh"])
         XCTAssertTrue(candidates.contains("/opt/homebrew/bin/gh"))
         XCTAssertTrue(candidates.contains("/usr/local/bin/gh"))
+    }
+
+    func testCodexResolutionPrefersBundledNativeBinaryOverNodeCLIWrapper() throws {
+        let candidates = CodexAppServerService.executableCandidates(
+            homeDirectory: URL(fileURLWithPath: "/Users/example"),
+            environment: ["PATH": "/Users/example/.local/bin:/usr/bin:/bin"]
+        ).map(\.path)
+
+        XCTAssertEqual(
+            candidates.first,
+            "/Applications/ChatGPT.app/Contents/Resources/codex"
+        )
+        XCTAssertLessThan(
+            try XCTUnwrap(candidates.firstIndex(of: "/Applications/ChatGPT.app/Contents/Resources/codex")),
+            try XCTUnwrap(candidates.firstIndex(of: "/Users/example/.local/bin/codex"))
+        )
+        XCTAssertTrue(candidates.contains("/Applications/Codex.app/Contents/Resources/codex"))
+    }
+
+    func testCodexServerEnvironmentSupportsGUIAppCLIFallbacks() {
+        let environment = CodexAppServerService.serverEnvironment(
+            base: [
+                "PATH": "/usr/bin:/bin",
+                "CODEX_SESSION_ID": "private-session",
+                "LANG": "en_US.UTF-8",
+            ],
+            homeDirectory: URL(fileURLWithPath: "/Users/example")
+        )
+
+        XCTAssertEqual(
+            environment["PATH"],
+            "/Users/example/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+        )
+        XCTAssertNil(environment["CODEX_SESSION_ID"])
+        XCTAssertEqual(environment["LANG"], "en_US.UTF-8")
+    }
+
+    private func decodeSidebarTask(
+        id: String,
+        status: String,
+        labelKey: String,
+        labelName: String
+    ) throws -> AgentOSTask {
+        let data = Data("""
+        {
+          "id": "\(id)",
+          "title": "Sidebar task",
+          "projects": [],
+          "labels": [{"key":"\(labelKey)","name":"\(labelName)","kind":"slack_channel"}],
+          "kind": "delivery",
+          "status": "\(status)",
+          "goal": "Test sidebar filtering",
+          "summary": "Fixture.",
+          "constraints": [],
+          "next_action": "None.",
+          "waiting_on": null,
+          "sources": {
+            "slack_threads": [],
+            "pull_requests": [],
+            "figma": [],
+            "deployments": [],
+            "other": []
+          },
+          "codex_threads": [],
+          "activity": {"total_seconds": 0, "turns": []},
+          "created_at": "2026-08-21T00:00:00Z",
+          "updated_at": "2026-08-21T00:00:00Z"
+        }
+        """.utf8)
+        return try JSONDecoder().decode(AgentOSTask.self, from: data)
     }
 
 }

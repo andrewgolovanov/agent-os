@@ -20,6 +20,11 @@ Agent OS does not replace your project repositories, GitHub, Slack, or Codex.
 It gives those systems a small, deterministic continuity layer without copying
 transcripts or introducing another hosted task database.
 
+The native sidebar can pin frequently used projects in a persistent ordered
+section. Pins are a local macOS presentation preference only: project identity,
+routing, Slack mappings, and plugin behavior continue to use the canonical
+Agent OS registry.
+
 Repositories are optional for every project, including local-only development
 that never uses Git. An actionable request
 from a named Slack channel can become an unassigned inbox outcome with a
@@ -37,7 +42,7 @@ downloadable macOS app supports Apple Silicon (`arm64`) on macOS 14 or newer;
 an Intel or universal binary is not included yet.
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.6.0
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.7.0
 codex plugin add agent-os@agent-os
 ```
 
@@ -54,10 +59,13 @@ plugin hook repeats the same idempotent check for the current `cwd` when a new
 Codex task starts. Git is optional: if a repository or origin appears later at
 the same root, Agent OS enriches the existing project without changing its key,
 tasks, or Slack mappings. Missing paths, ambiguous overlaps, duplicate origins,
-and transient worktrees without a durable checkout are skipped.
+and transient worktrees without a durable checkout are skipped. Existing Slack
+channel labels are linked automatically only when the normalized channel name
+has one exact non-conflicting registered project owner. Only unfinished
+unassigned outcomes may be attributed; completed work is never rewritten.
 
-For a skipped repository, a multi-repository project, or reviewed Slack channel
-mapping, open the repository from any folder in Codex and ask:
+For a skipped repository, a multi-repository project, or an ambiguous Slack
+channel mapping, open the repository from any folder in Codex and ask:
 
 ```text
 Onboard this repository into Agent OS safely.
@@ -123,12 +131,17 @@ local mutation before applying it.
 When no repository is registered, the Scheduled monitor can use the active
 Agent OS home as a non-version-controlled local project. Slack channel labels
 remain separate from repository-backed project routing. Once a channel is
-explicitly mapped to a registered project, its label stays on task cards but no
+safely mapped to a registered project, its label stays on task cards but no
 longer appears as a duplicate top-level sidebar filter.
 
 Plugin updates come from versioned marketplace snapshots. The native app uses
-signed Sparkle release archives. A development checkout keeps the older
-preview-first Git update path and is never overwritten when the packaged
+signed Sparkle release archives, then checks whether the already installed
+official Codex plugin matches its bundled release. Settings can re-pin that
+marketplace to the exact same `vN.N.N` tag and reinstall the plugin after
+confirmation, or do so automatically after the user opts in. A failed install
+restores the previous tag, a newer plugin is never downgraded, and private
+registry and task-event history are preserved. A development checkout keeps
+the preview-first Git update path and is never overwritten when the packaged
 runtime bootstraps.
 
 An older development installation that used one directory for both source and

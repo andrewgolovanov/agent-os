@@ -237,17 +237,45 @@ actor CodexAppServerService {
     }
 
     private func locateCodex() -> URL? {
-        let home = FileManager.default.homeDirectoryForCurrentUser
-        let candidates = [
-            home.appendingPathComponent(".local/bin/codex"),
-            URL(fileURLWithPath: "/Applications/ChatGPT.app/Contents/Resources/codex"),
-            URL(fileURLWithPath: "/usr/local/bin/codex"),
-        ]
-        return candidates.first { FileManager.default.isExecutableFile(atPath: $0.path) }
+        Self.executableCandidates().first {
+            FileManager.default.isExecutableFile(atPath: $0.path)
+        }
     }
 
     private func sanitizedEnvironment() -> [String: String] {
-        var environment = ProcessInfo.processInfo.environment
+        Self.serverEnvironment()
+    }
+
+    static func executableCandidates(
+        homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> [URL] {
+        let bundledCandidates = [
+            URL(fileURLWithPath: "/Applications/ChatGPT.app/Contents/Resources/codex"),
+            homeDirectory.appendingPathComponent("Applications/ChatGPT.app/Contents/Resources/codex"),
+            URL(fileURLWithPath: "/Applications/Codex.app/Contents/Resources/codex"),
+            homeDirectory.appendingPathComponent("Applications/Codex.app/Contents/Resources/codex"),
+        ]
+        let pathCandidates = environment["PATH", default: ""]
+            .split(separator: ":")
+            .map { URL(fileURLWithPath: String($0)).appendingPathComponent("codex") }
+        let cliCandidates = [
+            homeDirectory.appendingPathComponent(".local/bin/codex"),
+            URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
+            URL(fileURLWithPath: "/usr/local/bin/codex"),
+        ]
+
+        var seen = Set<String>()
+        return (bundledCandidates + pathCandidates + cliCandidates).filter {
+            seen.insert($0.standardizedFileURL.path).inserted
+        }
+    }
+
+    static func serverEnvironment(
+        base: [String: String] = ProcessInfo.processInfo.environment,
+        homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser
+    ) -> [String: String] {
+        var environment = base
         [
             "CODEX_CI",
             "CODEX_INTERNAL_ORIGINATOR_OVERRIDE",
@@ -256,6 +284,22 @@ actor CodexAppServerService {
             "CODEX_SHELL",
             "CODEX_THREAD_ID",
         ].forEach { environment.removeValue(forKey: $0) }
+
+        let existingPaths = environment["PATH", default: ""]
+            .split(separator: ":")
+            .map(String.init)
+        var seen = Set<String>()
+        environment["PATH"] = ([
+            homeDirectory.appendingPathComponent(".local/bin").path,
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin",
+            "/usr/sbin",
+            "/sbin",
+        ] + existingPaths)
+            .filter { !$0.isEmpty && seen.insert($0).inserted }
+            .joined(separator: ":")
         return environment
     }
 }

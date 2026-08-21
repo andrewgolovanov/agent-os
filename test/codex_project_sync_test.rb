@@ -47,6 +47,121 @@ class CodexProjectSyncTest < Minitest::Test
     assert_equal "preserve", repeated.dig(:projects, 0, :action)
   end
 
+  def test_sync_links_an_exact_slack_channel_and_attributes_only_unfinished_unassigned_work
+    project = create_directory("example-product-next")
+    task_board.create(
+      "id" => "task_example_product",
+      "title" => "Review example product",
+      "goal" => "Keep Slack work routed",
+      "summary" => "Ready.",
+      "next_action" => "Review the thread."
+    )
+    task_board.upsert_label(
+      "task_example_product",
+      key: "slack:CEXAMPLE",
+      name: "#project-example-product-int",
+      kind: "slack_channel"
+    )
+
+    result = synchronizer.sync(directories: [project], apply: true)
+
+    assert_equal 1, result.fetch(:registered_count)
+    assert_equal 1, result.fetch(:linked_slack_channel_count)
+    assert_equal 1, result.fetch(:attributed_slack_task_count)
+    assert_equal "example-product-next", result.dig(:slack_reconciliation, :matches, 0, :project_key)
+    assert_equal(
+      [{ "id" => "CEXAMPLE", "name" => "#project-example-product-int" }],
+      registry.dig("projects", "example-product-next", "slack_channels")
+    )
+    assert_equal ["example-product-next"], task_board.read_task("task_example_product").fetch("projects")
+
+    repeated = synchronizer.sync(directories: [project], apply: true)
+    assert_equal 0, repeated.fetch(:linked_slack_channel_count)
+    assert_equal 0, repeated.fetch(:attributed_slack_task_count)
+    assert_equal "preserve", repeated.dig(:slack_reconciliation, :action)
+  end
+
+  def test_sync_can_link_a_historical_channel_without_rewriting_finished_work
+    project = create_directory("revenuecat-next")
+    task_board.create(
+      "id" => "task_finished_revenuecat",
+      "title" => "Complete RevenueCat review",
+      "status" => "done",
+      "goal" => "Retain historical context",
+      "summary" => "Complete.",
+      "next_action" => "None."
+    )
+    task_board.upsert_label(
+      "task_finished_revenuecat",
+      key: "slack:C0REVENUE",
+      name: "#project-revenuecat-int",
+      kind: "slack_channel"
+    )
+
+    result = synchronizer.sync(directories: [project], apply: true)
+
+    assert_equal 1, result.fetch(:linked_slack_channel_count)
+    assert_equal 0, result.fetch(:attributed_slack_task_count)
+    assert_equal "C0REVENUE", registry.dig("projects", "revenuecat-next", "slack_channels", 0, "id")
+    assert_empty task_board.read_task("task_finished_revenuecat").fetch("projects")
+  end
+
+  def test_sync_refuses_a_slack_channel_with_conflicting_project_attribution
+    project = create_directory("example-product-next")
+    task_board.create(
+      "id" => "task_conflicting_project",
+      "title" => "Keep verified project",
+      "projects" => ["devhub"],
+      "goal" => "Preserve attribution",
+      "summary" => "Already attributed.",
+      "next_action" => "Keep the current project."
+    )
+    task_board.upsert_label(
+      "task_conflicting_project",
+      key: "slack:CEXAMPLE",
+      name: "#project-example-product-int",
+      kind: "slack_channel"
+    )
+
+    result = synchronizer.sync(directories: [project], apply: true)
+
+    assert_equal 0, result.fetch(:linked_slack_channel_count)
+    assert_equal 0, result.fetch(:attributed_slack_task_count)
+    assert_empty registry.dig("projects", "example-product-next", "slack_channels")
+    assert_equal ["devhub"], task_board.read_task("task_conflicting_project").fetch("projects")
+  end
+
+  def test_sync_refuses_a_slack_channel_with_an_ambiguous_project_identity
+    first = create_directory("first-product")
+    second = create_directory("second-product")
+    synchronizer.sync(directories: [first, second], apply: true)
+    payload = registry
+    payload.dig("projects", "first-product")["display_name"] = "Shared Product"
+    payload.dig("projects", "second-product")["display_name"] = "Shared Product"
+    File.write(File.join(@home, "config", "projects.yaml"), YAML.dump(payload))
+    task_board.create(
+      "id" => "task_ambiguous_project",
+      "title" => "Resolve shared product",
+      "goal" => "Avoid guessing a project",
+      "summary" => "Unassigned.",
+      "next_action" => "Review the mapping."
+    )
+    task_board.upsert_label(
+      "task_ambiguous_project",
+      key: "slack:C0SHARED",
+      name: "#project-shared-product-int",
+      kind: "slack_channel"
+    )
+
+    result = synchronizer.sync(directories: [first], apply: true)
+
+    assert_equal 0, result.fetch(:linked_slack_channel_count)
+    assert_equal 0, result.fetch(:attributed_slack_task_count)
+    assert_empty registry.dig("projects", "first-product", "slack_channels")
+    assert_empty registry.dig("projects", "second-product", "slack_channels")
+    assert_empty task_board.read_task("task_ambiguous_project").fetch("projects")
+  end
+
   def test_sync_enriches_the_same_local_project_when_git_and_a_remote_appear_later
     project = create_directory("future-project")
     synchronizer.sync(directories: [project], apply: true)
@@ -224,6 +339,10 @@ class CodexProjectSyncTest < Minitest::Test
 
   def synchronizer
     AgentOS::CodexProjectSync.new(source: @source, home: @home)
+  end
+
+  def task_board
+    @task_board ||= AgentOS::TaskBoard.new(File.join(@home, "work"))
   end
 
   def registry

@@ -27,7 +27,7 @@ Each layer has one purpose. The root `AGENTS.md` routes work without duplicating
 
 | Data | Canonical owner |
 | --- | --- |
-| Private home, timezone, project keys, aliases, roots, repository paths, and reviewed Slack channel mappings | `AGENT_OS_HOME/config/projects.yaml` |
+| Private home, timezone, project keys, aliases, roots, repository paths, and stable Slack channel mappings | `AGENT_OS_HOME/config/projects.yaml` |
 | System model and boundaries | `docs/architecture.md` |
 | Verified current readiness | `docs/state.md` |
 | Architectural rationale | `docs/decisions/` |
@@ -48,7 +48,7 @@ Each layer has one purpose. The root `AGENTS.md` routes work without duplicating
 
 ## Project registry
 
-Every project exists only as an entry in private `AGENT_OS_HOME/config/projects.yaml`. `root` defines the working project root, `repositories` optionally stores verified Git roots and roles, and optional `slack_channels` records reviewed stable channel IDs that belong to the project. A local project is valid with `repositories: []` for its entire lifetime. When Git is initialized later at the same root, Agent OS enriches that project entry instead of replacing its key, Task Board attribution, Slack mappings, or history. A repository may live in any user-selected folder.
+Every project exists only as an entry in private `AGENT_OS_HOME/config/projects.yaml`. `root` defines the working project root, `repositories` optionally stores verified Git roots and roles, and optional `slack_channels` records stable channel IDs that belong to the project. A local project is valid with `repositories: []` for its entire lifetime. When Git is initialized later at the same root, Agent OS enriches that project entry instead of replacing its key, Task Board attribution, Slack mappings, or history. A repository may live in any user-selected folder.
 
 Automatic Codex synchronization is a narrow registry-only path. The macOS app
 pages through public App Server metadata for active, non-archived tasks and
@@ -62,8 +62,14 @@ a committed Git root appears at the exact project root and refreshed when a
 previously unknown origin becomes available. Missing paths, ambiguous overlaps,
 duplicate origins, and worktree-only candidates are skipped. The private Agent
 OS home and its internal paths remain operational state and are never registered
-as projects. Synchronization never reads thread bodies, creates outcomes, maps
-channels, or changes repository files or Git state.
+as projects. After project registration, the same operation may link a Task
+Board Slack channel label only when its normalized name resolves to exactly one
+registered project, no other project owns the stable channel ID, and every
+labeled outcome is unassigned or already belongs only to that project. It may
+attribute unfinished unassigned outcomes, but never rewrites completed or
+conflicting attribution. This does not read Slack, import Slack history, or
+create outcomes. Synchronization never reads Codex thread bodies or changes
+repository files or Git state.
 
 Manual project onboarding accepts an existing absolute Git root, verifies its identity, and previews the registry change. A conservative channel-name comparison may suggest existing unfinished Slack-only work, but it never selects a channel automatically. After a second preview with exact reviewed channel IDs, apply records those mappings and may assign only unfinished outcomes that currently have no project; existing attribution and card labels are preserved. Onboarding never creates `AGENT_OS_HOME/projects`, writes Agent OS metadata into the product repository, moves source code, or merges outcomes by similar text. Existing repository `AGENTS.md`, READMEs, and documentation continue to own project-local rules and context.
 
@@ -75,10 +81,11 @@ If a user moves a repository, identity-checked relink updates only `root` and th
 
 - Discovery and reads are allowed only inside the selected Agent OS installation and registered paths.
 - Automatic Codex synchronization may mutate only the private project registry
-  for deterministic local project roots and verified same-root repository
-  enrichment. Manual onboarding and optional Task
-  Board reconciliation remain preview-first, limited to selected stable Slack
-  channel IDs, and never overwrite an existing project attribution.
+  for deterministic local project roots, verified same-root repository
+  enrichment, and a stable Slack channel mapping with exactly one
+  non-conflicting project identity. It may attribute only unfinished unassigned
+  outcomes. Manual and ambiguous Task Board reconciliation remain
+  preview-first and never overwrite existing attribution.
 - External provider tools are read-only by default.
 - Commits, pushes, PRs, deployments, messages, and external task mutations require explicit user intent.
 - Agent OS does not store secrets, full conversations, or complete build logs.
@@ -100,9 +107,26 @@ Packaged bootstrap also preserves ownership. Versioned plugin and app bundles co
 
 The macOS app is a replaceable presentation and action layer over these owners. It has no separate task database and mutates state only through deterministic Agent OS tools. It creates and names an idle Codex task through the stable App Server `stdio` API, records exact membership, copies the prepared prompt, and opens the public `codex://threads/<id>` handoff. Turn start stays in Codex so two App Server clients do not compete for one task.
 
+The app owns a deliberately narrow project-presentation preference: an ordered
+list of pinned stable project keys in macOS `UserDefaults`. It affects only the
+native sidebar and is not part of `projects.yaml`, Task Board state, project
+routing, Slack reconciliation, or the plugin runtime. Missing project keys stay
+dormant in the preference so a temporarily unavailable project can recover its
+pin. Thread pins are not treated as project pins, and private Codex desktop
+storage is not read. Unpinned projects remain alphabetical with folder glyphs;
+project icon and color mirroring waits for supported App Server metadata.
+
 Slack notifications open the native Board through `agent-os://board`. The deep link selects and refreshes the view; it carries no task content and creates no second storage path.
 
-The update plane has no separate database. Core and plugin updates accept only version-tag fast-forwards through preview-first CLI behavior. The app consumes an Ed25519-signed archive from the appcast of one GitHub Release. Automatic installation is a separate user opt-in, and updates never target private home data.
+The update plane has no separate database. Development core and plugin updates
+accept only version-tag fast-forwards through preview-first CLI behavior. The
+packaged app consumes an Ed25519-signed archive from the appcast of one GitHub
+Release, then uses its bundled runtime manifest as the authority for the
+matching plugin version and `vN.N.N` marketplace tag. It can replace only an
+already installed plugin from the official stable-tagged Git marketplace; the
+operation verifies the resulting version and restores the previous tag on
+failure. Automatic app and plugin installation are separate user opt-ins,
+newer plugins are not downgraded, and updates never target private home data.
 
 ## Intentionally deferred
 

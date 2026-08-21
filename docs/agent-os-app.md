@@ -42,7 +42,21 @@ with an argument array.
   non-archived `cwd` metadata. The shared runtime automatically registers only
   deterministic local project roots before the app loads its project snapshot;
   Git is optional, and a verified repository can enrich the same project later.
-  No thread body or historical task is imported.
+  Exact unique non-conflicting Slack channel labels may then be linked to the
+  project, with attribution limited to unfinished unassigned outcomes. No
+  thread body, Slack history, or historical task is imported.
+- The App Server process prefers the self-contained Codex executable bundled
+  with an installed Codex or ChatGPT app. Standalone CLI installations remain
+  a fallback, with standard user, Homebrew, and system binary directories added
+  explicitly because a macOS GUI launch does not inherit an interactive shell
+  `PATH`.
+- The app owns one narrow presentation preference: an ordered list of pinned
+  project keys in macOS `UserDefaults`. Pinned projects appear in their own
+  section above the otherwise alphabetical project list and can be toggled from
+  the row or its context menu. This preference never changes registry or task
+  routing state. Codex thread pins are not interpreted as project pins, private
+  desktop state is not read, and icon/color mirroring remains deferred until a
+  supported App Server contract exists.
 - The private home defaults to `~/.agent-os`.
 - `WORKSPACE_CONSOLE_ROOT` remains only as a deprecated compatibility alias for older
   one-directory installations.
@@ -63,7 +77,10 @@ may call it on its own queue without entering main-actor-isolated code.
 ## UI scope
 
 - regular SwiftUI window with Focus, Board, and Done views;
-- project, unmapped Slack channel label, outcome filtering, and search; mapped channel labels remain visible on task cards without duplicating their project in the sidebar;
+- ordered app-local project pins above the alphabetical project list, plus
+  project, unmapped Slack channel label, outcome filtering, and search; mapped
+  channel labels remain visible on task cards without duplicating their project
+  in the sidebar;
 - independently vertically scrollable Board columns inside the horizontal
   workflow canvas, keeping every card reachable without moving column headers
   while hiding the persistent vertical scroll indicators;
@@ -105,7 +122,8 @@ may call it on its own queue without entering main-actor-isolated code.
   remains the only trailing signal; full-width semantic separators, the shared
   hover surface, and pointing-hand feedback make every selectable row clear;
 - display-only Slack channel labels on outcomes, with an unmapped Labels sidebar
-  section that filters non-code work without enabling repository actions;
+  section for unfinished work that filters non-code work without retaining
+  completed-only zero-count rows or enabling repository actions;
 - tracked outcome time at the top of every Board card for immediate scanning;
 - compact status-only markers in Done use a fixed 24-point circular
   surface instead of retaining the horizontal padding of a text badge;
@@ -133,9 +151,12 @@ may call it on its own queue without entering main-actor-isolated code.
 - bounded menu-bar counts and quick actions.
 - a compact notice after newly discovered Codex projects are registered or
   enriched; skipped paths do not block the existing Board from loading.
-- unified update settings: Sparkle owns packaged app/runtime updates, while
-  Codex owns versioned marketplace snapshots of the companion plugin; automatic
-  app installation remains disabled until the user opts in.
+- unified update settings: Sparkle owns packaged app/runtime updates, while the
+  app compares the installed companion plugin with its signed bundled release
+  metadata and can ask Codex to re-pin the official marketplace to that exact
+  stable tag. Plugin installation and automatic app installation remain
+  separate user opt-ins; failed plugin replacement restores the previous tag,
+  newer plugins are not downgraded, and private state remains out of scope.
 
 There is no team administration, agent runtime, container manager, hosted
 database, transcript store, or provider write integration in the MVP.

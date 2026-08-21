@@ -22,10 +22,56 @@ struct UpdateSettingsView: View {
                     if let version = store.componentUpdateStatus?.source.currentVersion {
                         LabeledContent("Version", value: version)
                     }
-                    if let version = store.componentUpdateStatus?.plugin.installedVersion {
-                        LabeledContent("Codex plugin", value: version)
+                    if let plugin = store.componentUpdateStatus?.plugin {
+                        LabeledContent("Codex plugin", value: plugin.installedVersion ?? "Not installed")
+                    } else {
+                        LabeledContent(
+                            "Codex plugin",
+                            value: store.isCheckingForComponentUpdates ? "Checking…" : "Unknown"
+                        )
                     }
-                    Text("The runtime updates together with the macOS app. Codex owns the separately installed plugin and its updates; no Agent OS source checkout is required.")
+                    if let plugin = store.componentUpdateStatus?.plugin,
+                       plugin.refreshRequired,
+                       let version = plugin.sourceVersion
+                    {
+                        LabeledContent("Available plugin", value: version)
+                    }
+
+                    Toggle("Update Codex plugin automatically after app updates", isOn: $automaticallyUpdatesCorePlugin)
+                        .disabled(
+                            store.isCheckingForComponentUpdates
+                                || store.componentUpdateStatus?.plugin.installed != true
+                        )
+
+                    HStack {
+                        Button("Check Codex Plugin") {
+                            Task { await store.checkForComponentUpdates() }
+                        }
+                        .disabled(store.isCheckingForComponentUpdates)
+                        Button("Install Codex Plugin Update") {
+                            Task { await store.checkForComponentUpdates(apply: true) }
+                        }
+                        .disabled(
+                            store.isCheckingForComponentUpdates
+                                || store.componentUpdateStatus?.plugin.canInstallUpdate != true
+                        )
+                        if store.isCheckingForComponentUpdates {
+                            ProgressView()
+                                .controlSize(.small)
+                                .accessibilityLabel("Updating Agent OS components")
+                        }
+                    }
+
+                    if let plugin = store.componentUpdateStatus?.plugin,
+                       let reason = plugin.reason,
+                       ["manual-update-required", "installed-newer-than-runtime"].contains(plugin.action)
+                    {
+                        Text(reason)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Text("The app updates through Sparkle. Its companion plugin follows the same verified release tag through the official Codex marketplace; the private registry and task history are preserved. Start a fresh Codex task after a plugin update.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 } else {
@@ -43,10 +89,19 @@ struct UpdateSettingsView: View {
                         Button("Check Core and Plugin") {
                             Task { await store.checkForComponentUpdates() }
                         }
+                        .disabled(store.isCheckingForComponentUpdates)
                         Button("Install Core and Plugin Update") {
                             Task { await store.checkForComponentUpdates(apply: true) }
                         }
-                        .disabled(store.componentUpdateStatus?.source.updateAvailable != true)
+                        .disabled(
+                            store.isCheckingForComponentUpdates
+                                || store.componentUpdateStatus?.source.updateAvailable != true
+                        )
+                        if store.isCheckingForComponentUpdates {
+                            ProgressView()
+                                .controlSize(.small)
+                                .accessibilityLabel("Updating Agent OS components")
+                        }
                     }
 
                     Text("Development checkout updates are accepted only from version tags and only as a clean fast-forward. Local changes and diverged checkouts are never overwritten.")

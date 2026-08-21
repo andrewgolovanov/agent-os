@@ -3,7 +3,9 @@ import SwiftUI
 struct SidebarView: View {
     let projects: [AgentOSProject]
     let tasks: [AgentOSTask]
+    let pinnedProjectKeys: [String]
     @Binding var selection: String
+    let onToggleProjectPin: (String) -> Void
     @State private var hoveredKey: String?
 
     var body: some View {
@@ -35,15 +37,19 @@ struct SidebarView: View {
                     )
                 }
 
-                sidebarSection("Projects") {
-                    ForEach(projects) { project in
-                        sidebarRow(
-                            key: "project:\(project.key)",
-                            title: project.displayName,
-                            detail: project.key,
-                            image: "folder",
-                            count: tasks.filter { $0.projects.contains(project.key) && $0.status.isUnfinished }.count
-                        )
+                if !pinnedProjects.isEmpty {
+                    sidebarSection("Pinned") {
+                        ForEach(pinnedProjects) { project in
+                            projectRow(project, isPinned: true)
+                        }
+                    }
+                }
+
+                if !unpinnedProjects.isEmpty {
+                    sidebarSection("Projects") {
+                        ForEach(unpinnedProjects) { project in
+                            projectRow(project, isPinned: false)
+                        }
                     }
                 }
 
@@ -79,7 +85,38 @@ struct SidebarView: View {
     }
 
     private var labels: [AgentOSLabel] {
-        Self.visibleLabels(projects: projects, labels: tasks.flatMap(\.labels))
+        Self.visibleLabels(projects: projects, tasks: tasks)
+    }
+
+    private var pinnedProjects: [AgentOSProject] {
+        Self.pinnedProjects(projects: projects, pinnedProjectKeys: pinnedProjectKeys)
+    }
+
+    private var unpinnedProjects: [AgentOSProject] {
+        Self.unpinnedProjects(projects: projects, pinnedProjectKeys: pinnedProjectKeys)
+    }
+
+    nonisolated static func pinnedProjects(
+        projects: [AgentOSProject],
+        pinnedProjectKeys: [String]
+    ) -> [AgentOSProject] {
+        let projectsByKey = Dictionary(uniqueKeysWithValues: projects.map { ($0.key, $0) })
+        return pinnedProjectKeys.compactMap { projectsByKey[$0] }
+    }
+
+    nonisolated static func unpinnedProjects(
+        projects: [AgentOSProject],
+        pinnedProjectKeys: [String]
+    ) -> [AgentOSProject] {
+        let pinnedKeys = Set(pinnedProjectKeys)
+        return projects.filter { !pinnedKeys.contains($0.key) }
+    }
+
+    nonisolated static func visibleLabels(projects: [AgentOSProject], tasks: [AgentOSTask]) -> [AgentOSLabel] {
+        visibleLabels(
+            projects: projects,
+            labels: tasks.filter(\.status.isUnfinished).flatMap(\.labels)
+        )
     }
 
     nonisolated static func visibleLabels(projects: [AgentOSProject], labels: [AgentOSLabel]) -> [AgentOSLabel] {
@@ -106,43 +143,88 @@ struct SidebarView: View {
         }
     }
 
-    private func sidebarRow(key: String, title: String, detail: String, image: String, count: Int) -> some View {
-        Button {
-            selection = key
-        } label: {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: image)
-                    .font(.callout)
-                    .foregroundStyle(selection == key ? AgentOSTheme.sidebarAccentForeground : AgentOSTheme.textSecondary)
-                    .frame(width: 18, height: 20, alignment: .top)
-                    .padding(.top, 1)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.callout.weight(selection == key ? .medium : .regular))
-                        .foregroundStyle(AgentOSTheme.sidebarForeground)
-                        .lineLimit(1)
-                    Text(detail)
+    private func projectRow(_ project: AgentOSProject, isPinned: Bool) -> some View {
+        sidebarRow(
+            key: "project:\(project.key)",
+            title: project.displayName,
+            detail: project.key,
+            image: "folder",
+            count: tasks.filter { $0.projects.contains(project.key) && $0.status.isUnfinished }.count,
+            isPinned: isPinned,
+            onTogglePin: { onToggleProjectPin(project.key) }
+        )
+        .contextMenu {
+            Button(isPinned ? "Unpin Project" : "Pin Project", systemImage: isPinned ? "pin.slash" : "pin") {
+                onToggleProjectPin(project.key)
+            }
+        }
+    }
+
+    private func sidebarRow(
+        key: String,
+        title: String,
+        detail: String,
+        image: String,
+        count: Int,
+        isPinned: Bool? = nil,
+        onTogglePin: (() -> Void)? = nil
+    ) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            Button {
+                selection = key
+            } label: {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: image)
+                        .font(.callout)
+                        .foregroundStyle(selection == key ? AgentOSTheme.sidebarAccentForeground : AgentOSTheme.textSecondary)
+                        .frame(width: 18, height: 20, alignment: .top)
+                        .padding(.top, 1)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.callout.weight(selection == key ? .medium : .regular))
+                            .foregroundStyle(AgentOSTheme.sidebarForeground)
+                            .lineLimit(1)
+                        Text(detail)
+                            .font(.caption)
+                            .foregroundStyle(AgentOSTheme.textSecondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 8)
+                    Text(count, format: .number)
+                        .font(.caption.weight(.medium).monospacedDigit())
+                        .foregroundStyle(AgentOSTheme.textSecondary)
+                        .frame(minWidth: 20, minHeight: 20)
+                }
+                .padding(.leading, 8)
+                .padding(.trailing, onTogglePin == nil ? 8 : 2)
+                .padding(.vertical, 6)
+                .frame(height: 48, alignment: .top)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if let isPinned, let onTogglePin {
+                Button(action: onTogglePin) {
+                    Image(systemName: isPinned ? "pin.fill" : "pin")
                         .font(.caption)
                         .foregroundStyle(AgentOSTheme.textSecondary)
-                        .lineLimit(1)
+                        .frame(width: 26, height: 48)
+                        .contentShape(Rectangle())
                 }
-                Spacer(minLength: 8)
-                Text(count, format: .number)
-                    .font(.caption.weight(.medium).monospacedDigit())
-                    .foregroundStyle(AgentOSTheme.textSecondary)
-                    .frame(minWidth: 20, minHeight: 20)
+                .buttonStyle(.plain)
+                .opacity(isPinned || hoveredKey == key ? 1 : 0)
+                .allowsHitTesting(isPinned || hoveredKey == key)
+                .accessibilityLabel(isPinned ? "Unpin \(title)" : "Pin \(title)")
+                .help(isPinned ? "Unpin \(title)" : "Pin \(title)")
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .frame(height: 48, alignment: .top)
-            .frame(maxWidth: .infinity)
-            .background(
-                selection == key || hoveredKey == key ? AgentOSTheme.sidebarAccent : Color.clear,
-                in: RoundedRectangle(cornerRadius: AgentOSMetrics.radiusMedium)
-            )
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .frame(height: 48, alignment: .top)
+        .frame(maxWidth: .infinity)
+        .background(
+            selection == key || hoveredKey == key ? AgentOSTheme.sidebarAccent : Color.clear,
+            in: RoundedRectangle(cornerRadius: AgentOSMetrics.radiusMedium)
+        )
         .onHover { isHovering in
             hoveredKey = isHovering ? key : (hoveredKey == key ? nil : hoveredKey)
         }

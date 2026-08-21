@@ -30,8 +30,9 @@ label context sits above each task title, while status remains the only trailing
 signal. Semantic separators span the full row width instead of inheriting the
 variable native list inset.
 Unassigned outcomes may carry display-only Slack channel labels. The app shows
-those labels in Focus, Board, Done, and the inspector. Unmapped channels remain
-available as a separate sidebar filter; a channel explicitly mapped to a
+those labels in Focus, Board, Done, and the inspector. Unmapped channels on
+unfinished outcomes remain available as a separate sidebar filter; completed-
+only channels do not remain there with a zero count. A channel mapped to a
 registered project stays visible on task cards but is omitted from that
 top-level section to avoid duplicating the project. Labels never enable `Open
 new Codex task` on their own.
@@ -73,8 +74,26 @@ passes only unique working directories to the shared runtime. Deterministic
 local roots are registered automatically before the project snapshot is loaded,
 including folders without Git. A repository discovered later at the same root
 enriches the existing project; thread bodies and historical tasks are never
-imported. A compact notice reports changed projects without blocking the Board
-on skipped or ambiguous paths.
+imported. An existing Task Board Slack label is linked only when its normalized
+channel name resolves to exactly one non-conflicting registered project;
+unfinished unassigned work may then receive that project while completed work
+is never rewritten. A compact notice reports changed projects and Slack links
+without blocking the Board on skipped or ambiguous paths.
+
+For App Server access, the app prefers the self-contained Codex executable
+bundled with an installed Codex or ChatGPT app. A standalone Codex CLI remains
+a fallback; the app supplies standard user, Homebrew, and system executable
+paths so Node-based CLI wrappers also work when macOS launches the app without
+an interactive shell environment.
+
+The sidebar has an app-local `Pinned` section. Pin or unpin a project from the
+row affordance or its context menu; pinned projects keep the order in which
+they were pinned, while the remaining project list stays alphabetical. The
+ordered project keys live only in macOS `UserDefaults` and never change the
+project registry, Task Board routing, Slack mappings, or plugin behavior.
+Codex thread pins are not interpreted as project pins, and private Codex
+desktop state is never read. Project icons and colors remain folder glyphs
+until Codex exposes supported project-presentation metadata.
 
 Follow the checksum and Gatekeeper instructions in
 `../../docs/installation.md`. Install the Codex plugin from the same release to
@@ -145,8 +164,13 @@ tile so macOS can tint the mark correctly for either menu-bar appearance.
 
 The app uses Sparkle 2.9.5 with the stable latest GitHub Release appcast. It
 checks app updates automatically once per day and notifies by default. Users can
-enable automatic download/install in Settings. Packaged plugin updates are
-installed as newer Codex marketplace snapshots; development checkouts keep the
+enable automatic download/install in Settings. On launch, the packaged app also
+compares an already installed Agent OS Codex plugin with the exact plugin version
+in its bundled runtime. Settings can re-pin the official Git marketplace to the
+matching stable tag and reinstall the plugin after confirmation, or apply that
+step automatically after the user opts in. The updater verifies the target tag,
+restores the previous tag if installation fails, never downgrades a newer
+plugin, and never targets `AGENT_OS_HOME`. Development checkouts keep the
 preview-first `agent-os update` path.
 
 Every app archive is signed by the Agent OS Ed25519 update key and verified

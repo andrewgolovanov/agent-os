@@ -32,6 +32,14 @@ struct AgentOSUpdateStatus: Decodable, Sendable {
         let refreshRequired: Bool
         let updated: Bool
         let action: String
+        let reason: String?
+        let marketplaceSource: String?
+        let marketplaceRef: String?
+        let targetRef: String?
+
+        var canInstallUpdate: Bool {
+            refreshRequired && ["install-packaged-release", "refresh-after-core"].contains(action)
+        }
 
         enum CodingKeys: String, CodingKey {
             case configured
@@ -41,6 +49,10 @@ struct AgentOSUpdateStatus: Decodable, Sendable {
             case refreshRequired = "refresh_required"
             case updated
             case action
+            case reason
+            case marketplaceSource = "marketplace_source"
+            case marketplaceRef = "marketplace_ref"
+            case targetRef = "target_ref"
         }
     }
 

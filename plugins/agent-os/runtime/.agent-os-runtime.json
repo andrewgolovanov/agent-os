@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
-  "version": "0.6.0",
-  "plugin_version": "0.6.0+codex.20260821154421",
+  "version": "0.7.0",
+  "plugin_version": "0.7.0+codex.20260821172747",
   "files": {
     "LICENSE": {
       "sha256": "56fdec8396b0f0564c3f9795b48fd025ce8bb85535ee9c1abfc0ce9ac4a27f6c",
       "executable": false
     },
     "bin/agent-os": {
-      "sha256": "9c3e41be42b90bcdc290a5afcae758cd9e732744341af8c693572badd06df56f",
+      "sha256": "7160eebc23192821c6523a68007cd161826dfc49a8965ab324a261090575f83b",
       "executable": true
     },
     "config/examples/monitors.yaml": {
@@ -28,15 +28,15 @@
       "executable": false
     },
     "docs/optional-integrations.md": {
-      "sha256": "a69eb285d254d77ab001a8543f1ccf4b6c7db83c3db05e78e8cb68aadc00eb28",
+      "sha256": "343e58811720f7debae49833f712ac96ad37c7c0edd49d48c7c63f590cdf1914",
       "executable": false
     },
     "docs/slack-monitor.md": {
-      "sha256": "c6654614975ad401c9423567e739a891323a94a52c4ca726ba6f7318e9cd3da5",
+      "sha256": "26bf326ae89a4276c4378a6473a15f6491836e662bb8e78a3e68be7fc61a0919",
       "executable": false
     },
     "lib/agent_os/codex_project_sync.rb": {
-      "sha256": "67c8ca0899f59be468b996226e04ea98b4af42ef4d35ca66a289450baeb386d3",
+      "sha256": "9dd09596f9ed2694530d47ed6b4aea10e48283b650da068b7075a291eabd34eb",
       "executable": false
     },
     "lib/agent_os/home_migrator.rb": {
@@ -48,7 +48,7 @@
       "executable": false
     },
     "lib/agent_os/project_registry.rb": {
-      "sha256": "3750181764225988d3fafd50746ca4870bf27dd1e6958bf18c0da6e2e714d38f",
+      "sha256": "b9ce96e3b198c36e89a73f676a3ffdc6db1466b16d286c2996bdd1afcc425f05",
       "executable": false
     },
     "lib/agent_os/project_time.rb": {
@@ -72,7 +72,7 @@
       "executable": false
     },
     "lib/agent_os/updater.rb": {
-      "sha256": "48fb39eacdfffaf7bdaef9df85e33f0f6a214e0e2ee460c80c2a7c1c8897c603",
+      "sha256": "6cde0c92b6f0a19c497a57d7338cbe85c03c2bc042658b79b7d38e3d3200926b",
       "executable": false
     },
     "tools/codex-activity-hook": {

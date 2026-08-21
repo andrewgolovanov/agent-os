@@ -51,6 +51,7 @@ module AgentOS
       rescue ArgumentError => error
         skipped << skipped_entry(candidate.fetch(:input), "conflict", error.message, root: candidate.fetch(:root))
       end
+      slack_reconciliation = @registry.reconcile_deterministic_slack_channels(apply: apply)
 
       {
         schema_version: 1,
@@ -62,8 +63,11 @@ module AgentOS
         refreshed_count: projects.count { |project| project.fetch(:action) == "refreshed" },
         preserved_count: projects.count { |project| project.fetch(:action) == "preserve" },
         skipped_count: skipped.length,
+        linked_slack_channel_count: slack_reconciliation.fetch(:linked_channel_count),
+        attributed_slack_task_count: slack_reconciliation.fetch(:attributed_task_count),
         projects: projects,
-        skipped: skipped
+        skipped: skipped,
+        slack_reconciliation: slack_reconciliation
       }
     end
 

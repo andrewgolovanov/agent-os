@@ -123,6 +123,43 @@ module AgentOS
       local_project_result(plan, applied: false)
     end
 
+    def reconcile_deterministic_slack_channels(apply: false)
+      registry = load_registry
+      matches = deterministic_slack_channel_matches(registry)
+      channel_changes = matches.select { |match| match.fetch(:channel_change) }
+      task_assignments = matches.flat_map do |match|
+        match.fetch(:assign_task_ids).map do |task_id|
+          {
+            task_id: task_id,
+            project_key: match.fetch(:project_key),
+            channel_id: match.fetch(:id),
+            label_key: match.fetch(:key)
+          }
+        end
+      end.uniq { |assignment| assignment.fetch(:task_id) }
+      has_changes = channel_changes.any? || task_assignments.any?
+      result = {
+        schema_version: 1,
+        action: has_changes ? (apply ? "reconciled" : "reconcile") : "preserve",
+        applied: apply && has_changes,
+        linked_channel_count: channel_changes.length,
+        attributed_task_count: task_assignments.length,
+        matches: matches.map do |match|
+          match.reject { |field, _value| field == :channel_change }
+        end
+      }
+      return result unless apply && has_changes
+
+      validate_reconciled_task_assignments(task_assignments)
+      channel_changes.group_by { |match| match.fetch(:project_key) }.each do |project_key, channels|
+        update_project_channels(project_key, channels)
+      end
+      task_assignments.group_by { |assignment| assignment.fetch(:project_key) }.each do |project_key, assignments|
+        assign_reconciled_tasks(project_key, assignments)
+      end
+      result
+    end
+
     def upgrade_registry(apply: false)
       registry = load_registry
       candidates = registry.fetch("projects").each_with_object([]) do |(key, project), items|
@@ -633,48 +670,11 @@ module AgentOS
     end
 
     def slack_channel_suggestions(registry, key:, display_name:, aliases:)
-      identity_owners = Hash.new { |hash, identity| hash[identity] = [] }
-      registry.fetch("projects").each do |project_key, project|
-        next unless project.is_a?(Hash)
-
-        project_identity_variants(
-          project_key,
-          project.fetch("display_name", project_key),
-          Array(project["aliases"])
-        ).each { |identity| identity_owners[identity] << project_key }
-      end
+      identity_owners = project_identity_owners(registry)
       project_identity_variants(key, display_name, aliases).each { |identity| identity_owners[identity] << key }
       identity_owners.each_value(&:uniq!)
-
-      mapped_owners = Hash.new { |hash, channel_id| hash[channel_id] = [] }
-      registry.fetch("projects").each do |project_key, project|
-        Array(project["slack_channels"]).each do |channel|
-          mapped_owners[channel["id"].to_s.upcase] << project_key if channel.is_a?(Hash)
-        end
-      end
-
-      channels = {}
-      @task_board.tasks.each do |task|
-        next if FINISHED_TASK_STATUSES.include?(task.fetch("status"))
-
-        Array(task["labels"]).each do |label|
-          next unless label.is_a?(Hash) && label["kind"] == "slack_channel"
-
-          channel_id = label.fetch("key").delete_prefix("slack:").upcase
-          entry = channels[channel_id] ||= {
-            id: channel_id,
-            key: "slack:#{channel_id}",
-            name: label.fetch("name"),
-            task_ids: [],
-            assign_task_ids: [],
-            task_projects: []
-          }
-          entry[:name] = label.fetch("name")
-          entry[:task_ids] << task.fetch("id")
-          entry[:task_projects] |= Array(task["projects"])
-          entry[:assign_task_ids] << task.fetch("id") if Array(task["projects"]).empty?
-        end
-      end
+      mapped_owners = slack_channel_owners(registry)
+      channels = slack_channel_inventory(include_finished: false)
 
       channels.values.each_with_object([]) do |channel, suggestions|
         stem = normalized_channel_project_name(channel.fetch(:name))
@@ -691,6 +691,85 @@ module AgentOS
         suggestion.delete(:task_projects)
         suggestions << suggestion
       end.sort_by { |channel| [channel.fetch(:name).downcase, channel.fetch(:id)] }
+    end
+
+    def deterministic_slack_channel_matches(registry)
+      identity_owners = project_identity_owners(registry)
+      mapped_owners = slack_channel_owners(registry)
+
+      slack_channel_inventory(include_finished: true).values.each_with_object([]) do |channel, matches|
+        stem = normalized_channel_project_name(channel.fetch(:name))
+        candidate_keys = identity_owners.fetch(stem, []).uniq
+        next if stem.empty? || candidate_keys.length != 1
+
+        project_key = candidate_keys.first
+        owners = mapped_owners.fetch(channel.fetch(:id), []).uniq
+        next unless (owners - [project_key]).empty?
+        next unless (channel.fetch(:task_projects) - [project_key]).empty?
+
+        registered_channel = Array(registry.dig("projects", project_key, "slack_channels")).find do |entry|
+          entry.is_a?(Hash) && entry["id"].to_s.upcase == channel.fetch(:id)
+        end
+        matches << channel.merge(
+          project_key: project_key,
+          task_ids: channel.fetch(:task_ids).uniq.sort,
+          assign_task_ids: channel.fetch(:assign_task_ids).uniq.sort,
+          already_mapped: !registered_channel.nil?,
+          channel_change: registered_channel.nil? || registered_channel["name"] != channel.fetch(:name),
+          match: stem
+        ).reject { |field, _value| field == :task_projects }
+      end.sort_by { |channel| [channel.fetch(:project_key), channel.fetch(:name).downcase, channel.fetch(:id)] }
+    end
+
+    def project_identity_owners(registry)
+      owners = Hash.new { |hash, identity| hash[identity] = [] }
+      registry.fetch("projects").each do |project_key, project|
+        next unless project.is_a?(Hash)
+
+        project_identity_variants(
+          project_key,
+          project.fetch("display_name", project_key),
+          Array(project["aliases"])
+        ).each { |identity| owners[identity] << project_key }
+      end
+      owners.each_value(&:uniq!)
+      owners
+    end
+
+    def slack_channel_owners(registry)
+      registry.fetch("projects").each_with_object(Hash.new { |hash, channel_id| hash[channel_id] = [] }) do |(project_key, project), owners|
+        Array(project["slack_channels"]).each do |channel|
+          owners[channel["id"].to_s.upcase] << project_key if channel.is_a?(Hash)
+        end
+      end
+    end
+
+    def slack_channel_inventory(include_finished:)
+      channels = {}
+      @task_board.tasks.each do |task|
+        finished = FINISHED_TASK_STATUSES.include?(task.fetch("status"))
+        next if finished && !include_finished
+
+        Array(task["labels"]).each do |label|
+          next unless label.is_a?(Hash) && label["kind"] == "slack_channel"
+
+          channel_id = label.fetch("key").delete_prefix("slack:").upcase
+          next unless channel_id.match?(SLACK_CHANNEL_ID_PATTERN)
+
+          entry = channels[channel_id] ||= {
+            id: channel_id,
+            key: "slack:#{channel_id}",
+            name: label.fetch("name"),
+            task_ids: [],
+            assign_task_ids: [],
+            task_projects: []
+          }
+          entry[:task_ids] << task.fetch("id")
+          entry[:task_projects] |= Array(task["projects"])
+          entry[:assign_task_ids] << task.fetch("id") if !finished && Array(task["projects"]).empty?
+        end
+      end
+      channels
     end
 
     def project_identity_variants(key, display_name, aliases)
@@ -755,14 +834,19 @@ module AgentOS
     end
 
     def assign_reconciled_tasks(key, assignments)
+      tasks = validate_reconciled_task_assignments(assignments)
+      tasks.each { |task| @task_board.update(task.fetch("id"), "projects" => [key]) }
+      tasks.map { |task| task.fetch("id") }
+    end
+
+    def validate_reconciled_task_assignments(assignments)
       task_ids = assignments.map { |assignment| assignment.fetch(:task_id) }.uniq
       tasks = task_ids.map { |task_id| @task_board.read_task(task_id) }
       tasks.each do |task|
         raise ArgumentError, "cannot reconcile finished outcome #{task.fetch("id")}" if FINISHED_TASK_STATUSES.include?(task.fetch("status"))
         raise ArgumentError, "cannot replace existing project attribution for #{task.fetch("id")}" unless Array(task["projects"]).empty?
       end
-      tasks.each { |task| @task_board.update(task.fetch("id"), "projects" => [key]) }
-      task_ids
+      tasks
     end
 
     def project_root(project)

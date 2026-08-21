@@ -11,9 +11,14 @@ struct ContentView: View {
     @State private var searchText = ""
     @State private var showsNewTask = false
     @AppStorage(AgentOSAppearance.storageKey) private var storedAppearance = AgentOSAppearance.dark.rawValue
+    @AppStorage(AgentOSProjectPins.storageKey) private var storedPinnedProjectKeys = "[]"
 
     private var appearance: AgentOSAppearance {
         AgentOSAppearance(rawValue: storedAppearance) ?? .dark
+    }
+
+    private var pinnedProjectKeys: [String] {
+        AgentOSProjectPins.decode(storedPinnedProjectKeys)
     }
 
     private var visibleTasks: [AgentOSTask] {
@@ -77,7 +82,13 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            SidebarView(projects: store.projects, tasks: store.tasks, selection: $scope)
+            SidebarView(
+                projects: store.projects,
+                tasks: store.tasks,
+                pinnedProjectKeys: pinnedProjectKeys,
+                selection: $scope,
+                onToggleProjectPin: toggleProjectPin
+            )
                 .navigationSplitViewColumnWidth(
                     min: 210,
                     ideal: AgentOSMetrics.sidebarWidth,
@@ -183,6 +194,12 @@ struct ContentView: View {
             selectedTaskID = nil
             inspectorResizeStartWidth = nil
         }
+    }
+
+    private func toggleProjectPin(_ projectKey: String) {
+        storedPinnedProjectKeys = AgentOSProjectPins.encode(
+            AgentOSProjectPins.toggled(projectKey, in: pinnedProjectKeys)
+        )
     }
 
     private var detailPane: some View {

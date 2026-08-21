@@ -405,7 +405,7 @@ module AgentOS
         parser.on("--directory PATH", "Repeat for active Codex working directories") { |value| options[:directories] << value }
         parser.on("--repository PATH", "Deprecated alias for --directory") { |value| options[:directories] << value }
         parser.on("--json", "Print the machine-readable synchronization result") { options[:json] = true }
-        parser.on("--apply", "Register deterministic local projects and attach verified repositories when available") { options[:apply] = true }
+        parser.on("--apply", "Register deterministic local projects, attach verified repositories, and link exact non-conflicting Slack channels") { options[:apply] = true }
         parser.parse!(@arguments)
       end
       reject_extra_arguments!
@@ -426,6 +426,10 @@ module AgentOS
         end
         result.fetch(:skipped).each do |entry|
           @out.puts "  SKIP     #{entry.fetch(:input)} (#{entry.fetch(:reason)})"
+        end
+        result.dig(:slack_reconciliation, :matches).each do |match|
+          @out.puts "  SLACK    #{match.fetch(:id)} #{match.fetch(:name)} -> #{match.fetch(:project_key)}"
+          match.fetch(:assign_task_ids).each { |task_id| @out.puts "    assign   #{task_id}" }
         end
         @out.puts "Preview only. Re-run with --apply to register eligible local projects." unless options.fetch(:apply)
       end
@@ -918,7 +922,7 @@ module AgentOS
           activate   Preview or select the home used by app and plugin processes
           install-plugin  Preview or install the Agent OS Codex plugin
           onboard-project  Preview or register an existing Git repository
-          sync-codex-projects  Register active Codex projects and enrich optional repositories
+          sync-codex-projects  Register Codex projects, enrich repositories, and link exact Slack channels
           upgrade-project-registry  Preview or upgrade obsolete project registry metadata
           relink-project  Preview or update the path of an already registered repository
           configure-slack-monitor  Preview or configure the optional read-only Slack monitor

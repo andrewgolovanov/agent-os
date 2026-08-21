@@ -4,6 +4,29 @@ This roadmap contains only the next verifiable product outcomes.
 
 ## Now
 
+### Verify app-coordinated stable plugin updates
+
+The packaged runtime can now compare an already installed Agent OS plugin with
+the signed app bundle, plan the exact matching stable marketplace tag, and
+perform a user-confirmed or separately opted-in replacement with rollback. A
+real local retry completed `v0.4.3` to `v0.6.0`; the preceding stalled clone
+also proved restoration of the previous tag. Fresh-task pickup and second-Mac
+Sparkle coordination remain open.
+
+Done when:
+
+- Settings shows installed and bundled plugin versions plus an enabled install
+  action only for a supported official stable-tag transition;
+- a real local `v0.4.3` to `v0.6.0` plugin update re-pins the marketplace,
+  installs the exact bundled plugin version, preserves `AGENT_OS_HOME`, and is
+  loaded by a fresh Codex task;
+- a simulated installation failure restores the prior marketplace tag and
+  plugin version;
+- a newer plugin, an unpinned marketplace, and a non-official marketplace are
+  left unchanged with an actionable explanation;
+- the same behavior is confirmed after one genuine Sparkle app update on a
+  second Mac.
+
 ### Verify local-only project sync and structured Slack bot mentions in a packaged install
 
 The public `v0.6.0` app/runtime/plugin artifacts and an anonymous tag checkout
@@ -187,6 +210,23 @@ Done when:
   checks above.
 
 ## Next
+
+### Mirror Codex project icons and colors when the public contract supports it
+
+Agent OS now provides a narrow local fallback for project pins because that
+navigation affordance is useful without changing canonical project state. It
+should remain a read-only follower for Codex project icons and colors. The
+current supported App Server contract does not expose stable project
+presentation metadata, so those fields still wait on that boundary.
+
+Done when:
+
+- a supported Codex API returns stable project identity plus icon and color
+  without reading private desktop files;
+- Agent OS mirrors those values read-only and falls back to the folder glyph for
+  older Codex versions or missing fields;
+- thread pins are never misinterpreted as project pins, and any future Codex
+  project-pin migration explicitly reconciles the existing app-local ordering.
 
 ### Prove setup with a second user
 

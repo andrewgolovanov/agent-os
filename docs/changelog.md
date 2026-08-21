@@ -2,6 +2,42 @@
 
 ## 2026-08-21
 
+- Fixed native project synchronization failing with App Server status `127`
+  when a GUI launch selected a Node-based `~/.local/bin/codex` wrapper but did
+  not inherit the shell path containing `node`. The app now prefers the
+  self-contained executable bundled with Codex or ChatGPT and supplies explicit
+  user, Homebrew, and system paths for standalone CLI fallback.
+- Added deterministic Slack channel reconciliation to automatic Codex project
+  synchronization. A stable channel label is linked only when its normalized
+  name has exactly one registered project owner, the channel has no other
+  owner, and every labeled outcome is unassigned or already belongs only to
+  that project. Only unfinished unassigned outcomes are attributed; completed
+  and conflicting history is never rewritten.
+- Removed completed-only zero-count Slack labels from the native sidebar while
+  preserving labels on Done cards and source history. Added sync-report counts
+  and app notices for linked channels and newly attributed unfinished tasks.
+- Added app-local ordered project pins to the native sidebar. A hover button or
+  context-menu action moves a project into or out of a `Pinned` section while
+  unpinned projects remain alphabetical. Stable project keys are stored only
+  in macOS `UserDefaults`, so pinning cannot change the registry, Task Board
+  routing, Slack mappings, or plugin behavior. Agent OS still does not read
+  private Codex desktop state; project icons and colors remain deferred.
+- Added app-coordinated Codex plugin updates for packaged installations. The
+  native app now detects when its already installed plugin is older than the
+  signed bundled runtime, offers an explicit Settings action, and supports a
+  separate automatic-update opt-in after app updates. The runtime re-pins only
+  the official Git marketplace from one stable release tag to the app's exact
+  tag, verifies the installed full version, restores the previous tag after a
+  failed install, never downgrades a newer plugin, and leaves the private
+  registry and task-event history intact. Isolated fake-Codex coverage exercises
+  planning, successful replacement, rollback, untrusted-marketplace refusal,
+  missing-metadata fallback, bounded command timeout, and downgrade refusal.
+- Verified the packaged flow locally against the real Codex CLI. An initial
+  stalled GitHub marketplace clone failed back to the prior `v0.4.3` plugin;
+  the retry re-pinned the marketplace to `v0.6.0` at
+  `da78a9124cad93ee0a365b7d6b8e9eeb5256c239` and installed
+  `0.6.0+codex.20260821154421`. The private home inode and file count stayed
+  stable, and neither registry configuration nor task event history changed.
 - Published `v0.6.0` from
   `da78a9124cad93ee0a365b7d6b8e9eeb5256c239` in successful workflow run
   `32499730792`. The public archive SHA-256 is

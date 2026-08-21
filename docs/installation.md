@@ -20,11 +20,11 @@ Add the public Git marketplace at the release tag you want to install, then add
 the Agent OS plugin from that marketplace:
 
 ```bash
-codex plugin marketplace add andrewgolovanov/agent-os --ref v0.6.0
+codex plugin marketplace add andrewgolovanov/agent-os --ref v0.7.0
 codex plugin add agent-os@agent-os
 ```
 
-For a later release, replace `v0.6.0` with the latest published `vN.N.N` tag
+For a later release, replace `v0.7.0` with the latest published `vN.N.N` tag
 shown on the [Agent OS Releases page](https://github.com/andrewgolovanov/agent-os/releases).
 Codex downloads and manages the plugin snapshot; the user does not clone or
 maintain the Agent OS repository.
@@ -74,11 +74,13 @@ The plugin applies the same idempotent operation to the current `cwd` on each
 new Codex task before Task Bridge resolves project routing. When Git is added
 later at the exact project root, the same operation attaches the verified
 repository and fills a later origin without changing the project key, tasks, or
-Slack mappings. Automatic sync never moves a repository, changes Git state, or
-maps Slack channels.
+Slack mappings. Automatic sync may link a stable Slack channel only when its
+normalized name has one exact non-conflicting registered project owner, and may
+attribute only unfinished unassigned outcomes. It never reads Slack history,
+moves a repository, or changes Git state.
 
 Use manual onboarding for an ambiguous or multi-repository topology, relinking,
-or reviewed Slack channel reconciliation. A local-only project can also be
+or ambiguous Slack channel reconciliation. A local-only project can also be
 previewed explicitly with `agent-os sync-codex-projects --directory PATH` and
 applied only after reviewing the same command with `--apply`.
 
@@ -146,10 +148,20 @@ archive whose source or checksum you cannot verify. See
 
 ## Updates
 
-- Codex updates Agent OS by installing a newer versioned marketplace snapshot;
-  start a fresh task afterward.
 - The native app checks the latest signed Sparkle appcast once per day and
   notifies before installation by default. Automatic installation is opt-in.
+- After the app/runtime advances, **Settings → Updates** compares the installed
+  Agent OS Codex plugin with that same release. **Install Codex Plugin Update**
+  re-pins only the official Git marketplace from its previous stable tag to the
+  app's exact `vN.N.N` tag, reinstalls the plugin, and verifies its full version.
+  Start a fresh Codex task afterward.
+- **Update Codex plugin automatically after app updates** is a separate opt-in.
+  It applies the same tagged flow on app launch. A failed install restores the
+  previous marketplace tag; an unpinned, missing, local, or non-official
+  marketplace requires manual handling, and a newer plugin is never downgraded.
+- The updater does not pass or edit `AGENT_OS_HOME`; private registry and task
+  event history are preserved. A normal app/plugin bootstrap may validate and
+  re-render derived Task Board projections after installation.
 - A valid explicitly selected development checkout remains separate and keeps
   the preview-first tagged Git update flow. Packaged bootstrap never resets or
   overwrites it.
@@ -245,17 +257,17 @@ The script bundles Sparkle, ad-hoc signs the complete app and its updater
 helpers, signs the update archive with the Agent OS Ed25519 key, and verifies
 the archive signature before returning. It creates:
 
-- `dist/release/AgentOS-0.6.0-macOS.zip`;
-- `dist/release/AgentOS-0.6.0-macOS.zip.sha256`;
+- `dist/release/AgentOS-0.7.0-macOS.zip`;
+- `dist/release/AgentOS-0.7.0-macOS.zip.sha256`;
 - `dist/release/appcast.xml`.
 
 This is not a Developer ID signature and the app is not notarized. Only install
 an archive downloaded from the expected Agent OS GitHub release and compare its
 checksum before opening it. The current public package and checksum are attached
-to [Agent OS v0.6.0](https://github.com/andrewgolovanov/agent-os/releases/tag/v0.6.0):
+to [Agent OS v0.7.0](https://github.com/andrewgolovanov/agent-os/releases/tag/v0.7.0):
 
 ```bash
-shasum -a 256 -c AgentOS-0.6.0-macOS.zip.sha256
+shasum -a 256 -c AgentOS-0.7.0-macOS.zip.sha256
 ```
 
 ### App updates

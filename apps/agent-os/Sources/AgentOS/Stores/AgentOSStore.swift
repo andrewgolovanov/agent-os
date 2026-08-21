@@ -44,11 +44,8 @@ final class AgentOSStore {
         installWatchersIfAvailable()
         await synchronizeCodexProjects()
         await refresh()
-        let packagedRuntime = FileManager.default.fileExists(
-            atPath: configuration.sourceURL.appendingPathComponent(".agent-os-runtime.json").path
-        )
         await checkForComponentUpdates(
-            apply: !packagedRuntime && UserDefaults.standard.bool(forKey: "agent-os.auto-update-core-plugin"),
+            apply: UserDefaults.standard.bool(forKey: "agent-os.auto-update-core-plugin"),
             announceCurrent: false
         )
     }
@@ -64,9 +61,13 @@ final class AgentOSStore {
             )
             projectSyncReport = report
             let changedCount = report.registeredCount + report.enrichedCount + report.refreshedCount
-            if changedCount > 0 {
+            let slackChangedCount = report.linkedSlackChannelCount + report.attributedSlackTaskCount
+            if changedCount > 0 || slackChangedCount > 0 {
                 let suffix = report.skippedCount > 0 ? "; skipped \(report.skippedCount) ambiguous or unavailable paths" : ""
-                noticeMessage = "Synchronized \(changedCount) Codex project\(changedCount == 1 ? "" : "s")\(suffix)."
+                let projectMessage = "Synchronized \(changedCount) Codex project\(changedCount == 1 ? "" : "s")"
+                let channelMessage = "linked \(report.linkedSlackChannelCount) Slack channel\(report.linkedSlackChannelCount == 1 ? "" : "s")"
+                let taskMessage = "attributed \(report.attributedSlackTaskCount) unfinished task\(report.attributedSlackTaskCount == 1 ? "" : "s")"
+                noticeMessage = "\(projectMessage); \(channelMessage); \(taskMessage)\(suffix)."
             }
         } catch {
             noticeMessage = "Codex project synchronization was unavailable: \(error.localizedDescription)"
@@ -263,8 +264,17 @@ final class AgentOSStore {
                 noticeMessage = "Agent OS core/plugin updated. Start a fresh Codex task to load the refreshed plugin."
             } else if status.source.updateAvailable, let latest = status.source.latestVersion {
                 noticeMessage = "Agent OS \(latest) is available. Open Settings → Updates to install it."
+            } else if status.plugin.refreshRequired, status.plugin.canInstallUpdate {
+                let target = status.plugin.targetRef ?? status.plugin.sourceVersion ?? "a newer release"
+                noticeMessage = "Agent OS Codex plugin \(target) is available. Open Settings → Updates to install it."
+            } else if status.plugin.refreshRequired, let reason = status.plugin.reason {
+                noticeMessage = "Agent OS plugin needs a manual update: \(reason)."
+            } else if announceCurrent, status.plugin.action == "install-separately" {
+                noticeMessage = "The Agent OS Codex plugin is not installed."
+            } else if announceCurrent, status.plugin.action == "installed-newer-than-runtime" {
+                noticeMessage = "The installed Agent OS plugin is newer than this app and was left unchanged."
             } else if announceCurrent, status.source.action == "managed-by-app" {
-                noticeMessage = "Agent OS runtime is bundled with the app. Codex manages plugin updates separately."
+                noticeMessage = "Agent OS app/runtime and Codex plugin are up to date."
             } else if announceCurrent, status.source.configured {
                 noticeMessage = "Agent OS core and Codex plugin are up to date."
             }

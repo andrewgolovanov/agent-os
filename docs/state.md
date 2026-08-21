@@ -58,10 +58,27 @@ Verified: 2026-08-21
   same-root repository and later origin enrich the existing project. Thread
   bodies and historical tasks are not imported; missing, overlapping,
   duplicate-origin, conflicting, and transient-only candidates are skipped.
+- The native App Server client prefers the self-contained Codex executable
+  bundled with the installed Codex or ChatGPT app. Standalone CLI resolution
+  remains available through explicit user, Homebrew, and system search paths,
+  preventing GUI launches from failing with status `127` when the first CLI
+  candidate is a Node wrapper outside the inherited `PATH`.
 - Onboarding can conservatively suggest matching Slack channels, then requires
   a second preview with exact selected channel IDs before it records mappings
   or assigns unfinished outcomes that have no current project. Existing project
   attribution and Slack labels are preserved.
+- Automatic Codex project synchronization now closes the deterministic subset
+  of that gap: a stable Slack channel label whose normalized name has exactly
+  one registered, non-conflicting project owner is linked to that project.
+  Only unfinished unassigned outcomes are attributed; completed and conflicting
+  history is unchanged. Completed-only unmapped labels no longer remain in the
+  native sidebar with a zero count.
+- The native sidebar now supports app-local ordered project pins through a
+  `Pinned` section, row affordance, and context-menu action. The stable project
+  keys are stored only in macOS `UserDefaults`; they do not alter the registry,
+  Task Board routing, Slack mappings, or plugin behavior. Agent OS still does
+  not read private Codex desktop state, and project icon/color mirroring remains
+  intentionally unimplemented.
 - Project onboarding now has one registry-only topology: every project records
   a `root` plus an optional `repositories` collection and creates no generated folder under
   `AGENT_OS_HOME/projects`, including multi-repository registrations.
@@ -89,26 +106,27 @@ Verified: 2026-08-21
   provider integration. Immediately afterward, the app or task-start hook may
   add deterministic local project roots and verified same-root repository
   metadata to the private registry. Manual nested or multi-repository changes,
-  relinking, and Slack channel reconciliation remain preview-first.
+  relinking, and ambiguous Slack channel reconciliation remain preview-first;
+  only the exact unique non-conflicting channel subset is linked automatically.
 
 ## Verified implementation
 
 - `agent-os doctor` passes for the current instance and for a fresh temporary
   home.
 - The full Agent OS validator passes against both homes.
-- The current Ruby suite passes 94 tests and 790 assertions, including active
+- The current Ruby suite passes 105 tests and 862 assertions, including active
   private-home resolution, safe home migration, automatic eligible Codex
   local-only project registration and later repository enrichment,
   monitor-path rewriting, per-channel Slack cursor
-  validation, identity-checked repository relinking, preview-first Slack
-  channel mapping, safe unfinished-outcome reconciliation, completion
+  validation, identity-checked repository relinking, deterministic and
+  preview-first Slack channel mapping, safe unfinished-outcome reconciliation, completion
   follow-up, and Project Time reporting contracts.
-- Agent OS app builds and its 32 Swift tests pass. Current bundle launch
-  verification succeeds against the active private home: the ad-hoc signed
-  development bundle passes strict code-signature validation, launches from
-  `apps/agent-os/dist`, and leaves a valid 38-project registry. The complete
-  paginated live sync contains 13 local-only and 25 repository-backed projects,
-  with no duplicate, missing, or private-home roots.
+- Agent OS app builds and its 37 Swift tests pass. The current candidate binary
+  also passes an isolated signed-bundle launch: it initializes and reads a
+  separate temporary private home without touching the installed app's home.
+  The installed `v0.6.0` app remains the public runtime; the prior active-home
+  inventory contains 13 local-only and 25 repository-backed projects, with no
+  duplicate, missing, or private-home roots.
 - Task Board and the Agent OS MCP now support idempotent display-only Slack
   channel labels keyed by `slack:<channel_id>`. The native app keeps every
   channel label on its task card, filters unmapped labels separately from
@@ -260,7 +278,19 @@ Verified: 2026-08-21
   fast-forwards a clean checkout; dirty-checkout preservation and successful
   tagged update are covered by isolated Git tests.
 - The native app embeds Sparkle 2.9.5, exposes manual and daily checks, and keeps
-  automatic app and core/plugin installation as separate user opt-ins.
+  automatic app and plugin installation as separate user opt-ins. Its packaged
+  runtime now detects an older installed Agent OS plugin, targets the exact
+  matching stable tag in the official Git marketplace, verifies the resulting
+  full plugin version, restores the previous tag after a failed install, and
+  refuses to downgrade a newer plugin. The updater does not target private
+  Agent OS state; normal bootstrap may re-render projections while preserving
+  registry and task-event history.
+- A real local Settings run exercised both outcomes: the first `v0.4.3` to
+  `v0.6.0` attempt restored `v0.4.3` after a stalled GitHub clone, and the retry
+  installed `0.6.0+codex.20260821154421` from exact tag `v0.6.0` and commit
+  `da78a9124cad93ee0a365b7d6b8e9eeb5256c239`. `AGENT_OS_HOME` kept the same
+  inode and 717-file count; config files and task `events.jsonl` histories were
+  unchanged during the replacement.
 - The dedicated Agent OS Ed25519 key exists in the local Keychain account
   `agent-os`; only its public key is in source. The generated 0.1.0 archive
   signature was independently verified with CryptoKit.

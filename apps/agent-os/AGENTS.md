@@ -7,6 +7,7 @@
 - Perform task mutations through the registered Agent OS `tools/task-board` executable with argument arrays.
 - Use Codex App Server over local `stdio` only. Do not depend on experimental WebSocket transport or private desktop APIs.
 - Use the public `codex://threads/<id>` handoff for exact task navigation.
+- Keep project pins as an ordered app-local presentation preference in `UserDefaults`; they must never alter the project registry, Task Board routing, Slack mappings, or plugin behavior.
 - Slack remains a read-only source in the MVP.
 
 ## Structure

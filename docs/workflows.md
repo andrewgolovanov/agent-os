@@ -18,8 +18,13 @@
 5. If Git later appears at the exact registered root, enrich the same project;
    if its origin becomes known later, fill that metadata without changing Git.
    Nested or multi-repository attachment remains a manual reviewed operation.
-6. Never read thread bodies, create outcomes, migrate Slack history, map
-   channels, move repositories, or change Git state during synchronization.
+6. After a project is registered, link a stable Slack channel automatically
+   only when its normalized channel name has exactly one registered project
+   owner and no labeled outcome conflicts with that owner. Attribute only
+   unfinished unassigned outcomes; completed outcomes keep their historical
+   attribution unchanged. Ambiguous cases remain unmapped for manual review.
+7. Never read thread bodies, create outcomes, migrate Slack history, move
+   repositories, or change Git state during synchronization.
 
 ## Onboard a project manually
 
@@ -87,7 +92,11 @@ Change lifecycle only through `tools/task-board`. Private `task.json` is the str
    current-user mention are expanded and processed like human mention threads.
 5. Exact event identity is checked through `tools/slack-state`.
 6. Correlation uses stable Task Board sources and verified registry attribution, not similar text.
-7. A registered stable Slack channel mapping provides project attribution. Without one, an unknown-project named-channel signal may become an unassigned inbox outcome with a display-only `#channel-name` label keyed by the stable Slack channel ID.
+7. A registered stable Slack channel mapping provides project attribution. An
+   exact deterministic channel-name-to-project match may create this mapping
+   during Codex project synchronization; otherwise an unknown-project
+   named-channel signal may become an unassigned inbox outcome with a
+   display-only `#channel-name` label keyed by the stable Slack channel ID.
 8. Channel labels remain visible on task cards after attribution. They support scanning and filtering but never become project keys, repository paths, source identity, or routing authority. DMs do not persist participant names as labels.
 9. A channel cursor advances only after that channel page is complete; the global cursor advances only after every configured source and the full dynamic channel inventory are complete.
 10. Nonmatching ambient messages are discarded immediately and never persisted or analyzed as tasks. External messages, code or Git mutations, deployments, and management of user-owned Codex tasks are prohibited.

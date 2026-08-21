@@ -21,6 +21,12 @@ ID or notarization.
   source trees and never resets user changes.
 - Refresh `agent-os@agent-os` after the source update only when its manifest
   version changed. A fresh Codex task is still required to load the new plugin.
+- For a packaged install, treat the Ed25519-verified app bundle's runtime
+  manifest as the plugin target. Update only an already installed plugin from
+  the official Git marketplace when that marketplace is pinned to a stable
+  release tag; re-pin it to the app's exact tag, reinstall, and verify the full
+  plugin version. Restore the previous tag on failure and never downgrade a
+  newer plugin.
 - Let the native app check core/plugin status at startup. Automatic core/plugin
   installation is off until the user enables it in Agent OS Settings.
 - Use Sparkle 2.9.5 for native app updates. Check once per day by default, notify
@@ -38,6 +44,9 @@ ID or notarization.
 
 - One release updates the core, Codex plugin source, and macOS app without
   creating a second hosted task database.
+- Packaged users can keep the app/runtime/plugin release aligned without
+  tracking `main` or manually rebuilding marketplace commands. Missing,
+  unpinned, local, or non-official marketplaces remain explicit manual cases.
 - Core/plugin auto-update remains reversible through Git history and never
   overwrites a customized checkout.
 - Compromise of a download URL or checksum alone cannot produce an accepted app

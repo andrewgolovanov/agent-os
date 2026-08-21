@@ -85,6 +85,7 @@ REQUIRED_SOURCE_PATHS = %w[
   test/project_time_test.rb
   test/slack_state_test.rb
   test/agent_os_cli_test.rb
+  test/agent_os_updater_test.rb
   test/agent_os_mcp_test.rb
   test/paths_test.rb
   test/project_registry_test.rb
