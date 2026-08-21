@@ -2,6 +2,15 @@
 
 ## 2026-08-21
 
+- Published `v0.5.0` from
+  `5e6d0f16dd880e15ca681e6fa1e713acbf00facb` in successful workflow run
+  `32495953322`. The public archive SHA-256 is
+  `244ad1c6d445a9dacf3dc6a0036a407ed37d91d4e743095cf283d39f329754cb`;
+  its checksum, exact app/runtime/plugin version, Apple Silicon/macOS metadata,
+  23-file runtime, strict bundle signature, stable appcast URL and length, and
+  Sparkle Ed25519 signature passed independent post-publication checks. A fresh
+  anonymous tag clone also initialized and validated against an empty private
+  home.
 - Added automatic registration of deterministic active Codex repositories.
   The macOS app pages public non-archived `thread/list` metadata on launch, and
   the plugin hook synchronizes the current task `cwd` before Task Bridge

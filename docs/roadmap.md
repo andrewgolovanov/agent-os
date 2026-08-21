@@ -139,11 +139,17 @@ Completed publication checks:
   `32300042057`; its public checksum, Apple Silicon/macOS metadata, exact
   22-file runtime, strict bundle signature, stable appcast, Sparkle Ed25519
   signature, and fresh anonymous tag-clone validation passed — verified.
+- `v0.5.0` published automatic eligible Codex repository registration and
+  exact-current-user Slack bot/app mention intake from commit
+  `5e6d0f16dd880e15ca681e6fa1e713acbf00facb` in successful workflow run
+  `32495953322`; its public checksum, Apple Silicon/macOS metadata, exact
+  23-file runtime, strict bundle signature, stable appcast, Sparkle Ed25519
+  signature, and fresh anonymous tag-clone validation passed — verified.
 
 Remaining release checks:
 
-- a second Mac completes an approved clean install and a genuine `v0.4.2` to
-  `v0.4.3` update.
+- a second Mac completes an approved clean install and a genuine `v0.4.3` to
+  `v0.5.0` update.
 
 ### Complete the local Agent OS app pilot
 
