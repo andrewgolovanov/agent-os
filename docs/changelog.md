@@ -2,6 +2,20 @@
 
 ## 2026-08-21
 
+- Changed automatic Codex project synchronization so an existing local folder
+  is a valid project without Git. App launch and the task-start hook now create
+  local-only entries with `repositories: []`; a later committed Git root and
+  later origin enrich the same project without changing its key or Task Board
+  attribution.
+- Added stable path-derived suffixes for same-name projects, nested local-path
+  deduplication, and fail-closed overlap handling. Duplicate origins and
+  transient worktrees without durable checkouts remain excluded.
+- Updated the CLI to prefer repeatable `--directory` inputs while retaining
+  `--repository` as a compatibility alias, and added explicit created,
+  enriched, refreshed, preserved, and skipped synchronization counts.
+- Allowed the native app and registry validator to load projects with no
+  repositories, and added Ruby and Swift regression coverage for the complete
+  local-only-to-repository lifecycle.
 - Published `v0.5.0` from
   `5e6d0f16dd880e15ca681e6fa1e713acbf00facb` in successful workflow run
   `32495953322`. The public archive SHA-256 is

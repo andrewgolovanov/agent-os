@@ -51,18 +51,19 @@ Verified: 2026-08-21
   valid explicitly selected development checkout remains authoritative.
 - MCP and CLI onboarding can preview and register an existing Git repository
   from any absolute location without moving, cloning, renaming, or modifying it.
-- The shared runtime can automatically synchronize deterministic active Codex
-  Git roots. The app supplies only active non-archived `thread/list` `cwd`
-  metadata on launch, and the plugin hook supplies the current task `cwd`
-  before Task Bridge routing. Thread bodies and historical tasks are not
-  imported; missing, non-Git, unborn, duplicate, conflicting, and transient-only
-  candidates are skipped.
+- The development branch can automatically synchronize deterministic active
+  Codex project roots with or without Git. The app supplies only active
+  non-archived `thread/list` `cwd` metadata on launch, and the plugin hook
+  supplies the current task `cwd` before Task Bridge routing. A later committed
+  same-root repository and later origin enrich the existing project. Thread
+  bodies and historical tasks are not imported; missing, overlapping,
+  duplicate-origin, conflicting, and transient-only candidates are skipped.
 - Onboarding can conservatively suggest matching Slack channels, then requires
   a second preview with exact selected channel IDs before it records mappings
   or assigns unfinished outcomes that have no current project. Existing project
   attribution and Slack labels are preserved.
 - Project onboarding now has one registry-only topology: every project records
-  `root + repositories` and creates no generated folder under
+  a `root` plus an optional `repositories` collection and creates no generated folder under
   `AGENT_OS_HOME/projects`, including multi-repository registrations.
 - MCP and CLI one-way registry upgrade remove obsolete `layout` and `wrapper`
   fields while preserving any old managed folder in a private recovery backup
@@ -86,24 +87,28 @@ Verified: 2026-08-21
   OS source checkout and resolve through absolute paths in the private registry.
 - Packaged bootstrap itself preserves existing files and enables no monitor or
   provider integration. Immediately afterward, the app or task-start hook may
-  add only deterministic eligible Git roots to the private registry. Manual
-  onboarding, relinking, and Slack channel reconciliation remain preview-first.
+  add deterministic local project roots and verified same-root repository
+  metadata to the private registry. Manual nested or multi-repository changes,
+  relinking, and Slack channel reconciliation remain preview-first.
 
 ## Verified implementation
 
 - `agent-os doctor` passes for the current instance and for a fresh temporary
   home.
 - The full Agent OS validator passes against both homes.
-- The current Ruby suite passes 86 tests and 751 assertions, including active
+- The current Ruby suite passes 94 tests and 790 assertions, including active
   private-home resolution, safe home migration, automatic eligible Codex
-  repository registration, monitor-path rewriting, per-channel Slack cursor
+  local-only project registration and later repository enrichment,
+  monitor-path rewriting, per-channel Slack cursor
   validation, identity-checked repository relinking, preview-first Slack
   channel mapping, safe unfinished-outcome reconciliation, completion
   follow-up, and Project Time reporting contracts.
-- Agent OS app builds and its 30 Swift tests pass. Current bundle launch
+- Agent OS app builds and its 32 Swift tests pass. Current bundle launch
   verification succeeds against the active private home: the ad-hoc signed
   development bundle passes strict code-signature validation, launches from
-  `apps/agent-os/dist`, and leaves the validated eight-project registry intact.
+  `apps/agent-os/dist`, and leaves a valid 38-project registry. The complete
+  paginated live sync contains 13 local-only and 25 repository-backed projects,
+  with no duplicate, missing, or private-home roots.
 - Task Board and the Agent OS MCP now support idempotent display-only Slack
   channel labels keyed by `slack:<channel_id>`. The native app keeps every
   channel label on its task card, filters unmapped labels separately from

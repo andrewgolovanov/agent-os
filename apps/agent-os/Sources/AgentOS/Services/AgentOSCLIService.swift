@@ -15,7 +15,7 @@ struct AgentOSCLIService: Sendable {
             name: channel.fetch("name")
           }
         end,
-        repositories: value.fetch("repositories").map do |repository|
+        repositories: Array(value["repositories"]).map do |repository|
           {
             id: repository.fetch("id"),
             path: repository.fetch("path"),
@@ -44,18 +44,20 @@ struct AgentOSCLIService: Sendable {
         workingDirectories: [URL]
     ) async throws -> AgentOSProjectSyncReport {
         try validate(configuration)
-        let repositories = workingDirectories
+        let directories = workingDirectories
             .filter(\.isFileURL)
             .map(\.standardizedFileURL)
             .reduce(into: [URL]()) { result, url in
                 if !result.contains(where: { $0.path == url.path }) { result.append(url) }
             }
-        guard !repositories.isEmpty else {
+        guard !directories.isEmpty else {
             return AgentOSProjectSyncReport(
                 applied: true,
                 discoveredCount: 0,
                 eligibleCount: 0,
                 registeredCount: 0,
+                enrichedCount: 0,
+                refreshedCount: 0,
                 preservedCount: 0,
                 skippedCount: 0
             )
@@ -72,8 +74,8 @@ struct AgentOSCLIService: Sendable {
             "--apply",
             "--json",
         ]
-        for repository in repositories {
-            arguments.append(contentsOf: ["--repository", repository.path])
+        for directory in directories {
+            arguments.append(contentsOf: ["--directory", directory.path])
         }
         let output = try await ProcessRunner.run(
             executable: executable,

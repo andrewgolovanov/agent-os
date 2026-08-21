@@ -4,19 +4,20 @@ This roadmap contains only the next verifiable product outcomes.
 
 ## Now
 
-### Verify automatic project sync and structured Slack bot mentions in a packaged install
+### Verify local-only project sync and structured Slack bot mentions in a packaged install
 
 The implementation is local and must be proven with the synchronized packaged
 runtime and a fresh Codex task before release.
 
 Done when:
 
-- a fresh app launch registers eligible active Codex Git roots without reading
-  thread bodies or changing repository state;
-- a fresh plugin task in a previously unknown repository registers its current
-  root before Task Bridge routing;
-- missing, non-Git, duplicate-origin, conflicting, and transient-only paths are
-  skipped without blocking the app;
+- a fresh app launch registers active Codex roots without requiring Git,
+  reading thread bodies, or changing repository state;
+- a fresh plugin task in a previously unknown local folder registers its
+  current root before Task Bridge routing;
+- adding a first commit and then a remote enriches that same project key;
+- missing, overlapping, duplicate-origin, conflicting, and transient-only paths
+  are skipped without blocking the app;
 - a manual Slack monitor pass dynamically inventories visible channels, finds
   one exact current-user mention hidden in a bot/app Block Kit root, reads its
   complete thread, and ignores a comparable root without the mention;

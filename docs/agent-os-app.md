@@ -40,8 +40,9 @@ with an argument array.
   runtime pointer from the bundle, then reads `AGENT_OS_HOME/source-path`.
 - On each app launch, public App Server `thread/list` supplies active,
   non-archived `cwd` metadata. The shared runtime automatically registers only
-  deterministic eligible Git roots before the app loads its project snapshot;
-  no thread body or historical task is imported.
+  deterministic local project roots before the app loads its project snapshot;
+  Git is optional, and a verified repository can enrich the same project later.
+  No thread body or historical task is imported.
 - The private home defaults to `~/.agent-os`.
 - `WORKSPACE_CONSOLE_ROOT` remains only as a deprecated compatibility alias for older
   one-directory installations.
@@ -130,8 +131,8 @@ may call it on its own queue without entering main-actor-isolated code.
   template version of the same path geometry for the menu-bar extra;
 - create outcome and validated lifecycle changes;
 - bounded menu-bar counts and quick actions.
-- a compact notice after newly discovered eligible Codex repositories are
-  registered; skipped paths do not block the existing Board from loading.
+- a compact notice after newly discovered Codex projects are registered or
+  enriched; skipped paths do not block the existing Board from loading.
 - unified update settings: Sparkle owns packaged app/runtime updates, while
   Codex owns versioned marketplace snapshots of the companion plugin; automatic
   app installation remains disabled until the user opts in.

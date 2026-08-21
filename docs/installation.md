@@ -31,8 +31,8 @@ maintain the Agent OS repository.
 
 Start a fresh Codex task. Plugin startup creates `~/.agent-os` when it does not
 exist, copies no project code, records the packaged runtime selected for that
-plugin version, and idempotently registers the current task's eligible Git root
-in the private project registry. An existing valid development checkout selected through
+plugin version, and idempotently registers the current task's local project root
+in the private project registry whether or not Git exists. An existing valid development checkout selected through
 `AGENT_OS_SOURCE_ROOT` or the private source pointer remains authoritative and
 is never replaced by packaged bootstrap.
 
@@ -62,20 +62,25 @@ required for that workflow.
 
 On first launch, the macOS app uses public Codex App Server `thread/list`
 metadata for active, non-archived tasks. It passes only their `cwd` values to
-the packaged runtime. Existing unique Git roots are registered automatically;
-the app does not call `thread/read`, import task text, or create Task Board
-outcomes. The runtime deduplicates nested folders and normalized origins,
-prefers a durable checkout over a transient `.codex/worktrees` path, and skips
-missing paths, non-Git folders, unborn repositories, ambiguous keys, and
-worktrees with no durable checkout.
+the packaged runtime. Existing deterministic local roots are registered
+automatically, including folders without Git; the app does not call
+`thread/read`, import task text, or create Task Board outcomes. The runtime
+deduplicates nested folders and normalized origins, uses stable suffixes for
+same-name roots, prefers a durable checkout over a transient
+`.codex/worktrees` path, and skips missing paths, ambiguous overlaps, duplicate
+origins, and worktrees with no durable checkout.
 
 The plugin applies the same idempotent operation to the current `cwd` on each
-new Codex task before Task Bridge resolves project routing. Automatic sync
-never moves a repository, changes Git state, maps Slack channels, or rewrites
-existing project entries.
+new Codex task before Task Bridge resolves project routing. When Git is added
+later at the exact project root, the same operation attaches the verified
+repository and fills a later origin without changing the project key, tasks, or
+Slack mappings. Automatic sync never moves a repository, changes Git state, or
+maps Slack channels.
 
-Use manual onboarding for a skipped repository, a multi-repository project, or
-reviewed Slack channel reconciliation.
+Use manual onboarding for an ambiguous or multi-repository topology, relinking,
+or reviewed Slack channel reconciliation. A local-only project can also be
+previewed explicitly with `agent-os sync-codex-projects --directory PATH` and
+applied only after reviewing the same command with `--apply`.
 
 Open an existing Git repository from any location on the computer and ask:
 

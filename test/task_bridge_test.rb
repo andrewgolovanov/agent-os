@@ -22,9 +22,7 @@ class TaskBridgeTest < Minitest::Test
         projects:
           phrasso:
             root: #{@project_root}
-            repositories:
-              - id: site
-                path: #{@project_root}
+            repositories: []
       YAML
     )
     File.write(

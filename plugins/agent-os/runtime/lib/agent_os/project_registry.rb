@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "fileutils"
+require "digest"
 require "open3"
 require "pathname"
 require "tempfile"
@@ -102,6 +103,26 @@ module AgentOS
       )
     end
 
+    def sync_local_project(root:, key: nil, display_name: nil, apply: false)
+      root = verified_project_root(root)
+      lock_path = File.join(@home, ".runtime", "projects.lock")
+
+      if apply
+        FileUtils.mkdir_p(File.dirname(lock_path))
+        File.open(lock_path, File::RDWR | File::CREAT, 0o600) do |lock|
+          lock.flock(File::LOCK_EX)
+          registry = load_registry
+          plan = local_project_plan(registry, root: root, key: key, display_name: display_name)
+          apply_local_project_plan!(registry, plan)
+          atomic_write(@registry_path, YAML.dump(registry), mode: 0o600) if plan.fetch(:action) != "preserve"
+          return local_project_result(plan, applied: plan.fetch(:action) != "preserve")
+        end
+      end
+
+      plan = local_project_plan(load_registry, root: root, key: key, display_name: display_name)
+      local_project_result(plan, applied: false)
+    end
+
     def upgrade_registry(apply: false)
       registry = load_registry
       candidates = registry.fetch("projects").each_with_object([]) do |(key, project), items|
@@ -156,6 +177,7 @@ module AgentOS
       end
 
       registered = Array(project["repositories"])
+      raise ArgumentError, "project has no registered repository to relink" if registered.empty?
       entry = if repository_id.to_s.empty?
                 raise ArgumentError, "repository id is required for a multi-repository project" unless registered.length == 1
                 registered.first
@@ -186,6 +208,240 @@ module AgentOS
     end
 
     private
+
+    def local_project_plan(registry, root:, key:, display_name:)
+      projects = registry.fetch("projects")
+      existing = project_containing_path(registry, root)
+      repository = verified_repository_at_root(root)
+
+      if existing
+        project = existing.fetch(:project)
+        raise ArgumentError, "project uses obsolete registry metadata; run upgrade-project-registry first" if legacy_project?(project)
+
+        project_root = project_root(project)
+        repository = verified_repository_at_root(project_root)
+        repository_plan = repository_sync_plan(registry, existing.fetch(:key), project, repository)
+        return {
+          action: repository_plan.fetch(:action),
+          key: existing.fetch(:key),
+          display_name: project.fetch("display_name"),
+          root: project_root,
+          repository: repository,
+          repository_entry: repository_plan[:entry],
+          repository_updates: repository_plan.fetch(:updates, {}),
+          reason: repository_plan.fetch(:reason)
+        }
+      end
+
+      overlapping = projects.find do |_project_key, project|
+        next false unless project.is_a?(Hash) && project["root"]
+
+        registered_root = registered_path(project.fetch("root"))
+        descendant_path?(registered_root, root)
+      end
+      if overlapping
+        raise ArgumentError,
+              "project root overlaps registered project #{overlapping.first} at #{File.expand_path(overlapping.last.fetch("root"))}"
+      end
+
+      ensure_repository_available!(registry, repository) if repository
+      base_key = normalized_key(key || File.basename(root))
+      selected_key = key ? base_key : available_project_key(projects, base_key, root)
+      if projects.key?(selected_key)
+        raise ArgumentError, "project key #{selected_key.inspect} already belongs to another project"
+      end
+
+      {
+        action: "create",
+        key: selected_key,
+        display_name: normalized_display_name(display_name, base_key),
+        root: root,
+        repository: repository,
+        reason: repository ? "new local project and verified repository" : "new local project without a Git repository"
+      }
+    end
+
+    def apply_local_project_plan!(registry, plan)
+      case plan.fetch(:action)
+      when "create"
+        registry.fetch("projects")[plan.fetch(:key)] = local_project_entry(
+          display_name: plan.fetch(:display_name),
+          root: plan.fetch(:root),
+          repository: plan[:repository]
+        )
+      when "enrich"
+        project = registry.fetch("projects").fetch(plan.fetch(:key))
+        project["repositories"] = Array(project["repositories"])
+        project.fetch("repositories") << plan.fetch(:repository_entry)
+      when "refresh"
+        entry = registry.fetch("projects").fetch(plan.fetch(:key)).fetch("repositories").find do |repository|
+          repository.is_a?(Hash) && same_path?(repository["path"], plan.fetch(:repository).fetch(:path))
+        end
+        raise ArgumentError, "registered repository changed during refresh" unless entry
+
+        plan.fetch(:repository_updates).each { |field, value| entry[field] = value }
+      when "preserve"
+        nil
+      else
+        raise ArgumentError, "unsupported local project action: #{plan.fetch(:action)}"
+      end
+    end
+
+    def repository_sync_plan(registry, key, project, repository)
+      return { action: "preserve", reason: "local project is already registered" } unless repository
+
+      repositories = Array(project["repositories"])
+      existing = repositories.find do |entry|
+        entry.is_a?(Hash) && same_path?(entry["path"], repository.fetch(:path))
+      end
+      unless existing
+        ensure_repository_available!(registry, repository, except_key: key)
+        return {
+          action: "enrich",
+          entry: serialized_repository(repository, repositories: repositories),
+          reason: "verified Git repository is attached to the existing local project"
+        }
+      end
+
+      updates = {}
+      if (existing["primary_branch"].to_s.empty? || existing["primary_branch"] == "unknown") && repository.fetch(:primary_branch) != "unknown"
+        updates["primary_branch"] = repository.fetch(:primary_branch)
+      end
+      if repository[:remote] && (!existing["remotes"].is_a?(Hash) || existing.dig("remotes", "origin").to_s.empty?)
+        ensure_repository_available!(registry, repository, except_key: key)
+        updates["remotes"] = (existing["remotes"].is_a?(Hash) ? existing.fetch("remotes").dup : {}).merge(
+          "origin" => repository.fetch(:remote)
+        )
+      end
+      {
+        action: updates.empty? ? "preserve" : "refresh",
+        updates: updates,
+        reason: updates.empty? ? "local project and repository metadata are already current" : "new verified repository metadata is added without changing Git state"
+      }
+    end
+
+    def local_project_entry(display_name:, root:, repository:)
+      {
+        "display_name" => display_name,
+        "status" => "active",
+        "aliases" => [],
+        "root" => root,
+        "slack_channels" => [],
+        "repositories" => repository ? [serialized_repository(repository, repositories: [])] : []
+      }
+    end
+
+    def serialized_repository(repository, repositories:)
+      base_id = repository.fetch(:id)
+      ids = repositories.each_with_object([]) do |entry, values|
+        values << entry["id"] if entry.is_a?(Hash) && entry["id"]
+      end
+      repository_id = if ids.include?(base_id)
+                        "#{base_id}-#{Digest::SHA256.hexdigest(repository.fetch(:path))[0, 8]}"
+                      else
+                        base_id
+                      end
+      entry = {
+        "id" => repository_id,
+        "path" => repository.fetch(:path),
+        "role" => repositories.empty? ? "primary" : "supporting",
+        "source_of_truth" => repository.fetch(:source_of_truth),
+        "primary_branch" => repository.fetch(:primary_branch)
+      }
+      entry["remotes"] = { "origin" => repository.fetch(:remote) } if repository[:remote]
+      entry
+    end
+
+    def local_project_result(plan, applied:)
+      action = if applied
+                 { "create" => "created", "enrich" => "enriched", "refresh" => "refreshed" }.fetch(plan.fetch(:action), plan.fetch(:action))
+               else
+                 plan.fetch(:action)
+               end
+      repository = plan[:repository]
+      {
+        schema_version: 1,
+        action: action,
+        applied: applied,
+        project: {
+          key: plan.fetch(:key),
+          display_name: plan.fetch(:display_name),
+          root: plan.fetch(:root)
+        },
+        repository: repository,
+        files: plan.fetch(:action) == "preserve" ? [] : [@registry_path],
+        unchanged: [plan.fetch(:root)],
+        reason: plan.fetch(:reason)
+      }
+    end
+
+    def verified_project_root(path)
+      raw = path.to_s
+      raise ArgumentError, "project root must be absolute" unless Pathname.new(raw).absolute?
+      raise ArgumentError, "project root cannot be the filesystem root" if File.expand_path(raw) == File::SEPARATOR
+      raise ArgumentError, "project root does not exist: #{raw}" unless File.directory?(raw)
+
+      File.realpath(raw)
+    end
+
+    def verified_repository_at_root(root)
+      git_root = git_optional(root, "rev-parse", "--show-toplevel")
+      return nil if git_root.to_s.empty? || !same_path?(git_root, root)
+
+      verified_repository(root)
+    rescue ArgumentError
+      nil
+    end
+
+    def project_containing_path(registry, path)
+      registry.fetch("projects").each_with_object([]) do |(key, project), matches|
+        next unless project.is_a?(Hash) && project["root"]
+
+        root = registered_path(project.fetch("root"))
+        next unless descendant_path?(path, root)
+
+        matches << { key: key, project: project, root: root }
+      end.max_by { |entry| entry.fetch(:root).length }
+    end
+
+    def descendant_path?(path, root)
+      path == root || path.start_with?("#{root}#{File::SEPARATOR}")
+    end
+
+    def registered_path(path)
+      expanded = File.expand_path(path.to_s)
+      File.directory?(expanded) ? File.realpath(expanded) : expanded
+    end
+
+    def available_project_key(projects, base_key, root)
+      return base_key unless projects.key?(base_key)
+
+      digest = Digest::SHA256.hexdigest(root)
+      [8, 12, 16, 64].each do |length|
+        candidate = "#{base_key}-#{digest[0, length]}"
+        return candidate unless projects.key?(candidate)
+      end
+      raise ArgumentError, "cannot derive a unique project key for #{root}"
+    end
+
+    def ensure_repository_available!(registry, repository, except_key: nil)
+      identity = normalized_remote(repository[:remote])
+      registry.fetch("projects").each do |project_key, project|
+        next if project_key == except_key || !project.is_a?(Hash)
+
+        Array(project["repositories"]).each do |entry|
+          next unless entry.is_a?(Hash)
+          if same_path?(entry["path"], repository.fetch(:path))
+            raise ArgumentError, "repository path is already registered as #{project_key}"
+          end
+
+          remotes = entry["remotes"].is_a?(Hash) ? entry.fetch("remotes").values : []
+          if identity && remotes.any? { |remote| normalized_remote(remote) == identity }
+            raise ArgumentError, "repository origin is already registered as #{project_key} at #{entry.fetch("path")}"
+          end
+        end
+      end
+    end
 
     def apply_registry_upgrade!(candidates)
       moved = []

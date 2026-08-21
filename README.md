@@ -20,7 +20,8 @@ Agent OS does not replace your project repositories, GitHub, Slack, or Codex.
 It gives those systems a small, deterministic continuity layer without copying
 transcripts or introducing another hosted task database.
 
-Repositories are optional for Slack-only coordination. An actionable request
+Repositories are optional for every project, including local-only development
+that never uses Git. An actionable request
 from a named Slack channel can become an unassigned inbox outcome with a
 display-only channel label, so managers and client-facing users can organize
 work without creating fake Git projects. Slack source cards can also show one
@@ -47,12 +48,13 @@ Codex manages its plugin snapshot. Start a fresh Codex task after installing or
 updating the plugin so the MCP tools, skills, and hooks are loaded.
 
 On first app launch, Agent OS asks the public Codex App Server only for active,
-non-archived task metadata and automatically registers each deterministic
-existing Git root. It never reads task bodies or migrates historical tasks.
-The plugin hook repeats the same idempotent check for the current `cwd` when a
-new Codex task starts, so a repository first used later becomes available for
-future routing. Missing paths, non-Git folders, ambiguous key collisions, and
-transient worktrees without a durable checkout are skipped.
+non-archived task metadata and automatically registers each deterministic local
+project root. It never reads task bodies or migrates historical tasks. The
+plugin hook repeats the same idempotent check for the current `cwd` when a new
+Codex task starts. Git is optional: if a repository or origin appears later at
+the same root, Agent OS enriches the existing project without changing its key,
+tasks, or Slack mappings. Missing paths, ambiguous overlaps, duplicate origins,
+and transient worktrees without a durable checkout are skipped.
 
 For a skipped repository, a multi-repository project, or reviewed Slack channel
 mapping, open the repository from any folder in Codex and ask:
@@ -91,17 +93,17 @@ agent-os/
 ```
 
 Each user's private home owns `config/*.yaml`, `work/`, `.runtime/`, and a
-pointer to the selected packaged runtime. Registered project repositories
-remain wherever the user already keeps them; Agent OS stores their paths but
-does not copy their code. Private tasks, provider
+pointer to the selected packaged runtime. Registered project roots and optional
+repositories remain wherever the user already keeps them; Agent OS stores their
+paths but does not copy their code. Private tasks, provider
 identifiers, and repository paths never belong in a release candidate.
 
 ## Codex plugin
 
 The installed plugin contains its own minimal Agent OS runtime. On first use it
-creates or repairs the private home, automatically registers the current
-eligible Git root, then exposes Task Board and manual project onboarding through
-MCP. No manually managed Agent OS checkout is required.
+creates or repairs the private home, automatically registers the current local
+project root with or without Git, then exposes Task Board and manual project
+onboarding through MCP. No manually managed Agent OS checkout is required.
 
 The source plugin also contains the Context Loop skill, Task Bridge hooks, and
 the `setup-agent-os` skill. Use `$context-loop` when one long-running task needs
@@ -156,8 +158,9 @@ guide for the exact flow and update trust boundary.
 ## Safety and publication
 
 Integrations are opt-in and read-only by default. Initialization may write only
-deterministic eligible project entries to the private registry; it does not
-modify those repositories or enable hooks, schedules, Slack access, commits,
+deterministic project entries and verified same-root repository metadata to the
+private registry; it does not modify those repositories or enable hooks,
+schedules, Slack access, commits,
 pushes, or deploys.
 Plugin installation makes its hook bundle available, but Codex still requires
 the user to review trust with `/hooks`; the Slack connection and Scheduled task

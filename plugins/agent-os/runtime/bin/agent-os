@@ -398,34 +398,36 @@ module AgentOS
     end
 
     def sync_codex_projects
-      options = common_options(apply: false, json: false, repositories: [])
+      options = common_options(apply: false, json: false, directories: [])
       OptionParser.new do |parser|
-        parser.banner = "Usage: agent-os sync-codex-projects --repository PATH [--repository PATH ...] [--home PATH] [--source PATH] [--json] [--apply]"
+        parser.banner = "Usage: agent-os sync-codex-projects --directory PATH [--directory PATH ...] [--home PATH] [--source PATH] [--json] [--apply]"
         add_common_options(parser, options)
-        parser.on("--repository PATH", "Repeat for active Codex working directories") { |value| options[:repositories] << value }
+        parser.on("--directory PATH", "Repeat for active Codex working directories") { |value| options[:directories] << value }
+        parser.on("--repository PATH", "Deprecated alias for --directory") { |value| options[:directories] << value }
         parser.on("--json", "Print the machine-readable synchronization result") { options[:json] = true }
-        parser.on("--apply", "Register only deterministic eligible Git roots") { options[:apply] = true }
+        parser.on("--apply", "Register deterministic local projects and attach verified repositories when available") { options[:apply] = true }
         parser.parse!(@arguments)
       end
       reject_extra_arguments!
-      raise OptionParser::MissingArgument, "repository" if options.fetch(:repositories).empty?
+      raise OptionParser::MissingArgument, "directory" if options.fetch(:directories).empty?
 
       result = AgentOS::CodexProjectSync.new(
         source: validated_root(options.fetch(:source), "source"),
         home: validated_root(options.fetch(:home), "home")
-      ).sync(repositories: options.fetch(:repositories), apply: options.fetch(:apply))
+      ).sync(directories: options.fetch(:directories), apply: options.fetch(:apply))
 
       if options.fetch(:json)
         @out.puts JSON.pretty_generate(result)
       else
         @out.puts options.fetch(:apply) ? "Agent OS Codex project sync result" : "Agent OS Codex project sync plan"
         result.fetch(:projects).each do |project|
-          @out.puts "  #{project.fetch(:action).upcase.ljust(8)} #{project.fetch(:project_key)} -> #{project.fetch(:repository)}"
+          @out.puts "  #{project.fetch(:action).upcase.ljust(8)} #{project.fetch(:project_key)} -> #{project.fetch(:root)}"
+          @out.puts "    repository #{project.fetch(:repository)}" if project[:repository]
         end
         result.fetch(:skipped).each do |entry|
           @out.puts "  SKIP     #{entry.fetch(:input)} (#{entry.fetch(:reason)})"
         end
-        @out.puts "Preview only. Re-run with --apply to register eligible repositories." unless options.fetch(:apply)
+        @out.puts "Preview only. Re-run with --apply to register eligible local projects." unless options.fetch(:apply)
       end
       0
     end
@@ -916,7 +918,7 @@ module AgentOS
           activate   Preview or select the home used by app and plugin processes
           install-plugin  Preview or install the Agent OS Codex plugin
           onboard-project  Preview or register an existing Git repository
-          sync-codex-projects  Register eligible active Codex Git repositories
+          sync-codex-projects  Register active Codex projects and enrich optional repositories
           upgrade-project-registry  Preview or upgrade obsolete project registry metadata
           relink-project  Preview or update the path of an already registered repository
           configure-slack-monitor  Preview or configure the optional read-only Slack monitor

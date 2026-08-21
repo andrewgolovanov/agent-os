@@ -209,25 +209,17 @@ class AgentOSCLITest < Minitest::Test
     assert_equal %w[11:00 15:00], replaced.dig("monitors", "agent-os-slack-monitor", "schedule", "local_times")
   end
 
-  def test_codex_project_sync_previews_then_registers_eligible_repositories
+  def test_codex_project_sync_previews_then_registers_a_local_project
     _, stderr, status = Open3.capture3(
       @executable, "init", "--source", @source, "--home", @home, "--apply"
     )
     assert status.success?, stderr
     repository = File.join(@temporary, "codex-project")
     FileUtils.mkdir_p(repository)
-    _stdout, stderr, status = Open3.capture3("git", "-C", repository, "init", "-q")
-    assert status.success?, stderr
-    Open3.capture3("git", "-C", repository, "config", "user.email", "agent-os@example.invalid")
-    Open3.capture3("git", "-C", repository, "config", "user.name", "Agent OS")
-    File.write(File.join(repository, "README.md"), "# Codex Project\n")
-    Open3.capture3("git", "-C", repository, "add", "README.md")
-    _stdout, stderr, status = Open3.capture3("git", "-C", repository, "commit", "-qm", "Initial commit")
-    assert status.success?, stderr
 
     stdout, stderr, status = Open3.capture3(
       @executable, "sync-codex-projects", "--source", @source, "--home", @home,
-      "--repository", repository, "--json"
+      "--directory", repository, "--json"
     )
     assert status.success?, stderr
     assert_equal "create", JSON.parse(stdout).dig("projects", 0, "action")
@@ -235,11 +227,13 @@ class AgentOSCLITest < Minitest::Test
 
     stdout, stderr, status = Open3.capture3(
       @executable, "sync-codex-projects", "--source", @source, "--home", @home,
-      "--repository", repository, "--apply", "--json"
+      "--directory", repository, "--apply", "--json"
     )
     assert status.success?, stderr
     assert_equal 1, JSON.parse(stdout).fetch("registered_count")
-    assert_equal File.realpath(repository), YAML.safe_load(File.read(File.join(@home, "config", "projects.yaml"))).dig("projects", "codex-project", "root")
+    project = YAML.safe_load(File.read(File.join(@home, "config", "projects.yaml"))).dig("projects", "codex-project")
+    assert_equal File.realpath(repository), project.fetch("root")
+    assert_empty project.fetch("repositories")
   end
 
   def test_doctor_integration_checks_do_not_change_core_readiness

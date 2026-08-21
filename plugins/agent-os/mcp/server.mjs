@@ -94,7 +94,7 @@ function listProjects() {
         status: value.fetch("status"),
         root: value.fetch("root"),
         slack_channels: Array(value["slack_channels"]).map { |channel| channel.slice("id", "name") },
-        repositories: value.fetch("repositories").map { |repository| repository.slice("id", "path", "role", "source_of_truth", "primary_branch") }
+        repositories: Array(value["repositories"]).map { |repository| repository.slice("id", "path", "role", "source_of_truth", "primary_branch") }
       }
     end
     puts JSON.generate(projects)
@@ -121,7 +121,7 @@ const tools = [
   {
     name: "agent_os_list_projects",
     title: "List Agent OS projects",
-    description: "List registered project keys and exact repository paths.",
+    description: "List registered project keys, local roots, and optional repository paths.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
     annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
   },

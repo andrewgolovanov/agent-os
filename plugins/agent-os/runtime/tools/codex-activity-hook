@@ -21,7 +21,7 @@ def synchronize_current_project(agent_os_home, payload)
   AgentOS::CodexProjectSync.new(
     source: AgentOS::Paths.source_root,
     home: agent_os_home
-  ).sync(repositories: [cwd], apply: true)
+  ).sync(directories: [cwd], apply: true)
 rescue StandardError => e
   warn "codex-project-sync-hook: #{e.message}"
 end

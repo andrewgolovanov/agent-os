@@ -70,10 +70,11 @@ shared private home at `~/.agent-os` on first launch. A source checkout and
 
 The app also pages through public active Codex task metadata on launch and
 passes only unique working directories to the shared runtime. Deterministic
-existing Git roots are registered automatically before the project snapshot is
-loaded; thread bodies and historical tasks are never imported. A compact notice
-reports newly registered projects without blocking the Board on skipped or
-ambiguous paths.
+local roots are registered automatically before the project snapshot is loaded,
+including folders without Git. A repository discovered later at the same root
+enriches the existing project; thread bodies and historical tasks are never
+imported. A compact notice reports changed projects without blocking the Board
+on skipped or ambiguous paths.
 
 Follow the checksum and Gatekeeper instructions in
 `../../docs/installation.md`. Install the Codex plugin from the same release to

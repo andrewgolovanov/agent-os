@@ -219,6 +219,43 @@ final class AgentOSTests: XCTestCase {
         XCTAssertEqual(labels.map(\.name), ["#project-sample-product-int", "#general-checks"])
     }
 
+    func testLocalOnlyProjectDecodesWithoutRepositories() throws {
+        let data = Data(#"""
+        {
+          "key": "local-only",
+          "displayName": "Local Only",
+          "status": "active",
+          "root": "/tmp/local-only"
+        }
+        """#.utf8)
+
+        let project = try JSONDecoder().decode(AgentOSProject.self, from: data)
+
+        XCTAssertEqual(project.key, "local-only")
+        XCTAssertEqual(project.preferredWorkingDirectory.path, "/tmp/local-only")
+        XCTAssertTrue(project.repositories.isEmpty)
+        XCTAssertTrue(project.slackChannels.isEmpty)
+    }
+
+    func testLegacyProjectSyncReportDefaultsNewLifecycleCounts() throws {
+        let data = Data(#"""
+        {
+          "applied": true,
+          "discovered_count": 1,
+          "eligible_count": 1,
+          "registered_count": 0,
+          "preserved_count": 1,
+          "skipped_count": 0
+        }
+        """#.utf8)
+
+        let report = try JSONDecoder().decode(AgentOSProjectSyncReport.self, from: data)
+
+        XCTAssertEqual(report.enrichedCount, 0)
+        XCTAssertEqual(report.refreshedCount, 0)
+        XCTAssertEqual(report.preservedCount, 1)
+    }
+
     func testInspectorUsesComfortableResizableDesktopWidths() {
         XCTAssertEqual(AgentOSMetrics.inspectorMinWidth, 420)
         XCTAssertEqual(AgentOSMetrics.inspectorIdealWidth, 520)

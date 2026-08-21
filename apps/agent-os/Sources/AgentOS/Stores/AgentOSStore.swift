@@ -63,9 +63,10 @@ final class AgentOSStore {
                 workingDirectories: workingDirectories
             )
             projectSyncReport = report
-            if report.registeredCount > 0 {
+            let changedCount = report.registeredCount + report.enrichedCount + report.refreshedCount
+            if changedCount > 0 {
                 let suffix = report.skippedCount > 0 ? "; skipped \(report.skippedCount) ambiguous or unavailable paths" : ""
-                noticeMessage = "Registered \(report.registeredCount) Codex project\(report.registeredCount == 1 ? "" : "s")\(suffix)."
+                noticeMessage = "Synchronized \(changedCount) Codex project\(changedCount == 1 ? "" : "s")\(suffix)."
             }
         } catch {
             noticeMessage = "Codex project synchronization was unavailable: \(error.localizedDescription)"

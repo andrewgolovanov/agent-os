@@ -57,6 +57,7 @@ REQUIRED_SOURCE_PATHS = %w[
   docs/decisions/0013-bundled-runtime-installation.md
   docs/decisions/0021-auto-register-active-codex-repositories.md
   docs/decisions/0022-discover-exact-bot-mentions-across-visible-channels.md
+  docs/decisions/0023-projects-do-not-require-git.md
   lib/agent_os/codex_project_sync.rb
   lib/agent_os/project_registry.rb
   lib/agent_os/slack_monitor_setup.rb
@@ -230,7 +231,6 @@ if registry
         resolved_root = File.expand_path(root)
         error("project #{key} root does not exist: #{root}") unless File.directory?(resolved_root)
         repositories = Array(project["repositories"])
-        error("project #{key} must register at least one repository") if repositories.empty?
         repository_paths = []
 
         repositories.each do |repository|
@@ -250,7 +250,7 @@ if registry
             error("project #{key} repository is not a Git root: #{path}") unless File.exist?(File.join(resolved_path, ".git"))
           end
         end
-        unless repository_paths.include?(resolved_root)
+        if repositories.any? && !repository_paths.include?(resolved_root)
           error("project #{key} root must equal one registered repository path")
         end
       end

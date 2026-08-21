@@ -31,8 +31,8 @@ Each layer has one purpose. The root `AGENTS.md` routes work without duplicating
 | System model and boundaries | `docs/architecture.md` |
 | Verified current readiness | `docs/state.md` |
 | Architectural rationale | `docs/decisions/` |
-| Project-specific rules and exceptions | registered repository `AGENTS.md` |
-| Durable project knowledge | documentation in the registered repository |
+| Project-specific rules and exceptions | registered project-root `AGENTS.md` |
+| Durable project knowledge | documentation in the registered project root or repository |
 | Current goal, state, next action, sources, Codex memberships, and linked-turn time | `AGENT_OS_HOME/work/items/<task-id>/task.json` |
 | All-thread project Codex time and monthly rollups | generated `AGENT_OS_HOME/work/reports/project-time/<project>.json` |
 | Human-readable task handoff | generated `AGENT_OS_HOME/work/items/<task-id>/STATUS.md` |
@@ -42,22 +42,28 @@ Each layer has one purpose. The root `AGENTS.md` routes work without duplicating
 | Selected executable runtime | `AGENT_OS_HOME/source-path`; packaged runtime by default, explicit valid development checkout when selected |
 | Reusable Task Bridge event commands | installed Agent OS plugin hook bundle |
 | Repeatable procedures | `.agents/skills/<skill>/SKILL.md` or installed plugin skills |
-| Project code, Git history, and CI | the corresponding project repository |
+| Project code | the corresponding local project root |
+| Optional Git history and CI | the corresponding project repository |
 | Issues, PRs, provider state, and conversations | the corresponding external system |
 
 ## Project registry
 
-Every project exists only as an entry in private `AGENT_OS_HOME/config/projects.yaml`. `root` defines the working project root, `repositories` stores verified Git roots and roles, and optional `slack_channels` records reviewed stable channel IDs that belong to the project. For a normal single-repository project, `root` is the Git root. A repository may live in any user-selected folder.
+Every project exists only as an entry in private `AGENT_OS_HOME/config/projects.yaml`. `root` defines the working project root, `repositories` optionally stores verified Git roots and roles, and optional `slack_channels` records reviewed stable channel IDs that belong to the project. A local project is valid with `repositories: []` for its entire lifetime. When Git is initialized later at the same root, Agent OS enriches that project entry instead of replacing its key, Task Board attribution, Slack mappings, or history. A repository may live in any user-selected folder.
 
 Automatic Codex synchronization is a narrow registry-only path. The macOS app
 pages through public App Server metadata for active, non-archived tasks and
 passes only unique `cwd` values to the shared runtime. The plugin hook passes
-the current task `cwd` before Task Bridge routing. The runtime registers only
-deterministic existing Git roots, deduplicates nested paths and normalized
-origins, prefers a durable checkout over transient Codex worktrees, preserves
-existing entries, and skips every unavailable, non-Git, unborn, or conflicting
-candidate. It never reads thread bodies, creates outcomes, maps channels, or
-changes repository files or Git state.
+the current task `cwd` before Task Bridge routing. The runtime registers
+deterministic existing local project directories, deduplicates nested paths,
+uses stable path-derived suffixes for same-name projects, normalizes Git
+working directories to their repository roots, and prefers a durable checkout
+over transient Codex worktrees. Existing local-only entries are enriched when
+a committed Git root appears at the exact project root and refreshed when a
+previously unknown origin becomes available. Missing paths, ambiguous overlaps,
+duplicate origins, and worktree-only candidates are skipped. The private Agent
+OS home and its internal paths remain operational state and are never registered
+as projects. Synchronization never reads thread bodies, creates outcomes, maps
+channels, or changes repository files or Git state.
 
 Manual project onboarding accepts an existing absolute Git root, verifies its identity, and previews the registry change. A conservative channel-name comparison may suggest existing unfinished Slack-only work, but it never selects a channel automatically. After a second preview with exact reviewed channel IDs, apply records those mappings and may assign only unfinished outcomes that currently have no project; existing attribution and card labels are preserved. Onboarding never creates `AGENT_OS_HOME/projects`, writes Agent OS metadata into the product repository, moves source code, or merges outcomes by similar text. Existing repository `AGENTS.md`, READMEs, and documentation continue to own project-local rules and context.
 
@@ -69,7 +75,8 @@ If a user moves a repository, identity-checked relink updates only `root` and th
 
 - Discovery and reads are allowed only inside the selected Agent OS installation and registered paths.
 - Automatic Codex synchronization may mutate only the private project registry
-  for deterministic eligible Git roots. Manual onboarding and optional Task
+  for deterministic local project roots and verified same-root repository
+  enrichment. Manual onboarding and optional Task
   Board reconciliation remain preview-first, limited to selected stable Slack
   channel IDs, and never overwrite an existing project attribution.
 - External provider tools are read-only by default.

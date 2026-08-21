@@ -61,6 +61,30 @@ class AgentOSMCPTest < Minitest::Test
     end
   end
 
+  def test_server_lists_a_local_only_project
+    project = File.join(@temporary, "local-only")
+    FileUtils.mkdir_p(project)
+    _, stderr, status = Open3.capture3(
+      File.join(@source, "bin", "agent-os"),
+      "sync-codex-projects", "--source", @source, "--home", @home,
+      "--directory", project, "--apply", "--json"
+    )
+    assert status.success?, stderr
+
+    with_server("AGENT_OS_SOURCE_ROOT" => @source, "AGENT_OS_HOME" => @home) do |stdin, stdout, server_stderr, wait_thread|
+      projects = request(stdin, stdout, 1, "tools/call", { "name" => "agent_os_list_projects", "arguments" => {} })
+      local_project = projects.dig("result", "structuredContent", "projects").find do |entry|
+        entry.fetch("key") == "local-only"
+      end
+
+      assert_equal File.realpath(project), local_project.fetch("root")
+      assert_empty local_project.fetch("repositories")
+
+      stdin.close
+      assert wait_thread.value.success?, server_stderr.read
+    end
+  end
+
   def test_server_onboards_an_existing_repository_preview_first
     repository = File.join(@temporary, "mcp-project")
     system("git", "init", "-b", "main", repository, out: File::NULL, err: File::NULL) or flunk "repo init failed"

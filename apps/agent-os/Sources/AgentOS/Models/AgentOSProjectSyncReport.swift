@@ -5,6 +5,8 @@ struct AgentOSProjectSyncReport: Decodable, Sendable {
     let discoveredCount: Int
     let eligibleCount: Int
     let registeredCount: Int
+    let enrichedCount: Int
+    let refreshedCount: Int
     let preservedCount: Int
     let skippedCount: Int
 
@@ -13,7 +15,41 @@ struct AgentOSProjectSyncReport: Decodable, Sendable {
         case discoveredCount = "discovered_count"
         case eligibleCount = "eligible_count"
         case registeredCount = "registered_count"
+        case enrichedCount = "enriched_count"
+        case refreshedCount = "refreshed_count"
         case preservedCount = "preserved_count"
         case skippedCount = "skipped_count"
+    }
+
+    init(
+        applied: Bool,
+        discoveredCount: Int,
+        eligibleCount: Int,
+        registeredCount: Int,
+        enrichedCount: Int,
+        refreshedCount: Int,
+        preservedCount: Int,
+        skippedCount: Int
+    ) {
+        self.applied = applied
+        self.discoveredCount = discoveredCount
+        self.eligibleCount = eligibleCount
+        self.registeredCount = registeredCount
+        self.enrichedCount = enrichedCount
+        self.refreshedCount = refreshedCount
+        self.preservedCount = preservedCount
+        self.skippedCount = skippedCount
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        applied = try container.decode(Bool.self, forKey: .applied)
+        discoveredCount = try container.decode(Int.self, forKey: .discoveredCount)
+        eligibleCount = try container.decode(Int.self, forKey: .eligibleCount)
+        registeredCount = try container.decode(Int.self, forKey: .registeredCount)
+        enrichedCount = try container.decodeIfPresent(Int.self, forKey: .enrichedCount) ?? 0
+        refreshedCount = try container.decodeIfPresent(Int.self, forKey: .refreshedCount) ?? 0
+        preservedCount = try container.decode(Int.self, forKey: .preservedCount)
+        skippedCount = try container.decode(Int.self, forKey: .skippedCount)
     }
 }

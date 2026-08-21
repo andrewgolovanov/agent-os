@@ -5,5 +5,6 @@ agent_os:
   root: __AGENT_OS_HOME__
   timezone: __TIMEZONE__
 
-# Add projects through the onboard-project workflow after verifying exact paths.
+# Projects may have repositories: []. Add them through automatic Codex sync or
+# the preview-first onboard-project workflow after verifying exact local roots.
 projects: {}

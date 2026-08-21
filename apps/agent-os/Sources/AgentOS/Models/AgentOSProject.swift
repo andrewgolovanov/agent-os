@@ -45,6 +45,6 @@ struct AgentOSProject: Codable, Hashable, Identifiable, Sendable {
         status = try container.decode(String.self, forKey: .status)
         root = try container.decode(String.self, forKey: .root)
         slackChannels = try container.decodeIfPresent([AgentOSSlackChannel].self, forKey: .slackChannels) ?? []
-        repositories = try container.decode([AgentOSRepository].self, forKey: .repositories)
+        repositories = try container.decodeIfPresent([AgentOSRepository].self, forKey: .repositories) ?? []
     }
 }

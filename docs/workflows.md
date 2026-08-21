@@ -4,15 +4,21 @@
 
 1. On first app launch, page through public Codex App Server `thread/list` with
    `archived: false` and collect only unique `cwd` metadata.
-2. Normalize each directory to a real Git root. Collapse nested paths and
+2. Preserve a non-Git directory as a valid project root. When Git is present,
+   normalize the directory to its real Git root, collapse nested paths and
    equivalent origins, and replace transient Codex worktrees with a durable
    checkout when one exists.
-3. Automatically register only deterministic roots whose project key is not
-   owned by another repository. Preserve existing entries and skip every
-   unavailable, non-Git, unborn, ambiguous, or worktree-only candidate.
+3. Automatically register deterministic roots. Use the basename as the project
+   key and a stable path-derived suffix when another root already owns that
+   name. Preserve existing entries and skip unavailable paths, ambiguous
+   overlaps, duplicate origins, worktree-only candidates, and the private
+   Agent OS home used as a technical Scheduled working directory.
 4. At `UserPromptSubmit`, apply the same idempotent operation to the current
    task `cwd` before Task Bridge resolves the project.
-5. Never read thread bodies, create outcomes, migrate Slack history, map
+5. If Git later appears at the exact registered root, enrich the same project;
+   if its origin becomes known later, fill that metadata without changing Git.
+   Nested or multi-repository attachment remains a manual reviewed operation.
+6. Never read thread bodies, create outcomes, migrate Slack history, map
    channels, move repositories, or change Git state during synchronization.
 
 ## Onboard a project manually
@@ -46,10 +52,12 @@ Relink never moves a repository or changes Git files, remotes, branches, or hist
 1. Resolve the project name or alias through private `AGENT_OS_HOME/config/projects.yaml`.
 2. Read `AGENTS.md` at the registered project root.
 3. For a multi-repository project, read the nearest repository `AGENTS.md` before editing it.
-4. Verify Git identity and dirty state.
+4. Verify the local root; when Git exists, also verify repository identity and
+   dirty state.
 5. For durable work, include the exact Task Board ID or a stable source URL in the first project-task prompt. Task Bridge attaches `session_id` only for one exact match.
 6. Without an exact match, explicitly claim a suggested outcome through `tools/task-bridge claim` or create one through `tools/task-board`; never guess by title or branch.
-7. Perform and validate work in the project repository. Task Bridge measures exact Codex turns, not human pauses.
+7. Perform and validate work in the project root and any attached repository.
+   Task Bridge measures exact Codex turns, not human pauses.
 8. After material changes, checkpoint a verified summary, next action, and lifecycle status. `done` remains an explicit user decision.
 
 ## Durable outcome lifecycle

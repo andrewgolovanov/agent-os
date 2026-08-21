@@ -23,7 +23,7 @@ flowchart LR
     home --> registry["project registry"]
     home --> tasks["Task Board"]
     home --> runtime["runtime correlation"]
-    registry --> repos["existing repositories in any folder"]
+    registry --> projects["local project roots; repositories optional"]
 ```
 
 Normal users do not manage a source checkout. Codex owns its installed plugin
@@ -59,8 +59,9 @@ bootstrap.
   state, and preserve a valid selected development source.
 - The app pages public active, non-archived Codex task metadata and passes only
   `cwd` values to the shared runtime; the plugin hook synchronizes the current
-  task `cwd` before routing. Both automatically register only deterministic
-  eligible Git roots and never import thread bodies or historical tasks.
+  task `cwd` before routing. Both automatically register deterministic local
+  project roots with or without Git and never import thread bodies or historical
+  tasks. A verified repository and later origin enrich the same project entry.
 - MCP project onboarding previews and registers any existing Git repository by
   absolute path without moving or modifying it; the private registry is the
   only Agent OS owner of project routing metadata.
